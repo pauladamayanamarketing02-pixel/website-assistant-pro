@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* EasyMarketingAssist Design System - Warm, Friendly, Approachable */
+
+@layer base {
+  :root {
+    /* Warm cream/ivory background */
+    --background: 40 33% 98%;
+    --foreground: 220 25% 20%;
+
+    /* Card surfaces with subtle warmth */
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 20%;
+
+    /* Coral/Orange primary - friendly and energetic */
+    --primary: 16 85% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Soft sage secondary */
+    --secondary: 160 25% 94%;
+    --secondary-foreground: 160 30% 30%;
+
+    /* Muted warm grays */
+    --muted: 40 20% 94%;
+    --muted-foreground: 220 15% 45%;
+
+    /* Teal accent for calls-to-action */
+    --accent: 174 60% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 16 85% 60%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar - clean and professional */
+    --sidebar-background: 220 25% 18%;
+    --sidebar-foreground: 220 15% 90%;
+    --sidebar-primary: 16 85% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 25%;
+    --sidebar-accent-foreground: 220 15% 95%;
+    --sidebar-border: 220 25% 25%;
+    --sidebar-ring: 16 85% 60%;
+
+    /* Custom colors for EasyMarketingAssist */
+    --coral: 16 85% 60%;
+    --coral-light: 16 85% 70%;
+    --coral-dark: 16 85% 50%;
+    --teal: 174 60% 45%;
+    --teal-light: 174 60% 55%;
+    --cream: 40 33% 98%;
+    --sage: 160 25% 90%;
+    --navy: 220 25% 18%;
+  }
+
+  .dark {
+    --background: 220 25% 10%;
+    --foreground: 40 20% 95%;
+
+    --card: 220 25% 14%;
+    --card-foreground: 40 20% 95%;
+
+    --popover: 220 25% 14%;
+    --popover-foreground: 40 20% 95%;
+
+    --primary: 16 85% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 25% 20%;
+    --secondary-foreground: 40 20% 95%;
+
+    --muted: 220 25% 18%;
+    --muted-foreground: 220 15% 65%;
+
+    --accent: 174 60% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 25% 22%;
+    --input: 220 25% 22%;
+    --ring: 16 85% 60%;
+
+    --sidebar-background: 220 30% 8%;
+    --sidebar-foreground: 220 15% 90%;
+    --sidebar-primary: 16 85% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 15%;
+    --sidebar-accent-foreground: 220 15% 95%;
+    --sidebar-border: 220 25% 15%;
+    --sidebar-ring: 16 85% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--coral-light)) 100%);
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--teal-light)) 100%);
+  }
+
+  .gradient-hero {
+    background: linear-gradient(180deg, hsl(var(--cream)) 0%, hsl(var(--sage)) 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .shadow-soft {
+    box-shadow: 0 4px 20px -4px hsla(var(--navy), 0.1);
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 30px -5px hsla(var(--primary), 0.3);
+  }
+}
