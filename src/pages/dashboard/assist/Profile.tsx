@@ -163,11 +163,6 @@ export default function AssistProfile() {
     try {
       const fullPhone = `${profile.phoneCode} ${profile.phoneNumber}`.trim();
       
-      // Combine location and city for storage
-      const fullLocation = profile.city && profile.location 
-        ? `${profile.city}, ${profile.location}` 
-        : profile.location || profile.city || '';
-      
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -180,7 +175,8 @@ export default function AssistProfile() {
           experience: profile.experience,
           linkedin_url: profile.linkedin_url,
           twitter_url: profile.twitter_url,
-          location: fullLocation, // Save city + country
+          country: profile.location,
+          city: profile.city,
           specialization: profile.specialization,
           avatar_url: profile.avatar_url,
           social_links: profile.social_links, // Save social media links
@@ -399,7 +395,7 @@ export default function AssistProfile() {
               {isEditing ? (
                 <Select value={profile.location} onValueChange={handleCountryChange}>
                   <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background z-50">
                     {countries.map((c) => (
                       <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
                     ))}
@@ -411,7 +407,22 @@ export default function AssistProfile() {
             </div>
             <div className="space-y-2">
               <Label>City</Label>
-              <p className="py-2 font-medium">{profile.city || '-'}</p>
+              {isEditing ? (
+                <Select
+                  value={profile.city}
+                  onValueChange={(v) => setProfile((prev) => ({ ...prev, city: v }))}
+                  disabled={!profile.location}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    {cities.map((city) => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="py-2 font-medium">{profile.city || '-'}</p>
+              )}
             </div>
           </div>
           <div className="space-y-2">
