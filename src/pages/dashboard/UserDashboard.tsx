@@ -80,28 +80,22 @@ export default function UserDashboard() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <Sidebar className="border-r bg-card text-card-foreground">
-          <div className="p-4 border-b flex items-center gap-2 bg-card">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Home className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-semibold tracking-tight text-card-foreground">EasyMarketing</span>
-              <span className="text-xs text-muted-foreground">User Dashboard</span>
-            </div>
+        <Sidebar className="border-r">
+          <div className="p-4 border-b">
+            <span className="font-bold text-lg text-foreground">EasyMarketing</span>
           </div>
-          <SidebarContent className="px-3 py-4">
+          <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
-                <SidebarMenu className="space-y-1 animate-fade-in">
+                <SidebarMenu>
                   {menuItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
                         <NavLink
                           to={item.url}
                           end={item.url === '/dashboard/user'}
-                          className="flex items-center gap-3 px-3 py-2 rounded-full text-sm text-card-foreground hover:bg-primary/10 hover:text-primary hover-scale transition-colors"
-                          activeClassName="bg-primary/90 text-primary-foreground shadow-sm"
+                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent"
+                          activeClassName="bg-sidebar-accent text-sidebar-primary"
                         >
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
@@ -113,12 +107,8 @@ export default function UserDashboard() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-          <div className="mt-auto p-4 border-t bg-card">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-sm text-card-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-              onClick={signOut}
-            >
+          <div className="mt-auto p-4 border-t">
+            <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
