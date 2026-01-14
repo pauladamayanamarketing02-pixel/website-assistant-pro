@@ -254,14 +254,12 @@ export type Database = {
           experience: string | null
           id: string
           linkedin_url: string | null
-          location: string | null
           name: string
           onboarding_completed: boolean | null
           phone: string | null
           portfolio_url: string | null
           skills: string[] | null
           social_links: Json | null
-          specialization: string | null
           status: string | null
           twitter_url: string | null
           updated_at: string | null
@@ -278,14 +276,12 @@ export type Database = {
           experience?: string | null
           id: string
           linkedin_url?: string | null
-          location?: string | null
           name: string
           onboarding_completed?: boolean | null
           phone?: string | null
           portfolio_url?: string | null
           skills?: string[] | null
           social_links?: Json | null
-          specialization?: string | null
           status?: string | null
           twitter_url?: string | null
           updated_at?: string | null
@@ -302,14 +298,12 @@ export type Database = {
           experience?: string | null
           id?: string
           linkedin_url?: string | null
-          location?: string | null
           name?: string
           onboarding_completed?: boolean | null
           phone?: string | null
           portfolio_url?: string | null
           skills?: string[] | null
           social_links?: Json | null
-          specialization?: string | null
           status?: string | null
           twitter_url?: string | null
           updated_at?: string | null
