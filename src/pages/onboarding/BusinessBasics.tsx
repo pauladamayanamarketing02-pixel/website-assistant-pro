@@ -8,9 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { businessTypeCategories } from '@/data/businessTypes';
 import { countries, type Country } from '@/data/countries';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export default function BusinessBasics() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     businessName: '',
     businessType: '',
@@ -21,6 +26,7 @@ export default function BusinessBasics() {
   });
   const [businessId, setBusinessId] = useState('');
   const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const storedBusinessId = sessionStorage.getItem('onboarding_businessId');
@@ -49,17 +55,109 @@ export default function BusinessBasics() {
     formData.city && 
     formData.phoneNumber.trim();
 
-  const handleContinue = () => {
-    // Combine phone code and number
-    const fullPhoneNumber = `${formData.phoneCode} ${formData.phoneNumber}`.trim();
-    
-    // Store in sessionStorage for use in later steps
-    sessionStorage.setItem('onboarding_businessName', formData.businessName.trim());
-    sessionStorage.setItem('onboarding_businessType', formData.businessType);
-    sessionStorage.setItem('onboarding_country', formData.country);
-    sessionStorage.setItem('onboarding_city', formData.city);
-    sessionStorage.setItem('onboarding_phoneNumber', fullPhoneNumber);
-    navigate('/onboarding/online-presence');
+  const handleContinue = async () => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You must be logged in to continue.',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Combine phone code and number
+      const fullPhoneNumber = `${formData.phoneCode} ${formData.phoneNumber}`.trim();
+
+      // Store in sessionStorage for use in later steps
+      sessionStorage.setItem('onboarding_businessName', formData.businessName.trim());
+      sessionStorage.setItem('onboarding_businessType', formData.businessType);
+      sessionStorage.setItem('onboarding_country', formData.country);
+      sessionStorage.setItem('onboarding_city', formData.city);
+      sessionStorage.setItem('onboarding_phoneNumber', fullPhoneNumber);
+
+      // Get other onboarding data already collected
+      const firstName = sessionStorage.getItem('onboarding_firstName') || '';
+      const lastName = sessionStorage.getItem('onboarding_lastName') || '';
+      const businessStage = sessionStorage.getItem('onboarding_businessStage') || 'new';
+
+      // Check if business already exists for this user
+      const { data: existingBusiness } = await (supabase
+        .from('businesses')
+        .select('id, business_number')
+        .eq('user_id', user.id)
+        .maybeSingle() as any);
+
+      const businessData: any = {
+        user_id: user.id,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        business_name: formData.businessName.trim() || null,
+        business_type: formData.businessType || null,
+        country: formData.country || null,
+        city: formData.city || null,
+        phone_number: fullPhoneNumber || null,
+        email: user.email || null,
+        stage: businessStage,
+        onboarding_completed: false,
+      };
+
+      let businessError;
+      let businessNumber: number | null = existingBusiness?.business_number ?? null;
+
+      if (existingBusiness) {
+        const { data: updatedBusiness, error } = await (supabase
+          .from('businesses')
+          .update(businessData)
+          .eq('user_id', user.id)
+          .select('business_number')
+          .maybeSingle() as any);
+        businessError = error;
+        if (updatedBusiness?.business_number) {
+          businessNumber = updatedBusiness.business_number;
+        }
+      } else {
+        const { data: newBusiness, error } = await (supabase
+          .from('businesses')
+          .insert(businessData)
+          .select('business_number')
+          .maybeSingle() as any);
+        businessError = error;
+        if (newBusiness?.business_number) {
+          businessNumber = newBusiness.business_number;
+        }
+      }
+
+      if (businessError) {
+        console.error('Business error:', businessError);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to save business info. Please try again.',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (businessNumber) {
+        const generatedBusinessId = `B${businessNumber.toString().padStart(5, '0')}`;
+        setBusinessId(generatedBusinessId);
+        sessionStorage.setItem('onboarding_businessId', generatedBusinessId);
+      }
+
+      navigate('/onboarding/online-presence');
+    } catch (error) {
+      console.error('Unexpected error saving business:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Get unique phone codes for dropdown
@@ -207,7 +305,7 @@ export default function BusinessBasics() {
             <Button
               size="lg"
               className="w-full mt-4"
-              disabled={!isFormValid}
+              disabled={!isFormValid || isSubmitting}
               onClick={handleContinue}
             >
               Next Step
