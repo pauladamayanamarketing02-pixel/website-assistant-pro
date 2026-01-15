@@ -26,6 +26,7 @@ interface Client {
   phone: string | null;
   business_id: string | null;
   business_name: string | null;
+  business_number: number | null;
 }
 
 interface BusinessFormData {
@@ -197,7 +198,7 @@ export default function ClientList() {
 
       const { data: businesses, error: businessesError } = await supabase
         .from('businesses')
-        .select('id, user_id, business_name');
+        .select('id, user_id, business_name, business_number');
 
       if (businessesError) throw businessesError;
 
@@ -221,6 +222,7 @@ export default function ClientList() {
             phone: profile.phone,
             business_id: business?.id || null,
             business_name: business?.business_name || null,
+            business_number: business?.business_number || null,
           };
         });
 
@@ -432,6 +434,9 @@ export default function ClientList() {
 
     setSavingBusiness(true);
     try {
+      // Filter out empty URLs before saving
+      const validSocialLinks = formData.social_links.filter(link => link.url && link.url.trim() !== '');
+      
       const fullPhone = `${formData.phoneCode} ${formData.phoneNumber}`.trim();
 
       const hoursForDb = formData.hours.map(h => ({
@@ -451,7 +456,7 @@ export default function ClientList() {
           hours: hoursForDb as any,
           website_url: formData.website_url, // Allow empty string
           gmb_link: formData.gmb_link || null,
-          social_links: formData.social_links as any,
+          social_links: validSocialLinks as any,
         })
         .eq('user_id', selectedClient.id);
 
@@ -774,7 +779,9 @@ export default function ClientList() {
                     {/* Business ID - Full Row */}
                     <div className="space-y-2">
                       <Label>Business ID</Label>
-                      <p className="font-medium py-2 font-mono text-xs">{selectedClient.business_id || '-'}</p>
+                      <p className="font-medium py-2 font-mono text-xs">
+                        {selectedClient.business_number ? `B${String(selectedClient.business_number).padStart(5, '0')}` : '-'}
+                      </p>
                     </div>
 
                     {/* First Name + Last Name */}
@@ -1061,14 +1068,14 @@ export default function ClientList() {
                       )}
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label>Social Media Links</Label>
-                      {isEditingBusiness ? (
-                        <SocialMediaInput
-                          links={formData.social_links}
-                          onChange={(links) => setFormData(prev => ({ ...prev, social_links: links }))}
-                        />
-                      ) : (
+                    {isEditingBusiness ? (
+                      <SocialMediaInput
+                        links={formData.social_links}
+                        onChange={(links) => setFormData(prev => ({ ...prev, social_links: links }))}
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>Social Media Links</Label>
                         <div className="flex flex-wrap gap-2">
                           {formData.social_links.length > 0 ? (
                             formData.social_links.map((link, i) => (
@@ -1089,8 +1096,8 @@ export default function ClientList() {
                             <p className="text-muted-foreground">No social links</p>
                           )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

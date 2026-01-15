@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Camera, Save, Pencil, X, Globe, Linkedin, Twitter, Briefcase, MapPin, Plus, Facebook, Instagram, Youtube } from 'lucide-react';
+import { User, Camera, Save, Pencil, X, Globe, Linkedin, Twitter, Briefcase, MapPin, Plus, Facebook, Instagram, Youtube, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -447,7 +447,15 @@ export default function AssistProfile() {
             {isEditing ? (
               <Input value={profile.portfolio_url} onChange={(e) => setProfile(prev => ({ ...prev, portfolio_url: e.target.value }))} placeholder="https://..." />
             ) : profile.portfolio_url ? (
-              <a href={profile.portfolio_url} target="_blank" rel="noopener noreferrer" className="py-2 text-primary hover:underline block">{profile.portfolio_url}</a>
+              <a 
+                href={profile.portfolio_url.startsWith('http') ? profile.portfolio_url : `https://${profile.portfolio_url}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="py-2 text-primary hover:underline flex items-center gap-2"
+              >
+                {profile.portfolio_url}
+                <ExternalLink className="h-4 w-4" />
+              </a>
             ) : (
               <p className="py-2 text-muted-foreground">-</p>
             )}
@@ -460,8 +468,22 @@ export default function AssistProfile() {
               {profile.social_links.map((link, index) => (
                 <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
                   <Badge variant="outline">{socialPlatforms.find(p => p.value === link.platform)?.label || link.platform}</Badge>
-                  <span className="flex-1 text-sm truncate">{link.url}</span>
-                  {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveSocialLink(index)}><X className="h-4 w-4" /></Button>}
+                  {isEditing ? (
+                    <>
+                      <span className="flex-1 text-sm truncate">{link.url}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveSocialLink(index)}><X className="h-4 w-4" /></Button>
+                    </>
+                  ) : (
+                    <a 
+                      href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 text-sm text-primary hover:underline flex items-center gap-1"
+                    >
+                      {link.url}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
