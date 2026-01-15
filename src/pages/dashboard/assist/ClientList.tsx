@@ -943,9 +943,12 @@ export default function ClientList() {
                           <>
                             <Input
                               value={formData.email}
-                              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                               placeholder="Email"
+                              disabled
                             />
+                            <p className="text-xs text-muted-foreground">
+                              This is the primary login email and cannot be changed, but you can add a second email.
+                            </p>
 
                             {showEmailSecondary && (
                               <div className="space-y-2 pt-2">
