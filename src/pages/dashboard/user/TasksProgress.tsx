@@ -109,7 +109,7 @@ export default function TasksProgress() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
   const [workLogsLoading, setWorkLogsLoading] = useState(false);
-  const [nextTaskNumber, setNextTaskNumber] = useState(100);
+  const [nextTaskNumber, setNextTaskNumber] = useState(101);
   const [businessName, setBusinessName] = useState('');
   const [statusFilters, setStatusFilters] = useState<Task['status'][]>([]);
 
@@ -163,12 +163,12 @@ export default function TasksProgress() {
 
       if (tasksData) {
         setTasks(tasksData as Task[]);
-        // Calculate next task number
+        // Calculate next task number for UI display (DB guarantees uniqueness)
         const maxNum = tasksData.reduce(
           (max, t) => Math.max(max, t.task_number || 0),
-          99
+          100
         );
-        setNextTaskNumber(maxNum + 1);
+        setNextTaskNumber(Math.max(maxNum + 1, 101));
       }
 
       // Fetch assist accounts sorted by name (via SECURITY DEFINER RPC)
@@ -293,7 +293,6 @@ export default function TasksProgress() {
       .from('tasks')
       .insert({
         user_id: user.id,
-        task_number: nextTaskNumber,
         title: formData.title,
         description: formData.description || null,
         type: (formData.type as any) || null,
@@ -318,11 +317,15 @@ export default function TasksProgress() {
     }
 
     if (data) {
-      setNextTaskNumber(nextTaskNumber + 1);
+      const createdTask = data as Task;
+      const createdNum = createdTask.task_number || nextTaskNumber;
+      setNextTaskNumber(createdNum + 1);
+
       toast({
         title: 'Task Created',
-        description: `Task "${formData.title}" (${formatTaskId(nextTaskNumber)}) has been created.`,
+        description: `Task "${formData.title}" (${formatTaskId(createdNum)}) has been created.`,
       });
+
       resetForm();
     }
   };
@@ -527,7 +530,7 @@ export default function TasksProgress() {
                 <div className="space-y-2">
                   <Label>Status</Label>
                   <Input value={statusConfig[derivedStatus].label} disabled className="bg-muted" />
-                  <p className="text-xs text-muted-foreground">Status otomatis mengikuti pilihan Assignee.</p>
+                  <p className="text-xs text-muted-foreground">Status updates automatically after assignee selection.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -872,7 +875,7 @@ export default function TasksProgress() {
                   disabled
                   className="bg-muted"
                 />
-                <p className="text-xs text-muted-foreground">Status otomatis mengikuti pilihan Assignee.</p>
+                <p className="text-xs text-muted-foreground">Status updates automatically after assignee selection.</p>
               </div>
 
               <div className="space-y-2">
