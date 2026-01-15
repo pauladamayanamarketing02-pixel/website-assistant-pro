@@ -109,16 +109,12 @@ export default function TasksProgress() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
   const [workLogsLoading, setWorkLogsLoading] = useState(false);
-  const [workLogStatusFilter, setWorkLogStatusFilter] = useState<Task['status'] | null>(null);
   const [nextTaskNumber, setNextTaskNumber] = useState(100);
   const [businessName, setBusinessName] = useState('');
   const [statusFilter, setStatusFilter] = useState<Task['status'] | null>(null);
 
   const visibleTasks = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;
-  const visibleWorkLogs = workLogStatusFilter
-    ? workLogs.filter((l) => (l.status || '') === workLogStatusFilter)
-    : workLogs;
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -136,6 +132,7 @@ export default function TasksProgress() {
     type: '',
     platform: '',
     deadline: '',
+    status: 'pending' as Task['status'],
   });
 
   useEffect(() => {
@@ -335,6 +332,7 @@ export default function TasksProgress() {
       type: task.type || '',
       platform: task.platform || '',
       deadline: task.deadline ? task.deadline.slice(0, 10) : '',
+      status: task.status,
     });
     setIsEditing(false);
     setViewMode('view');
@@ -363,8 +361,6 @@ export default function TasksProgress() {
 
   // View Task Progress (Task Info + Work Log History)
   if (viewMode === 'view' && selectedTask) {
-    const config = statusConfig[selectedTask.status];
-
     const createdDate = selectedTask.created_at ? selectedTask.created_at.slice(0, 10) : '';
 
     const handleSaveChanges = async () => {
@@ -372,7 +368,7 @@ export default function TasksProgress() {
 
       const nextPlatform = editData.type === 'social_media' ? (editData.platform || null) : null;
 
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('tasks')
         .update({
           title: editData.title,
@@ -380,9 +376,12 @@ export default function TasksProgress() {
           type: (editData.type as any) || null,
           platform: nextPlatform as any,
           deadline: editData.deadline || null,
+          status: editData.status as any,
         })
         .eq('id', selectedTask.id)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('*')
+        .single();
 
       if (error) {
         toast({
@@ -393,6 +392,11 @@ export default function TasksProgress() {
         return;
       }
 
+      if (updated) {
+        setSelectedTask(updated as Task);
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? (updated as Task) : t)));
+      }
+
       toast({
         title: 'Saved',
         description: 'Task updated successfully.',
@@ -400,7 +404,7 @@ export default function TasksProgress() {
       setIsEditing(false);
     };
 
-    const workLogStatuses: Task['status'][] = [
+    const statusOptions: Task['status'][] = [
       'pending',
       'assigned',
       'in_progress',
@@ -432,13 +436,33 @@ export default function TasksProgress() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={config.className}>
-                  {config.label}
-                </Badge>
+                <Select
+                  value={editData.status}
+                  onValueChange={(value) => setEditData((p) => ({ ...p, status: value as Task['status'] }))}
+                  disabled={!isEditing}
+                >
+                  <SelectTrigger className="h-9 w-[190px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {statusConfig[s].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsEditing((v) => !v)}
+                  onClick={() => {
+                    setIsEditing((v) => {
+                      const next = !v;
+                      if (next) setEditData((p) => ({ ...p, status: selectedTask.status }));
+                      return next;
+                    });
+                  }}
                   aria-pressed={isEditing}
                 >
                   <Pencil className="h-4 w-4 mr-2" />
@@ -576,90 +600,74 @@ export default function TasksProgress() {
               <CardDescription>Track your progress on this task</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {workLogStatuses.map((status) => {
-                  const isActive = workLogStatusFilter === status;
-                  const label = statusConfig[status].label;
-                  return (
-                    <Button
-                      key={status}
-                      type="button"
-                      size="sm"
-                      variant={isActive ? 'default' : 'outline'}
-                      onClick={() =>
-                        setWorkLogStatusFilter((prev) => (prev === status ? null : status))
-                      }
-                      className={cn(isActive && 'shadow-glow')}
-                      aria-pressed={isActive}
-                    >
-                      {label}
-                    </Button>
-                  );
-                })}
-              </div>
-
               {workLogsLoading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
                   ))}
                 </div>
-              ) : visibleWorkLogs.length === 0 ? (
+              ) : workLogs.length === 0 ? (
                 <div className="py-10 text-center">
                   <p className="text-sm text-muted-foreground">Belum ada work log.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {visibleWorkLogs.map((log) => {
-                    const status = (log.status as Task['status'] | null) ?? null;
-                    const statusBadge = status ? statusConfig[status] : null;
+                  {workLogs.map((log) => (
+                    <div key={log.id} className="rounded-lg border bg-card p-4">
+                      <div className="grid gap-3">
+                        <div className="text-sm font-medium text-foreground">
+                          {new Date(log.created_at).toLocaleString()}
+                        </div>
 
-                    return (
-                      <div key={log.id} className="rounded-lg border bg-card p-4 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-foreground">
-                              {new Date(log.created_at).toLocaleString()}
-                            </p>
-                            {typeof log.time_spent === 'number' && (
-                              <p className="text-xs text-muted-foreground">Time spent: {log.time_spent} min</p>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Time Spent (minutes)</p>
+                            <p className="text-sm text-foreground">{typeof log.time_spent === 'number' ? log.time_spent : '-'}</p>
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Shared URL</p>
+                            {log.shared_url ? (
+                              <a className="text-sm text-primary hover:underline" href={log.shared_url} target="_blank" rel="noreferrer">
+                                {log.shared_url}
+                              </a>
+                            ) : (
+                              <p className="text-sm text-foreground">-</p>
                             )}
                           </div>
-                          {statusBadge ? (
-                            <Badge variant="outline" className={statusBadge.className}>
-                              {statusBadge.label}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-muted text-muted-foreground">
-                              -
-                            </Badge>
-                          )}
                         </div>
 
-                        {log.work_description && (
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{log.work_description}</p>
-                        )}
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Work Description</p>
+                          <p className="text-sm text-foreground whitespace-pre-wrap">{log.work_description || '-'}</p>
+                        </div>
 
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                          {log.shared_url && (
-                            <a className="text-primary hover:underline" href={log.shared_url} target="_blank" rel="noreferrer">
-                              Shared URL
-                            </a>
-                          )}
-                          {log.file_url && (
-                            <a className="text-primary hover:underline" href={log.file_url} target="_blank" rel="noreferrer">
-                              File
-                            </a>
-                          )}
-                          {log.screenshot_url && (
-                            <a className="text-primary hover:underline" href={log.screenshot_url} target="_blank" rel="noreferrer">
-                              Screenshot
-                            </a>
-                          )}
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Upload File</p>
+                            {log.file_url ? (
+                              <a className="text-sm text-primary hover:underline" href={log.file_url} target="_blank" rel="noreferrer">
+                                Open file
+                              </a>
+                            ) : (
+                              <p className="text-sm text-foreground">-</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Screenshot</p>
+                            {log.screenshot_url ? (
+                              <a className="text-sm text-primary hover:underline" href={log.screenshot_url} target="_blank" rel="noreferrer">
+                                Open screenshot
+                              </a>
+                            ) : (
+                              <p className="text-sm text-foreground">-</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -689,7 +697,7 @@ export default function TasksProgress() {
             <CardDescription>Fill in the details for your new task</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Task ID</Label>
                 <Input
@@ -699,17 +707,7 @@ export default function TasksProgress() {
                 />
                 <p className="text-xs text-muted-foreground">Auto-generated ID</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="title">Task Title *</Label>
-                <Input
-                  id="title"
-                  placeholder="Enter task title..."
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, title: e.target.value }))
-                  }
-                />
-              </div>
+
               <div className="space-y-2">
                 <Label>Business Name</Label>
                 <Input
@@ -719,6 +717,19 @@ export default function TasksProgress() {
                   className="bg-muted"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="title">Task Title *</Label>
+              <Input
+                id="title"
+                placeholder="Enter task title..."
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, title: e.target.value }))
+                }
+                className="w-full"
+              />
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">

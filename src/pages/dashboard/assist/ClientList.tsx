@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Eye, ArrowLeft, Building2, BookOpen, Image, FileText, Package, Settings,
   Copy, Save, Pencil, ImageIcon, Video, FileIcon, Upload, Trash2, Grid, List,
-  User, Lock, Mail, ExternalLink, EyeOff, X, Plus, Check
+  User, Lock, Mail, ExternalLink, EyeOff, X, Plus, Check, Download
 } from 'lucide-react';
 import { RichTextEditor } from '@/components/dashboard/RichTextEditor';
 import { SocialMediaInput, SocialMediaLink } from '@/components/dashboard/SocialMediaInput';
@@ -1548,6 +1548,11 @@ export default function ClientList() {
                                   <Button variant="secondary" size="icon" onClick={() => handleCopyUrl(item.url)}>
                                     <Copy className="h-4 w-4" />
                                   </Button>
+                                  <Button variant="secondary" size="icon" asChild>
+                                    <a href={item.url} download target="_blank" rel="noreferrer">
+                                      <Download className="h-4 w-4" />
+                                    </a>
+                                  </Button>
                                   <Button variant="destructive" size="icon" onClick={() => handleDeleteGallery(item)}>
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -1584,6 +1589,11 @@ export default function ClientList() {
                                     <Button variant="ghost" size="icon" onClick={() => handleCopyUrl(item.url)}>
                                       <Copy className="h-4 w-4" />
                                     </Button>
+                                    <Button variant="ghost" size="icon" asChild>
+                                      <a href={item.url} download target="_blank" rel="noreferrer">
+                                        <Download className="h-4 w-4" />
+                                      </a>
+                                    </Button>
                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteGallery(item)}>
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -1599,9 +1609,20 @@ export default function ClientList() {
                 </Card>
 
                 <Dialog open={!!galleryPreviewItem} onOpenChange={(open) => !open && setGalleryPreviewItem(null)}>
-                  <DialogContent className="max-w-6xl h-[85vh] flex flex-col">
+                  <DialogContent className="max-w-6xl h-[85vh] flex flex-col relative">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setGalleryPreviewItem(null)}
+                      className="absolute right-4 top-4 z-10"
+                      aria-label="Close preview"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+
                     <DialogHeader>
-                      <DialogTitle className="flex items-center justify-between gap-3">
+                      <DialogTitle className="flex items-center justify-between gap-3 pr-12">
                         <span className="truncate">{galleryPreviewItem?.name}</span>
                         <div className="flex items-center gap-2">
                           <Button
@@ -1612,8 +1633,11 @@ export default function ClientList() {
                             <Copy className="h-4 w-4 mr-2" />
                             Copy URL
                           </Button>
-                          <Button variant="outline" size="icon" onClick={() => setGalleryPreviewItem(null)}>
-                            <X className="h-4 w-4" />
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={galleryPreviewItem?.url || '#'} download target="_blank" rel="noreferrer">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </a>
                           </Button>
                         </div>
                       </DialogTitle>
