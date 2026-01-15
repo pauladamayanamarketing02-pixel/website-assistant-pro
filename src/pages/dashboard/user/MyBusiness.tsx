@@ -692,8 +692,13 @@ export default function MyBusiness() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="john@example.com"
-                  disabled={!isEditing}
+                  disabled
                 />
+                {isEditing && (
+                  <p className="text-xs text-muted-foreground">
+                    This is the primary login email and cannot be changed, but you can add a second email.
+                  </p>
+                )}
 
                 {showEmailSecondary && (
                   <div className="space-y-2 pt-2">
