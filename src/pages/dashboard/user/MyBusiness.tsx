@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
-import { Save, Building2, FileText, User, Users, ArrowLeft, Pencil, X, Plus } from 'lucide-react';
+import { Save, Building2, FileText, User, Users, ArrowLeft, Pencil, X, Plus, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -838,32 +839,82 @@ export default function MyBusiness() {
 
             <div className="space-y-2">
               <Label htmlFor="website">Website URL</Label>
-              <Input
-                id="website"
-                value={formData.website_url}
-                onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                placeholder="https://yourbusiness.com"
-                disabled={!isEditing}
-              />
+              {isEditing ? (
+                <Input
+                  id="website"
+                  value={formData.website_url}
+                  onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                  placeholder="https://yourbusiness.com"
+                />
+              ) : formData.website_url ? (
+                <a 
+                  href={formData.website_url.startsWith('http') ? formData.website_url : `https://${formData.website_url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium py-2 text-primary hover:underline flex items-center gap-2"
+                >
+                  {formData.website_url}
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              ) : (
+                <p className="font-medium py-2">-</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="gmb">Google Business Profile Link</Label>
-              <Input
-                id="gmb"
-                value={formData.gmb_link}
-                onChange={(e) => setFormData({ ...formData, gmb_link: e.target.value })}
-                placeholder="https://g.page/..."
-                disabled={!isEditing}
-              />
+              {isEditing ? (
+                <Input
+                  id="gmb"
+                  value={formData.gmb_link}
+                  onChange={(e) => setFormData({ ...formData, gmb_link: e.target.value })}
+                  placeholder="https://g.page/..."
+                />
+              ) : formData.gmb_link ? (
+                <a 
+                  href={formData.gmb_link.startsWith('http') ? formData.gmb_link : `https://${formData.gmb_link}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium py-2 text-primary hover:underline flex items-center gap-2"
+                >
+                  {formData.gmb_link}
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              ) : (
+                <p className="font-medium py-2">-</p>
+              )}
             </div>
 
             {/* Social Media Links */}
-            <div className={!isEditing ? 'pointer-events-none opacity-70' : ''}>
-              <SocialMediaInput
-                links={formData.social_media_links}
-                onChange={(links) => setFormData({ ...formData, social_media_links: links })}
-              />
+            <div className="space-y-2">
+              <Label>Social Media Links</Label>
+              {isEditing ? (
+                <SocialMediaInput
+                  links={formData.social_media_links}
+                  onChange={(links) => setFormData({ ...formData, social_media_links: links })}
+                />
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {formData.social_media_links.length > 0 ? (
+                    formData.social_media_links.map((link, index) => (
+                      <a
+                        key={index}
+                        href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
+                      >
+                        <Badge variant="secondary" className="capitalize">
+                          {link.platform}
+                        </Badge>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">No social media links added</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {isEditing && (
