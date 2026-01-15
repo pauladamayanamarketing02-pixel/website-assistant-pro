@@ -111,9 +111,11 @@ export default function TasksProgress() {
   const [workLogsLoading, setWorkLogsLoading] = useState(false);
   const [nextTaskNumber, setNextTaskNumber] = useState(100);
   const [businessName, setBusinessName] = useState('');
-  const [statusFilter, setStatusFilter] = useState<Task['status'] | null>(null);
+  const [statusFilters, setStatusFilters] = useState<Task['status'][]>([]);
 
-  const visibleTasks = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;
+  const visibleTasks = statusFilters.length
+    ? tasks.filter((t) => statusFilters.includes(t.status))
+    : tasks;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -943,17 +945,21 @@ export default function TasksProgress() {
       </div>
 
       {/* Summary (click to filter) */}
-      <div className="grid grid-cols-3 gap-4">
-        {(['assigned', 'in_progress', 'ready_for_review'] as const).map((status) => {
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {(['pending', 'assigned', 'in_progress', 'ready_for_review'] as const).map((status) => {
           const config = statusConfig[status];
           const count = tasks.filter((t) => t.status === status).length;
-          const isActive = statusFilter === status;
+          const isActive = statusFilters.includes(status);
 
           return (
             <button
               key={status}
               type="button"
-              onClick={() => setStatusFilter((prev) => (prev === status ? null : status))}
+              onClick={() =>
+                setStatusFilters((prev) =>
+                  prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+                )
+              }
               className="text-left"
               aria-pressed={isActive}
               aria-label={`Filter tasks: ${config.label}`}
@@ -995,7 +1001,7 @@ export default function TasksProgress() {
             </p>
             <div className="flex items-center justify-center gap-3">
               {tasks.length !== 0 && (
-                <Button variant="outline" onClick={() => setStatusFilter(null)}>
+                <Button variant="outline" onClick={() => setStatusFilters([])}>
                   Show All Tasks
                 </Button>
               )}
@@ -1009,7 +1015,11 @@ export default function TasksProgress() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>{statusFilter ? `${statusConfig[statusFilter].label} Tasks` : 'All Tasks'}</CardTitle>
+            <CardTitle>
+              {statusFilters.length
+                ? `${statusFilters.map((s) => statusConfig[s].label).join(', ')} Tasks`
+                : 'All Tasks'}
+            </CardTitle>
             <CardDescription>Tasks created for your Marketing Assist</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
