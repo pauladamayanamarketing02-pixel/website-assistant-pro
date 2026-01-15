@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, X, ArrowLeft, Eye, FileText, Link as LinkIcon, Image, Camera } from 'lucide-react';
+import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, X, ArrowLeft, Eye, FileText, Link as LinkIcon, Image, Camera, User } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ interface Task {
   task_number: number | null;
   title: string;
   description: string | null;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: 'pending' | 'assigned' | 'in_progress' | 'ready_for_review' | 'completed';
   type: 'blog' | 'social_media' | 'email_marketing' | 'ads' | 'others' | null;
   platform: 'facebook' | 'instagram' | 'x' | 'threads' | 'linkedin' | null;
   file_url: string | null;
@@ -63,21 +63,31 @@ interface AssistUser {
   email: string;
 }
 
-const statusConfig = {
+const statusConfig: Record<Task['status'], { label: string; icon: any; className: string }> = {
   pending: {
     label: 'Pending',
     icon: Clock,
     className: 'bg-muted text-muted-foreground',
+  },
+  assigned: {
+    label: 'Assigned',
+    icon: User,
+    className: 'bg-secondary text-secondary-foreground',
   },
   in_progress: {
     label: 'In Progress',
     icon: AlertCircle,
     className: 'bg-primary/10 text-primary',
   },
-  completed: {
-    label: 'Completed',
+  ready_for_review: {
+    label: 'Ready for Review',
     icon: CheckCircle,
     className: 'bg-accent/10 text-accent',
+  },
+  completed: {
+    label: 'Completed',
+    icon: CheckSquare,
+    className: 'bg-muted text-muted-foreground',
   },
 };
 
@@ -473,7 +483,7 @@ const fetchAssistUsers = async () => {
 
   // Task View Mode with Work Log
   if (viewMode === 'view' && selectedTask) {
-    const config = statusConfig[selectedTask.status];
+    const config = statusConfig[selectedTask.status] ?? statusConfig.pending;
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
