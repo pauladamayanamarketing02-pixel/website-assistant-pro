@@ -557,6 +557,48 @@ export type Database = {
         }
         Relationships: []
       }
+      work_log_delete_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          owner_id: string
+          reason: string
+          requester_id: string
+          status: string
+          task_id: string
+          updated_at: string
+          work_log_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          owner_id: string
+          reason: string
+          requester_id: string
+          status?: string
+          task_id: string
+          updated_at?: string
+          work_log_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          owner_id?: string
+          reason?: string
+          requester_id?: string
+          status?: string
+          task_id?: string
+          updated_at?: string
+          work_log_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
