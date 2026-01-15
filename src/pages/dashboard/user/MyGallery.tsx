@@ -1,9 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { 
-  ImageIcon, Video, FileIcon, Upload, Trash2, 
-  MoreVertical, Download, Eye, Grid, List, X, Copy, Link 
+import {
+  ImageIcon,
+  Video,
+  FileIcon,
+  Upload,
+  Trash2,
+  MoreVertical,
+  Download,
+  Eye,
+  Grid,
+  List,
+  Copy,
+  Link,
+  FileText,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -12,12 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +45,8 @@ export default function MyGallery() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedTab, setSelectedTab] = useState('all');
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
+  const [textPreview, setTextPreview] = useState<string>('');
+  const [loadingTextPreview, setLoadingTextPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
@@ -47,7 +55,7 @@ export default function MyGallery() {
     const fetchGallery = async () => {
       if (!user) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_gallery')
         .select('*')
         .eq('user_id', user.id)
@@ -62,6 +70,27 @@ export default function MyGallery() {
     fetchGallery();
   }, [user]);
 
+  // Load text preview when opening modal (txt/md/csv/json/log)
+  useEffect(() => {
+    const kind = getPreviewKind(previewItem);
+    if (!previewItem || kind !== 'text') {
+      setTextPreview('');
+      setLoadingTextPreview(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoadingTextPreview(true);
+
+    fetch(previewItem.url, { signal: controller.signal })
+      .then((r) => r.text())
+      .then((t) => setTextPreview(t))
+      .catch(() => setTextPreview(''))
+      .finally(() => setLoadingTextPreview(false));
+
+    return () => controller.abort();
+  }, [previewItem]);
+
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !user) return;
@@ -75,9 +104,8 @@ export default function MyGallery() {
         ? 'video' 
         : 'file';
 
-      // Upload to Supabase Storage
       const filePath = `${user.id}/${Date.now()}-${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('user-files')
         .upload(filePath, file);
 
@@ -96,7 +124,7 @@ export default function MyGallery() {
         .getPublicUrl(filePath);
 
       // Save to database
-      const { data: dbData, error: dbError } = await supabase
+      const { data: dbData } = await supabase
         .from('user_gallery')
         .insert({
           user_id: user.id,
@@ -167,6 +195,26 @@ export default function MyGallery() {
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   };
 
+  const getExtension = (nameOrUrl: string) => {
+    const clean = nameOrUrl.split('?')[0].split('#')[0];
+    const parts = clean.split('.');
+    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+  };
+
+  const getPreviewKind = (item: MediaItem | null) => {
+    if (!item) return 'unknown' as const;
+    if (item.type === 'image') return 'image' as const;
+    if (item.type === 'video') return 'video' as const;
+
+    const ext = getExtension(item.name || item.url);
+
+    if (ext === 'pdf') return 'pdf' as const;
+    if (['txt', 'md', 'csv', 'json', 'log'].includes(ext)) return 'text' as const;
+    if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) return 'office' as const;
+
+    return 'download' as const;
+  };
+
   const filteredMedia = media.filter((item) => {
     if (selectedTab === 'all') return true;
     return item.type === selectedTab;
@@ -221,7 +269,7 @@ export default function MyGallery() {
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*,video/*,.pdf,.doc,.docx"
+            accept="*/*"
             onChange={handleUpload}
             className="hidden"
           />
@@ -356,39 +404,114 @@ export default function MyGallery() {
       </Tabs>
 
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>{previewItem?.name}</span>
-              <Button 
-                variant="outline" 
+        <DialogContent className="w-[95vw] max-w-6xl h-[90vh] p-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-6 py-4 border-b">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold truncate">{previewItem?.name}</h2>
+              <p className="text-sm text-muted-foreground truncate">
+                {previewItem ? formatSize(previewItem.size) : ''}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => previewItem && handleCopyUrl(previewItem.url)}
               >
                 <Copy className="h-4 w-4 mr-2" />
                 Copy URL
               </Button>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            {previewItem?.type === 'image' ? (
-              <img
-                src={previewItem.url}
-                alt={previewItem.name}
-                className="w-full rounded-lg"
-              />
-            ) : previewItem?.type === 'video' ? (
-              <video
-                src={previewItem.url}
-                controls
-                className="w-full rounded-lg"
-              />
-            ) : (
-              <div className="text-center py-12 bg-muted rounded-lg">
-                <FileIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Preview not available for this file type</p>
-              </div>
-            )}
+              <Button variant="outline" size="sm" asChild>
+                <a href={previewItem?.url || '#'} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </a>
+              </Button>
+            </div>
+          </div>
+
+          <div className="h-[calc(90vh-73px)] bg-background">
+            {(() => {
+              const kind = getPreviewKind(previewItem);
+              if (!previewItem) return null;
+
+              if (kind === 'image') {
+                return (
+                  <div className="h-full w-full p-6 overflow-auto">
+                    <img
+                      src={previewItem.url}
+                      alt={previewItem.name}
+                      loading="lazy"
+                      className="max-h-full mx-auto rounded-lg"
+                    />
+                  </div>
+                );
+              }
+
+              if (kind === 'video') {
+                return (
+                  <div className="h-full w-full p-6">
+                    <video
+                      src={previewItem.url}
+                      controls
+                      className="w-full h-full rounded-lg"
+                    />
+                  </div>
+                );
+              }
+
+              if (kind === 'pdf') {
+                return (
+                  <iframe
+                    title={previewItem.name}
+                    src={previewItem.url}
+                    className="w-full h-full"
+                  />
+                );
+              }
+
+              if (kind === 'office') {
+                const viewerUrl = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(previewItem.url)}`;
+                return <iframe title={previewItem.name} src={viewerUrl} className="w-full h-full" />;
+              }
+
+              if (kind === 'text') {
+                return (
+                  <div className="h-full p-6 overflow-auto">
+                    {loadingTextPreview ? (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        Loading preview...
+                      </div>
+                    ) : textPreview ? (
+                      <pre className="whitespace-pre-wrap break-words text-sm leading-relaxed font-mono">
+                        {textPreview}
+                      </pre>
+                    ) : (
+                      <div className="text-center py-12 bg-muted rounded-lg">
+                        <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">Tidak bisa memuat preview teks.</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="h-full flex items-center justify-center p-6">
+                  <div className="text-center py-12 bg-muted rounded-lg w-full">
+                    <FileIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Preview tidak tersedia untuk tipe file ini.</p>
+                    <div className="mt-4">
+                      <Button asChild>
+                        <a href={previewItem.url} target="_blank" rel="noopener noreferrer">
+                          Buka / Download
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>
