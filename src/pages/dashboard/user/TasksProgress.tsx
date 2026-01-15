@@ -133,6 +133,7 @@ export default function TasksProgress() {
     platform: '',
     deadline: '',
     status: 'pending' as Task['status'],
+    assignee: 'none' as string, // assist user id or 'none'
   });
 
   useEffect(() => {
@@ -333,6 +334,7 @@ export default function TasksProgress() {
       platform: task.platform || '',
       deadline: task.deadline ? task.deadline.slice(0, 10) : '',
       status: task.status,
+      assignee: task.assigned_to || 'none',
     });
     setIsEditing(false);
     setViewMode('view');
@@ -363,10 +365,47 @@ export default function TasksProgress() {
   if (viewMode === 'view' && selectedTask) {
     const createdDate = selectedTask.created_at ? selectedTask.created_at.slice(0, 10) : '';
 
+    const requiresAssignee = editData.status !== 'pending';
+    const hasSelectedAssignee = !!editData.assignee && editData.assignee !== 'none';
+
+    // Only allow editing of the rest of the fields after an assignee is chosen (when status is not pending)
+    const canEditDetails = isEditing && (!requiresAssignee || hasSelectedAssignee);
+
+    const handleStatusChange = (value: string) => {
+      const nextStatus = value as Task['status'];
+
+      if (nextStatus === 'pending') {
+        // Pending must always have no assignee
+        setEditData((p) => ({ ...p, status: nextStatus, assignee: 'none' }));
+        return;
+      }
+
+      // For any non-pending status, assignee becomes mandatory before other fields unlock
+      if (!editData.assignee || editData.assignee === 'none') {
+        toast({
+          variant: 'destructive',
+          title: 'Please select an assignee first',
+          description: 'Select an assignee to enable the other fields.',
+        });
+      }
+
+      setEditData((p) => ({ ...p, status: nextStatus }));
+    };
+
     const handleSaveChanges = async () => {
       if (!user) return;
 
+      if (requiresAssignee && !hasSelectedAssignee) {
+        toast({
+          variant: 'destructive',
+          title: 'Please select an assignee first',
+          description: 'Assignee is required for this status.',
+        });
+        return;
+      }
+
       const nextPlatform = editData.type === 'social_media' ? (editData.platform || null) : null;
+      const nextAssignedTo = requiresAssignee && hasSelectedAssignee ? editData.assignee : null;
 
       const { data: updated, error } = await supabase
         .from('tasks')
@@ -377,6 +416,7 @@ export default function TasksProgress() {
           platform: nextPlatform as any,
           deadline: editData.deadline || null,
           status: editData.status as any,
+          assigned_to: nextAssignedTo,
         })
         .eq('id', selectedTask.id)
         .eq('user_id', user.id)
@@ -438,7 +478,7 @@ export default function TasksProgress() {
               <div className="flex items-center gap-2">
                 <Select
                   value={editData.status}
-                  onValueChange={(value) => setEditData((p) => ({ ...p, status: value as Task['status'] }))}
+                  onValueChange={handleStatusChange}
                   disabled={!isEditing}
                 >
                   <SelectTrigger className="h-9 w-[190px]">
@@ -459,7 +499,17 @@ export default function TasksProgress() {
                   onClick={() => {
                     setIsEditing((v) => {
                       const next = !v;
-                      if (next) setEditData((p) => ({ ...p, status: selectedTask.status }));
+                      if (next) {
+                        setEditData({
+                          title: selectedTask.title,
+                          description: selectedTask.description || '',
+                          type: selectedTask.type || '',
+                          platform: selectedTask.platform || '',
+                          deadline: selectedTask.deadline ? selectedTask.deadline.slice(0, 10) : '',
+                          status: selectedTask.status,
+                          assignee: selectedTask.assigned_to || 'none',
+                        });
+                      }
                       return next;
                     });
                   }}
@@ -482,7 +532,7 @@ export default function TasksProgress() {
                 <Input
                   id="edit-title"
                   value={editData.title}
-                  disabled={!isEditing}
+                  disabled={!canEditDetails}
                   onChange={(e) => setEditData((p) => ({ ...p, title: e.target.value }))}
                 />
               </div>
@@ -494,7 +544,26 @@ export default function TasksProgress() {
                 </div>
                 <div className="space-y-2">
                   <Label>Assignee</Label>
-                  <Input value={getAssistName(selectedTask.assigned_to)} disabled className="bg-muted" />
+                  <Select
+                    value={isEditing ? editData.assignee : (selectedTask.assigned_to || 'none')}
+                    onValueChange={(value) => setEditData((p) => ({ ...p, assignee: value }))}
+                    disabled={!isEditing || !requiresAssignee}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select assignee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {assists.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!requiresAssignee && (
+                    <p className="text-xs text-muted-foreground">Assignee is disabled while status is Pending.</p>
+                  )}
                 </div>
               </div>
 
@@ -504,7 +573,7 @@ export default function TasksProgress() {
                   <Select
                     value={editData.type}
                     onValueChange={(value) => setEditData((p) => ({ ...p, type: value, platform: '' }))}
-                    disabled={!isEditing}
+                    disabled={!canEditDetails}
                   >
                     <SelectTrigger id="edit-type">
                       <SelectValue placeholder="Select type" />
@@ -524,7 +593,7 @@ export default function TasksProgress() {
                   <Select
                     value={editData.platform}
                     onValueChange={(value) => setEditData((p) => ({ ...p, platform: value }))}
-                    disabled={!isEditing || editData.type !== 'social_media'}
+                    disabled={!canEditDetails || editData.type !== 'social_media'}
                   >
                     <SelectTrigger id="edit-platform">
                       <SelectValue placeholder="Select platform" />
@@ -551,7 +620,7 @@ export default function TasksProgress() {
                     id="edit-deadline"
                     type="date"
                     value={editData.deadline}
-                    disabled={!isEditing}
+                    disabled={!canEditDetails}
                     onChange={(e) => setEditData((p) => ({ ...p, deadline: e.target.value }))}
                   />
                 </div>
@@ -562,7 +631,7 @@ export default function TasksProgress() {
                 <Textarea
                   id="edit-description"
                   value={editData.description}
-                  disabled={!isEditing}
+                  disabled={!canEditDetails}
                   onChange={(e) => setEditData((p) => ({ ...p, description: e.target.value }))}
                   rows={5}
                 />
