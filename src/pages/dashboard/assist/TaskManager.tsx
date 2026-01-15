@@ -92,12 +92,8 @@ const statusConfig: Record<Task['status'], { label: string; icon: any; className
 };
 
 const workLogStatusOptions = [
-  { value: 'assigned', label: 'Assigned' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'ready_for_review', label: 'Ready for Review' },
-  { value: 'on_hold', label: 'On Hold' },
-  { value: 'waiting_on_client', label: 'Waiting on Client' },
-  { value: 'completed', label: 'Completed' },
 ];
 
 const typeLabels: Record<string, string> = {
@@ -134,6 +130,7 @@ export default function TaskManager() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
   const [sortByAssist, setSortByAssist] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | Task['status']>('all');
   const [nextTaskNumber, setNextTaskNumber] = useState(100);
   const [assistName, setAssistName] = useState('');
   
@@ -153,7 +150,7 @@ export default function TaskManager() {
     timeSpent: '',
     workDescription: '',
     sharedUrl: '',
-    status: 'in_progress',
+    status: 'assigned',
   });
   const [workLogFile, setWorkLogFile] = useState<File | null>(null);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
@@ -164,6 +161,11 @@ export default function TaskManager() {
     fetchClients();
     fetchAssistUsers();
   }, []);
+
+  // Lock the assignee filter to the currently logged-in assist (disabled in UI)
+  useEffect(() => {
+    if (user?.id) setSortByAssist(user.id);
+  }, [user?.id]);
 
 const fetchTasks = async () => {
     const { data } = await supabase
@@ -291,7 +293,7 @@ const fetchAssistUsers = async () => {
       timeSpent: '',
       workDescription: '',
       sharedUrl: '',
-      status: 'in_progress',
+      status: 'assigned',
     });
     setWorkLogFile(null);
     setScreenshotFile(null);
@@ -458,7 +460,9 @@ const fetchAssistUsers = async () => {
 
   // Sort and filter tasks
   const filteredTasks = tasks
-    .filter(task => !sortByAssist || task.assigned_to === sortByAssist)
+    // Force filter by current assist account (as requested)
+    .filter((task) => (!sortByAssist ? true : task.assigned_to === sortByAssist))
+    .filter((task) => (filterStatus === 'all' ? true : task.status === filterStatus))
     .sort((a, b) => {
       if (sortByAssist) {
         return getAssigneeName(a.assigned_to).localeCompare(getAssigneeName(b.assigned_to));
@@ -518,13 +522,7 @@ const fetchAssistUsers = async () => {
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground">Task Title</Label>
-                <Input
-                  value={selectedTask.title}
-                  onChange={(e) => {
-                    const updated = { ...selectedTask, title: e.target.value };
-                    setSelectedTask(updated);
-                  }}
-                />
+                <Input value={selectedTask.title} disabled className="bg-muted" />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -537,16 +535,27 @@ const fetchAssistUsers = async () => {
                   <p className="font-medium">{getAssigneeName(selectedTask.assigned_to)}</p>
                 </div>
                 <div>
+                  <Label className="text-muted-foreground">Created</Label>
+                  <Input
+                    value={new Date(selectedTask.created_at).toLocaleString()}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Deadline</Label>
+                  <Input
+                    type="date"
+                    value={selectedTask.deadline ? selectedTask.deadline.split('T')[0] : ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div>
                   <Label className="text-muted-foreground">Type</Label>
-                  <Select
-                    value={selectedTask.type || ''}
-                    onValueChange={(value) => {
-                      const updated = { ...selectedTask, type: value as Task['type'], platform: value === 'social_media' ? selectedTask.platform : null };
-                      setSelectedTask(updated);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
+                  <Select value={selectedTask.type || ''} disabled>
+                    <SelectTrigger className="bg-muted">
+                      <SelectValue placeholder="-" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="blog">Blog</SelectItem>
@@ -560,15 +569,9 @@ const fetchAssistUsers = async () => {
                 {selectedTask.type === 'social_media' && (
                   <div>
                     <Label className="text-muted-foreground">Platform</Label>
-                    <Select
-                      value={selectedTask.platform || ''}
-                      onValueChange={(value) => {
-                        const updated = { ...selectedTask, platform: value as Task['platform'] };
-                        setSelectedTask(updated);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select platform" />
+                    <Select value={selectedTask.platform || ''} disabled>
+                      <SelectTrigger className="bg-muted">
+                        <SelectValue placeholder="-" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="facebook">Facebook</SelectItem>
@@ -580,29 +583,11 @@ const fetchAssistUsers = async () => {
                     </Select>
                   </div>
                 )}
-                <div>
-                  <Label className="text-muted-foreground">Deadline</Label>
-                  <Input
-                    type="date"
-                    value={selectedTask.deadline ? selectedTask.deadline.split('T')[0] : ''}
-                    onChange={(e) => {
-                      const updated = { ...selectedTask, deadline: e.target.value || null } as Task;
-                      setSelectedTask(updated);
-                    }}
-                  />
-                </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground">Description</Label>
-                <Textarea
-                  value={selectedTask.description || ''}
-                  onChange={(e) => {
-                    const updated = { ...selectedTask, description: e.target.value };
-                    setSelectedTask(updated);
-                  }}
-                  rows={4}
-                />
+                <Textarea value={selectedTask.description || ''} disabled className="bg-muted" rows={4} />
               </div>
 
               {selectedTask.file_url && (
@@ -620,36 +605,8 @@ const fetchAssistUsers = async () => {
               )}
 
               <div className="flex justify-end">
-                <Button
-                  onClick={async () => {
-                    try {
-                      const { error } = await supabase
-                        .from('tasks')
-                        .update({
-                          title: selectedTask.title,
-                          description: selectedTask.description,
-                          type: selectedTask.type,
-                          platform: selectedTask.type === 'social_media' ? selectedTask.platform : null,
-                          deadline: selectedTask.deadline,
-                        })
-                        .eq('id', selectedTask.id);
-
-                      if (error) throw error;
-
-                      toast({
-                        title: 'Task Updated',
-                        description: 'Task information has been updated.',
-                      });
-                    } catch (error: any) {
-                      toast({
-                        variant: 'destructive',
-                        title: 'Error',
-                        description: error.message || 'Failed to update task.',
-                      });
-                    }
-                  }}
-                >
-                  Save Changes
+                <Button disabled variant="secondary">
+                  Read-only
                 </Button>
               </div>
             </CardContent>
@@ -741,14 +698,17 @@ const fetchAssistUsers = async () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <Select 
-                    value={workLogForm.status} 
-                    onValueChange={(value) => setWorkLogForm(prev => ({ ...prev, status: value }))}
+                  <Select
+                    value={workLogForm.status}
+                    onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, status: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="assigned" disabled>
+                        Assigned
+                      </SelectItem>
                       {workLogStatusOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
@@ -1039,22 +999,33 @@ const fetchAssistUsers = async () => {
         </Button>
       </div>
 
-      {/* Filter by Assist */}
-      <div className="flex items-center gap-4">
-        <Label>Filter by Assignee:</Label>
-        <Select value={sortByAssist || "all"} onValueChange={(value) => setSortByAssist(value === "all" ? "" : value)}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="All Assignees" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Assignees</SelectItem>
-            {assistUsers.map((assist) => (
-              <SelectItem key={assist.id} value={assist.id}>
-                {assist.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Filters */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
+        <div className="flex items-center gap-3">
+          <Label>Assignee:</Label>
+          <Input
+            value={assistName || (user?.email ?? '')}
+            disabled
+            className="w-[240px] bg-muted"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Label>Status:</Label>
+          <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as any)}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="assigned">Assigned</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="ready_for_review">Ready for Review</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card>
