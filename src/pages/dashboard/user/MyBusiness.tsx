@@ -326,6 +326,9 @@ export default function MyBusiness() {
 
       const fullPhone = `${formData.phoneCode} ${formData.phoneNumber}`.trim();
 
+      // Filter out empty URLs before saving
+      const validSocialLinks = formData.social_media_links.filter(link => link.url && link.url.trim() !== '');
+
       const { error } = await supabase
         .from('businesses')
         .update({
@@ -336,7 +339,7 @@ export default function MyBusiness() {
           business_address: formData.business_address || null,
           website_url: formData.website_url, // Allow empty string
           gmb_link: formData.gmb_link || null,
-          social_links: formData.social_media_links as any,
+          social_links: validSocialLinks as any,
           hours: formData.hours as any,
         })
         .eq('user_id', user.id);
@@ -886,14 +889,14 @@ export default function MyBusiness() {
             </div>
 
             {/* Social Media Links */}
-            <div className="space-y-2">
-              <Label>Social Media Links</Label>
-              {isEditing ? (
-                <SocialMediaInput
-                  links={formData.social_media_links}
-                  onChange={(links) => setFormData({ ...formData, social_media_links: links })}
-                />
-              ) : (
+            {isEditing ? (
+              <SocialMediaInput
+                links={formData.social_media_links}
+                onChange={(links) => setFormData({ ...formData, social_media_links: links })}
+              />
+            ) : (
+              <div className="space-y-2">
+                <Label>Social Media Links</Label>
                 <div className="flex flex-wrap gap-2">
                   {formData.social_media_links.length > 0 ? (
                     formData.social_media_links.map((link, index) => (
@@ -914,8 +917,8 @@ export default function MyBusiness() {
                     <p className="text-muted-foreground">No social media links added</p>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {isEditing && (
               <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
