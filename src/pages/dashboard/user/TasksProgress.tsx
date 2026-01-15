@@ -39,6 +39,19 @@ interface AssistAccount {
   name: string;
 }
 
+interface WorkLog {
+  id: string;
+  task_id: string;
+  user_id: string;
+  created_at: string;
+  status: string | null;
+  time_spent: number | null;
+  work_description: string | null;
+  file_url: string | null;
+  screenshot_url: string | null;
+  shared_url: string | null;
+}
+
 const statusConfig: Record<Task['status'], { label: string; icon: any; className: string }> = {
   pending: {
     label: 'Pending',
@@ -94,11 +107,17 @@ export default function TasksProgress() {
   const [uploading, setUploading] = useState(false);
   const [assists, setAssists] = useState<AssistAccount[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
+  const [workLogsLoading, setWorkLogsLoading] = useState(false);
+  const [workLogStatusFilter, setWorkLogStatusFilter] = useState<Task['status'] | null>(null);
   const [nextTaskNumber, setNextTaskNumber] = useState(100);
   const [businessName, setBusinessName] = useState('');
   const [statusFilter, setStatusFilter] = useState<Task['status'] | null>(null);
 
   const visibleTasks = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;
+  const visibleWorkLogs = workLogStatusFilter
+    ? workLogs.filter((l) => (l.status || '') === workLogStatusFilter)
+    : workLogs;
   
   const [formData, setFormData] = useState({
     title: '',
@@ -166,6 +185,25 @@ export default function TasksProgress() {
 
     fetchData();
   }, [user]);
+
+  // Fetch work log history for selected task
+  useEffect(() => {
+    const fetchWorkLogs = async () => {
+      if (!user || !selectedTask || viewMode !== 'view') return;
+      setWorkLogsLoading(true);
+
+      const { data, error } = await supabase
+        .from('task_work_logs')
+        .select('*')
+        .eq('task_id', selectedTask.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) setWorkLogs(data as WorkLog[]);
+      setWorkLogsLoading(false);
+    };
+
+    fetchWorkLogs();
+  }, [user, selectedTask?.id, viewMode]);
 
   // Real-time subscription for tasks
   useEffect(() => {
@@ -323,7 +361,7 @@ export default function TasksProgress() {
     );
   }
 
-  // View Task Progress (details + optional edit)
+  // View Task Progress (Task Info + Work Log History)
   if (viewMode === 'view' && selectedTask) {
     const config = statusConfig[selectedTask.status];
 
@@ -362,6 +400,14 @@ export default function TasksProgress() {
       setIsEditing(false);
     };
 
+    const workLogStatuses: Task['status'][] = [
+      'pending',
+      'assigned',
+      'in_progress',
+      'ready_for_review',
+      'completed',
+    ];
+
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4">
@@ -374,148 +420,251 @@ export default function TasksProgress() {
               <p className="text-muted-foreground">Update the core details of this task</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">Sortir &gt;&gt;&gt;</span>
-            <Badge variant="outline" className={config.className}>
-              {config.label}
-            </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing((v) => !v)}
-              aria-pressed={isEditing}
-            >
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          </div>
         </div>
 
-        <Card>
-          <CardContent className="pt-6 space-y-6">
-            <div className="space-y-2">
-              <Label>Task ID</Label>
-              <Input value={formatTaskId(selectedTask.task_number || 0)} disabled className="bg-muted font-mono" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-title">Task Title</Label>
-              <Input
-                id="edit-title"
-                value={editData.title}
-                disabled={!isEditing}
-                onChange={(e) => setEditData((p) => ({ ...p, title: e.target.value }))}
-              />
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Business Name</Label>
-                <Input value={businessName || ''} disabled className="bg-muted" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Task Info */}
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle>Task Info</CardTitle>
+                <CardDescription>Update the core details of this task</CardDescription>
               </div>
-              <div className="space-y-2">
-                <Label>Assignee</Label>
-                <Input value={getAssistName(selectedTask.assigned_to)} disabled className="bg-muted" />
-              </div>
-            </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-type">Type</Label>
-                <Select
-                  value={editData.type}
-                  onValueChange={(value) =>
-                    setEditData((p) => ({ ...p, type: value, platform: '' }))
-                  }
-                  disabled={!isEditing}
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={config.className}>
+                  {config.label}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing((v) => !v)}
+                  aria-pressed={isEditing}
                 >
-                  <SelectTrigger id="edit-type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="blog">Blog</SelectItem>
-                    <SelectItem value="social_media">Social Media</SelectItem>
-                    <SelectItem value="email_marketing">Email Marketing</SelectItem>
-                    <SelectItem value="ads">Ads</SelectItem>
-                    <SelectItem value="others">Others</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Task ID</Label>
+                <Input value={formatTaskId(selectedTask.task_number || 0)} disabled className="bg-muted font-mono" />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-platform">Platform</Label>
-                <Select
-                  value={editData.platform}
-                  onValueChange={(value) => setEditData((p) => ({ ...p, platform: value }))}
-                  disabled={!isEditing || editData.type !== 'social_media'}
-                >
-                  <SelectTrigger id="edit-platform">
-                    <SelectValue placeholder="Select platform" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="facebook">Facebook</SelectItem>
-                    <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="x">X (Twitter)</SelectItem>
-                    <SelectItem value="threads">Threads</SelectItem>
-                    <SelectItem value="linkedin">LinkedIn</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Created</Label>
-                <Input type="date" value={createdDate} disabled className="bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-deadline">Deadline</Label>
+                <Label htmlFor="edit-title">Task Title</Label>
                 <Input
-                  id="edit-deadline"
-                  type="date"
-                  value={editData.deadline}
+                  id="edit-title"
+                  value={editData.title}
                   disabled={!isEditing}
-                  onChange={(e) => setEditData((p) => ({ ...p, deadline: e.target.value }))}
+                  onChange={(e) => setEditData((p) => ({ ...p, title: e.target.value }))}
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editData.description}
-                disabled={!isEditing}
-                onChange={(e) => setEditData((p) => ({ ...p, description: e.target.value }))}
-                rows={5}
-              />
-            </div>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Business Name</Label>
+                  <Input value={businessName || ''} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Assignee</Label>
+                  <Input value={getAssistName(selectedTask.assigned_to)} disabled className="bg-muted" />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label>File</Label>
-              {selectedTask.file_url ? (
-                <a
-                  href={selectedTask.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  <Upload className="h-4 w-4" />
-                  View File
-                </a>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-type">Type</Label>
+                  <Select
+                    value={editData.type}
+                    onValueChange={(value) => setEditData((p) => ({ ...p, type: value, platform: '' }))}
+                    disabled={!isEditing}
+                  >
+                    <SelectTrigger id="edit-type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="blog">Blog</SelectItem>
+                      <SelectItem value="social_media">Social Media</SelectItem>
+                      <SelectItem value="email_marketing">Email Marketing</SelectItem>
+                      <SelectItem value="ads">Ads</SelectItem>
+                      <SelectItem value="others">Others</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-platform">Platform</Label>
+                  <Select
+                    value={editData.platform}
+                    onValueChange={(value) => setEditData((p) => ({ ...p, platform: value }))}
+                    disabled={!isEditing || editData.type !== 'social_media'}
+                  >
+                    <SelectTrigger id="edit-platform">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="x">X (Twitter)</SelectItem>
+                      <SelectItem value="threads">Threads</SelectItem>
+                      <SelectItem value="linkedin">LinkedIn</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Created</Label>
+                  <Input type="date" value={createdDate} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-deadline">Deadline</Label>
+                  <Input
+                    id="edit-deadline"
+                    type="date"
+                    value={editData.deadline}
+                    disabled={!isEditing}
+                    onChange={(e) => setEditData((p) => ({ ...p, deadline: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editData.description}
+                  disabled={!isEditing}
+                  onChange={(e) => setEditData((p) => ({ ...p, description: e.target.value }))}
+                  rows={5}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>File</Label>
+                {selectedTask.file_url ? (
+                  <a
+                    href={selectedTask.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <Upload className="h-4 w-4" />
+                    View File
+                  </a>
+                ) : (
+                  <p className="text-sm text-muted-foreground">-</p>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSaveChanges} disabled={!isEditing}>
+                  Save Changes
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Work Log History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Work Log History</CardTitle>
+              <CardDescription>Track your progress on this task</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {workLogStatuses.map((status) => {
+                  const isActive = workLogStatusFilter === status;
+                  const label = statusConfig[status].label;
+                  return (
+                    <Button
+                      key={status}
+                      type="button"
+                      size="sm"
+                      variant={isActive ? 'default' : 'outline'}
+                      onClick={() =>
+                        setWorkLogStatusFilter((prev) => (prev === status ? null : status))
+                      }
+                      className={cn(isActive && 'shadow-glow')}
+                      aria-pressed={isActive}
+                    >
+                      {label}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {workLogsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : visibleWorkLogs.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-sm text-muted-foreground">Belum ada work log.</p>
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">-</p>
-              )}
-            </div>
+                <div className="space-y-3">
+                  {visibleWorkLogs.map((log) => {
+                    const status = (log.status as Task['status'] | null) ?? null;
+                    const statusBadge = status ? statusConfig[status] : null;
 
-            <div className="flex justify-end pt-2">
-              <Button onClick={handleSaveChanges} disabled={!isEditing}>
-                Save Changes
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                    return (
+                      <div key={log.id} className="rounded-lg border bg-card p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground">
+                              {new Date(log.created_at).toLocaleString()}
+                            </p>
+                            {typeof log.time_spent === 'number' && (
+                              <p className="text-xs text-muted-foreground">Time spent: {log.time_spent} min</p>
+                            )}
+                          </div>
+                          {statusBadge ? (
+                            <Badge variant="outline" className={statusBadge.className}>
+                              {statusBadge.label}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-muted text-muted-foreground">
+                              -
+                            </Badge>
+                          )}
+                        </div>
+
+                        {log.work_description && (
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{log.work_description}</p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                          {log.shared_url && (
+                            <a className="text-primary hover:underline" href={log.shared_url} target="_blank" rel="noreferrer">
+                              Shared URL
+                            </a>
+                          )}
+                          {log.file_url && (
+                            <a className="text-primary hover:underline" href={log.file_url} target="_blank" rel="noreferrer">
+                              File
+                            </a>
+                          )}
+                          {log.screenshot_url && (
+                            <a className="text-primary hover:underline" href={log.screenshot_url} target="_blank" rel="noreferrer">
+                              Screenshot
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
