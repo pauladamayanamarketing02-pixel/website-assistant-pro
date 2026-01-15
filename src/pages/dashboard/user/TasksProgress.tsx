@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, X, Calendar, User, ArrowLeft, Eye } from 'lucide-react';
+import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, X, Calendar, User, ArrowLeft, Pencil } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -110,6 +110,15 @@ export default function TasksProgress() {
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    title: '',
+    description: '',
+    type: '',
+    platform: '',
+    deadline: '',
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
@@ -143,27 +152,13 @@ export default function TasksProgress() {
         setNextTaskNumber(maxNum + 1);
       }
 
-      // Fetch assist accounts sorted by name
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'assist');
+      // Fetch assist accounts sorted by name (via SECURITY DEFINER RPC)
+      const { data: assistAccounts, error: assistError } = await supabase.rpc('get_assist_accounts');
 
-      if (roles) {
-        const assistIds = roles.map((r) => r.user_id);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, name')
-          .in('id', assistIds)
-          .order('name', { ascending: true });
-
-        if (profiles) {
-          // Sort by full name
-          const sortedAssists = profiles.sort((a, b) =>
-            (a.name || '').localeCompare(b.name || '')
-          );
-          setAssists(sortedAssists);
-        }
+      if (!assistError && assistAccounts) {
+        setAssists(
+          [...assistAccounts].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        );
       }
 
       setLoading(false);
@@ -241,7 +236,7 @@ export default function TasksProgress() {
     // Upload file if exists
     if (uploadedFile) {
       const filePath = `${user.id}/tasks/${Date.now()}-${uploadedFile.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('user-files')
         .upload(filePath, uploadedFile);
 
@@ -296,6 +291,14 @@ export default function TasksProgress() {
 
   const handleViewTask = (task: Task) => {
     setSelectedTask(task);
+    setEditData({
+      title: task.title,
+      description: task.description || '',
+      type: task.type || '',
+      platform: task.platform || '',
+      deadline: task.deadline ? task.deadline.slice(0, 10) : '',
+    });
+    setIsEditing(false);
     setViewMode('view');
   };
 
@@ -320,84 +323,197 @@ export default function TasksProgress() {
     );
   }
 
-  // View Task Details
+  // View Task Progress (details + optional edit)
   if (viewMode === 'view' && selectedTask) {
     const config = statusConfig[selectedTask.status];
+
+    const createdDate = selectedTask.created_at ? selectedTask.created_at.slice(0, 10) : '';
+
+    const handleSaveChanges = async () => {
+      if (!user) return;
+
+      const nextPlatform = editData.type === 'social_media' ? (editData.platform || null) : null;
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: editData.title,
+          description: editData.description || null,
+          type: (editData.type as any) || null,
+          platform: nextPlatform as any,
+          deadline: editData.deadline || null,
+        })
+        .eq('id', selectedTask.id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to save changes.',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Saved',
+        description: 'Task updated successfully.',
+      });
+      setIsEditing(false);
+    };
+
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={resetForm}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Task Details</h1>
-            <p className="text-muted-foreground">{formatTaskId(selectedTask.task_number || 0)}</p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={resetForm}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Task Progress</h1>
+              <p className="text-muted-foreground">Update the core details of this task</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">Sortir &gt;&gt;&gt;</span>
+            <Badge variant="outline" className={config.className}>
+              {config.label}
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing((v) => !v)}
+              aria-pressed={isEditing}
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
           </div>
         </div>
 
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>{selectedTask.title}</CardTitle>
-                <CardDescription>Created {new Date(selectedTask.created_at).toLocaleDateString()}</CardDescription>
-              </div>
-              <Badge variant="outline" className={config.className}>
-                {config.label}
-              </Badge>
+          <CardContent className="pt-6 space-y-6">
+            <div className="space-y-2">
+              <Label>Task ID</Label>
+              <Input value={formatTaskId(selectedTask.task_number || 0)} disabled className="bg-muted font-mono" />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label className="text-muted-foreground">Task ID</Label>
-                <p className="font-mono font-medium">{formatTaskId(selectedTask.task_number || 0)}</p>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Task Title</Label>
+              <Input
+                id="edit-title"
+                value={editData.title}
+                disabled={!isEditing}
+                onChange={(e) => setEditData((p) => ({ ...p, title: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Business Name</Label>
+                <Input value={businessName || ''} disabled className="bg-muted" />
               </div>
-              <div>
-                <Label className="text-muted-foreground">Type</Label>
-                <p>{selectedTask.type ? typeLabels[selectedTask.type] : '-'}</p>
-              </div>
-              {selectedTask.platform && (
-                <div>
-                  <Label className="text-muted-foreground">Platform</Label>
-                  <p>{platformLabels[selectedTask.platform]}</p>
-                </div>
-              )}
-              <div>
-                <Label className="text-muted-foreground">Assignee</Label>
-                <p>{getAssistName(selectedTask.assigned_to)}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Deadline</Label>
-                <p>{selectedTask.deadline ? new Date(selectedTask.deadline).toLocaleDateString() : '-'}</p>
+              <div className="space-y-2">
+                <Label>Assignee</Label>
+                <Input value={getAssistName(selectedTask.assigned_to)} disabled className="bg-muted" />
               </div>
             </div>
-            {selectedTask.description && (
-              <div>
-                <Label className="text-muted-foreground">Description</Label>
-                <p className="mt-1">{selectedTask.description}</p>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-type">Type</Label>
+                <Select
+                  value={editData.type}
+                  onValueChange={(value) =>
+                    setEditData((p) => ({ ...p, type: value, platform: '' }))
+                  }
+                  disabled={!isEditing}
+                >
+                  <SelectTrigger id="edit-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="blog">Blog</SelectItem>
+                    <SelectItem value="social_media">Social Media</SelectItem>
+                    <SelectItem value="email_marketing">Email Marketing</SelectItem>
+                    <SelectItem value="ads">Ads</SelectItem>
+                    <SelectItem value="others">Others</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-            {selectedTask.file_url && (
-              <div>
-                <Label className="text-muted-foreground">Attachment</Label>
-                <a 
-                  href={selectedTask.file_url} 
-                  target="_blank" 
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-platform">Platform</Label>
+                <Select
+                  value={editData.platform}
+                  onValueChange={(value) => setEditData((p) => ({ ...p, platform: value }))}
+                  disabled={!isEditing || editData.type !== 'social_media'}
+                >
+                  <SelectTrigger id="edit-platform">
+                    <SelectValue placeholder="Select platform" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="x">X (Twitter)</SelectItem>
+                    <SelectItem value="threads">Threads</SelectItem>
+                    <SelectItem value="linkedin">LinkedIn</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Created</Label>
+                <Input type="date" value={createdDate} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-deadline">Deadline</Label>
+                <Input
+                  id="edit-deadline"
+                  type="date"
+                  value={editData.deadline}
+                  disabled={!isEditing}
+                  onChange={(e) => setEditData((p) => ({ ...p, deadline: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editData.description}
+                disabled={!isEditing}
+                onChange={(e) => setEditData((p) => ({ ...p, description: e.target.value }))}
+                rows={5}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>File</Label>
+              {selectedTask.file_url ? (
+                <a
+                  href={selectedTask.file_url}
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline flex items-center gap-1 mt-1"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
                 >
                   <Upload className="h-4 w-4" />
                   View File
                 </a>
-              </div>
-            )}
-            {selectedTask.notes && (
-              <div className="p-4 rounded-lg bg-muted/50">
-                <Label className="text-muted-foreground">Note from Assist</Label>
-                <p className="mt-1">{selectedTask.notes}</p>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">-</p>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSaveChanges} disabled={!isEditing}>
+                Save Changes
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -704,8 +820,8 @@ export default function TasksProgress() {
                         <Badge variant="outline" className={config.className}>
                           {config.label}
                         </Badge>
-                        <Button variant="ghost" size="sm" onClick={() => handleViewTask(task)}>
-                          <Eye className="h-4 w-4" />
+                        <Button variant="outline" size="sm" onClick={() => handleViewTask(task)}>
+                          View Progress
                         </Button>
                       </div>
                     </div>
