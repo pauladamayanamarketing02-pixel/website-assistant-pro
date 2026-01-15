@@ -146,11 +146,20 @@ export default function TaskManager() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   // Work log form state
-  const [workLogForm, setWorkLogForm] = useState({
-    timeSpent: '',
+  type WorkLogStatus = 'in_progress' | 'ready_for_review';
+
+  const [workLogForm, setWorkLogForm] = useState<{
+    hours: string;
+    minutes: string;
+    workDescription: string;
+    sharedUrl: string;
+    status: WorkLogStatus;
+  }>({
+    hours: '',
+    minutes: '',
     workDescription: '',
     sharedUrl: '',
-    status: 'assigned',
+    status: 'in_progress',
   });
   const [workLogFile, setWorkLogFile] = useState<File | null>(null);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
@@ -288,15 +297,28 @@ const fetchAssistUsers = async () => {
     setViewMode('list');
   };
 
-  const resetWorkLogForm = () => {
-    setWorkLogForm({
-      timeSpent: '',
+  const resetWorkLogForm = (opts?: { keepStatus?: WorkLogStatus }) => {
+    setWorkLogForm((prev) => ({
+      hours: '',
+      minutes: '',
       workDescription: '',
       sharedUrl: '',
-      status: 'assigned',
-    });
+      status: opts?.keepStatus ?? prev.status,
+    }));
     setWorkLogFile(null);
     setScreenshotFile(null);
+  };
+
+  const getDefaultWorkLogStatusForTask = (task: Task): WorkLogStatus => {
+    return task.status === 'ready_for_review' ? 'ready_for_review' : 'in_progress';
+  };
+
+  const getTotalMinutes = (hours: string, minutes: string) => {
+    const h = Number.parseInt(hours || '0', 10);
+    const m = Number.parseInt(minutes || '0', 10);
+    const safeH = Number.isFinite(h) && h >= 0 ? h : 0;
+    const safeM = Number.isFinite(m) && m >= 0 ? m : 0;
+    return safeH * 60 + safeM;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -410,12 +432,14 @@ const fetchAssistUsers = async () => {
         }
       }
 
+      const totalMinutes = getTotalMinutes(workLogForm.hours, workLogForm.minutes);
+
       const { error } = await supabase
         .from('task_work_logs')
         .insert({
           task_id: selectedTask.id,
           user_id: user.id,
-          time_spent: workLogForm.timeSpent ? parseInt(workLogForm.timeSpent) : null,
+          time_spent: totalMinutes > 0 ? totalMinutes : null,
           work_description: workLogForm.workDescription || null,
           shared_url: workLogForm.sharedUrl || null,
           file_url: fileUrl,
@@ -444,7 +468,8 @@ const fetchAssistUsers = async () => {
         description: 'Your work log has been saved.',
       });
 
-      resetWorkLogForm();
+      // Keep the selected status active after saving
+      resetWorkLogForm({ keepStatus: workLogForm.status });
       fetchWorkLogs(selectedTask.id);
     } catch (error: any) {
       toast({
@@ -734,37 +759,61 @@ const fetchAssistUsers = async () => {
               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Time Spent (minutes)</Label>
-                  <Input
-                    type="number"
-                    placeholder="60"
-                    value={workLogForm.timeSpent}
-                    onChange={(e) => setWorkLogForm(prev => ({ ...prev, timeSpent: e.target.value }))}
-                  />
+              <div className="space-y-3">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Hours</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="1"
+                      value={workLogForm.hours}
+                      onChange={(e) => setWorkLogForm((prev) => ({ ...prev, hours: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Minutes</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={59}
+                      placeholder="30"
+                      value={workLogForm.minutes}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          setWorkLogForm((prev) => ({ ...prev, minutes: '' }));
+                          return;
+                        }
+                        const n = Number.parseInt(raw, 10);
+                        const safe = Number.isFinite(n) ? Math.min(59, Math.max(0, n)) : 0;
+                        setWorkLogForm((prev) => ({ ...prev, minutes: String(safe) }));
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={workLogForm.status}
+                      onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, status: value as WorkLogStatus }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workLogStatusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={workLogForm.status}
-                    onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, status: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="assigned" disabled>
-                        Assigned
-                      </SelectItem>
-                      {workLogStatusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Total Time Spent: <span className="font-medium text-foreground">{getTotalMinutes(workLogForm.hours, workLogForm.minutes)} min</span>
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -1119,6 +1168,16 @@ const fetchAssistUsers = async () => {
                           onClick={() => {
                             setSelectedTask(task);
                             setViewMode('view');
+                            setWorkLogs([]);
+                            setWorkLogFile(null);
+                            setScreenshotFile(null);
+                            setWorkLogForm({
+                              hours: '',
+                              minutes: '',
+                              workDescription: '',
+                              sharedUrl: '',
+                              status: getDefaultWorkLogStatusForTask(task),
+                            });
                             fetchWorkLogs(task.id);
                           }}
                         >
