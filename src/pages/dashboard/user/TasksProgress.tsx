@@ -41,7 +41,7 @@ interface AssistAccount {
 
 const statusConfig = {
   pending: {
-    label: 'Pending',
+    label: 'Assigned',
     icon: Clock,
     className: 'bg-muted text-muted-foreground',
   },
@@ -51,7 +51,7 @@ const statusConfig = {
     className: 'bg-primary/10 text-primary',
   },
   completed: {
-    label: 'Completed',
+    label: 'Ready for Review',
     icon: CheckCircle,
     className: 'bg-accent/10 text-accent',
   },
@@ -86,8 +86,10 @@ export default function TasksProgress() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [nextTaskNumber, setNextTaskNumber] = useState(100);
   const [businessName, setBusinessName] = useState('');
+  const [statusFilter, setStatusFilter] = useState<Task['status'] | null>(null);
+
+  const visibleTasks = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;
   
-  // Form state
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -581,44 +583,84 @@ export default function TasksProgress() {
         </Button>
       </div>
 
-      {/* Summary */}
+      {/* Summary (click to filter) */}
       <div className="grid grid-cols-3 gap-4">
         {(['pending', 'in_progress', 'completed'] as const).map((status) => {
           const config = statusConfig[status];
-          const count = tasks.filter(t => t.status === status).length;
+          const count = tasks.filter((t) => t.status === status).length;
+          const isActive = statusFilter === status;
+
           return (
-            <Card key={status}>
-              <CardContent className="py-4 text-center">
-                <config.icon className={cn("h-6 w-6 mx-auto mb-2", status === 'pending' ? 'text-muted-foreground' : status === 'in_progress' ? 'text-primary' : 'text-accent')} />
-                <p className="text-2xl font-bold text-foreground">{count}</p>
-                <p className="text-xs text-muted-foreground">{config.label}</p>
-              </CardContent>
-            </Card>
+            <button
+              key={status}
+              type="button"
+              onClick={() => setStatusFilter((prev) => (prev === status ? null : status))}
+              className="text-left"
+              aria-pressed={isActive}
+              aria-label={`Filter tasks: ${config.label}`}
+            >
+              <Card
+                className={cn(
+                  "transition-colors",
+                  isActive ? "border-primary bg-primary/10" : "hover:bg-muted/20",
+                )}
+              >
+                <CardContent className="py-4 text-center">
+                  <config.icon
+                    className={cn(
+                      "h-6 w-6 mx-auto mb-2",
+                      isActive
+                        ? "text-primary"
+                        : status === 'pending'
+                          ? 'text-muted-foreground'
+                          : status === 'in_progress'
+                            ? 'text-primary'
+                            : 'text-accent',
+                    )}
+                  />
+                  <p className="text-2xl font-bold text-foreground">{count}</p>
+                  <p className={cn("text-xs", isActive ? "text-primary" : "text-muted-foreground")}>{config.label}</p>
+                </CardContent>
+              </Card>
+            </button>
           );
         })}
       </div>
 
       {/* Task List */}
-      {tasks.length === 0 ? (
+      {visibleTasks.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">No tasks yet</h3>
-            <p className="text-muted-foreground mb-4">Create your first task to get started</p>
-            <Button onClick={() => setViewMode('create')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Task
-            </Button>
+            <h3 className="text-lg font-semibold text-foreground">
+              {tasks.length === 0 ? 'No tasks yet' : 'No tasks for this status'}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {tasks.length === 0
+                ? 'Create your first task to get started'
+                : 'Try clearing the filter to see all tasks.'}
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              {tasks.length !== 0 && (
+                <Button variant="outline" onClick={() => setStatusFilter(null)}>
+                  Show All Tasks
+                </Button>
+              )}
+              <Button onClick={() => setViewMode('create')}>
+                <Plus className="h-4 w-4 mr-2" />
+                {tasks.length === 0 ? 'Create Task' : 'New Task'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>All Tasks</CardTitle>
+            <CardTitle>{statusFilter ? `${statusConfig[statusFilter].label} Tasks` : 'All Tasks'}</CardTitle>
             <CardDescription>Tasks created for your Marketing Assist</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {tasks.map((task) => {
+            {visibleTasks.map((task) => {
               const config = statusConfig[task.status];
               return (
                 <div
