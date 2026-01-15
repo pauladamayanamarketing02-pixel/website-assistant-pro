@@ -23,7 +23,7 @@ interface Task {
   task_number: number | null;
   title: string;
   description: string | null;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: 'pending' | 'assigned' | 'in_progress' | 'ready_for_review' | 'completed';
   type: 'blog' | 'social_media' | 'email_marketing' | 'ads' | 'others' | null;
   platform: 'facebook' | 'instagram' | 'x' | 'threads' | 'linkedin' | null;
   file_url: string | null;
@@ -39,21 +39,31 @@ interface AssistAccount {
   name: string;
 }
 
-const statusConfig = {
+const statusConfig: Record<Task['status'], { label: string; icon: any; className: string }> = {
   pending: {
-    label: 'Assigned',
+    label: 'Pending',
     icon: Clock,
     className: 'bg-muted text-muted-foreground',
+  },
+  assigned: {
+    label: 'Assigned',
+    icon: User,
+    className: 'bg-secondary text-secondary-foreground',
   },
   in_progress: {
     label: 'In Progress',
     icon: AlertCircle,
     className: 'bg-primary/10 text-primary',
   },
-  completed: {
+  ready_for_review: {
     label: 'Ready for Review',
     icon: CheckCircle,
     className: 'bg-accent/10 text-accent',
+  },
+  completed: {
+    label: 'Completed',
+    icon: CheckSquare,
+    className: 'bg-muted text-muted-foreground',
   },
 };
 
@@ -95,7 +105,7 @@ export default function TasksProgress() {
     description: '',
     type: '',
     platform: '',
-    assignee: '',
+    assignee: 'none',
     deadline: '',
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -199,7 +209,7 @@ export default function TasksProgress() {
       description: '',
       type: '',
       platform: '',
-      assignee: '',
+      assignee: 'none',
       deadline: '',
     });
     setUploadedFile(null);
@@ -243,6 +253,9 @@ export default function TasksProgress() {
       }
     }
 
+    const selectedAssignee = formData.assignee && formData.assignee !== 'none' ? formData.assignee : null;
+    const nextStatus: Task['status'] = selectedAssignee ? 'assigned' : 'pending';
+
     const { data, error } = await supabase
       .from('tasks')
       .insert({
@@ -250,12 +263,12 @@ export default function TasksProgress() {
         task_number: nextTaskNumber,
         title: formData.title,
         description: formData.description || null,
-        type: formData.type as any || null,
-        platform: formData.type === 'social_media' ? formData.platform as any : null,
-        assigned_to: formData.assignee || null,
+        type: (formData.type as any) || null,
+        platform: formData.type === 'social_media' ? (formData.platform as any) : null,
+        assigned_to: selectedAssignee,
         deadline: formData.deadline || null,
         file_url: fileUrl,
-        status: 'pending',
+        status: nextStatus as any,
       })
       .select()
       .single();
@@ -532,13 +545,14 @@ export default function TasksProgress() {
               <div className="space-y-2">
                 <Label htmlFor="assignee">Assignee</Label>
                 <Select 
-                  value={formData.assignee} 
+                  value={formData.assignee || 'none'}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, assignee: value }))}
                 >
                   <SelectTrigger id="assignee">
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
                     {assists.map((assist) => (
                       <SelectItem key={assist.id} value={assist.id}>
                         {assist.name}
@@ -585,7 +599,7 @@ export default function TasksProgress() {
 
       {/* Summary (click to filter) */}
       <div className="grid grid-cols-3 gap-4">
-        {(['pending', 'in_progress', 'completed'] as const).map((status) => {
+        {(['assigned', 'in_progress', 'ready_for_review'] as const).map((status) => {
           const config = statusConfig[status];
           const count = tasks.filter((t) => t.status === status).length;
           const isActive = statusFilter === status;
@@ -609,13 +623,7 @@ export default function TasksProgress() {
                   <config.icon
                     className={cn(
                       "h-6 w-6 mx-auto mb-2",
-                      isActive
-                        ? "text-primary"
-                        : status === 'pending'
-                          ? 'text-muted-foreground'
-                          : status === 'in_progress'
-                            ? 'text-primary'
-                            : 'text-accent',
+                      isActive ? "text-primary" : "text-muted-foreground",
                     )}
                   />
                   <p className="text-2xl font-bold text-foreground">{count}</p>
