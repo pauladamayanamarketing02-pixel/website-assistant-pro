@@ -33,6 +33,8 @@ interface BusinessFormData {
   business_type: string;
   country: string;
   city: string;
+  business_address: string;
+  hours: { day: string; opensAt: string; closesAt: string; }[];
   website_url: string;
   gmb_link: string;
   email: string;
@@ -126,6 +128,8 @@ export default function ClientList() {
     business_type: '',
     country: '',
     city: '',
+    business_address: '',
+    hours: [],
     website_url: '',
     gmb_link: '',
     email: '',
@@ -136,6 +140,8 @@ export default function ClientList() {
     last_name: '',
     social_links: [],
   });
+  
+  const [newHour, setNewHour] = useState({ day: 'Monday', opensAt: '09:00', closesAt: '17:00' });
   
   // Knowledge Base state
   const [kbData, setKbData] = useState<KnowledgeBaseData>({
@@ -307,11 +313,22 @@ export default function ClientList() {
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
 
+        // Parse hours
+        const hoursData = Array.isArray((business as any).hours) 
+          ? ((business as any).hours as any[]).map(h => ({
+              day: h.day || '',
+              opensAt: h.opens_at || h.opensAt || '',
+              closesAt: h.closes_at || h.closesAt || '',
+            }))
+          : [];
+
         setFormData({
           business_name: (business as any).business_name || '',
           business_type: (business as any).business_type || '',
           country: country,
           city: city,
+          business_address: (business as any).business_address || '',
+          hours: hoursData,
           website_url: (business as any).website_url || '',
           gmb_link: (business as any).gmb_link || '',
           email: client.email || '',
@@ -341,6 +358,8 @@ export default function ClientList() {
           business_type: '',
           country: '',
           city: '',
+          business_address: '',
+          hours: [],
           website_url: '',
           gmb_link: '',
           email: client.email || '',
@@ -415,6 +434,12 @@ export default function ClientList() {
     try {
       const fullPhone = `${formData.phoneCode} ${formData.phoneNumber}`.trim();
 
+      const hoursForDb = formData.hours.map(h => ({
+        day: h.day,
+        opens_at: h.opensAt,
+        closes_at: h.closesAt,
+      }));
+
       const { error } = await supabase
         .from('businesses')
         .update({
@@ -422,6 +447,8 @@ export default function ClientList() {
           business_type: formData.business_type || null,
           country: formData.country || null,
           city: formData.city || null,
+          business_address: formData.business_address || null,
+          hours: hoursForDb as any,
           website_url: formData.website_url, // Allow empty string
           gmb_link: formData.gmb_link || null,
           social_links: formData.social_links as any,
@@ -863,30 +890,52 @@ export default function ClientList() {
                         <Label>Email</Label>
                         <p className="font-medium py-2">{formData.email || '-'}</p>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Website URL</Label>
-                        {isEditingBusiness ? (
-                          <Input
-                            value={formData.website_url}
-                            onChange={(e) => setFormData(prev => ({ ...prev, website_url: e.target.value }))}
-                            placeholder="https://..."
-                          />
-                        ) : (
-                          <p className="font-medium py-2">{formData.website_url || '-'}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Google Business Profile</Label>
-                        {isEditingBusiness ? (
-                          <Input
-                            value={formData.gmb_link}
-                            onChange={(e) => setFormData(prev => ({ ...prev, gmb_link: e.target.value }))}
-                            placeholder="https://..."
-                          />
-                        ) : (
-                          <p className="font-medium py-2">{formData.gmb_link || '-'}</p>
-                        )}
-                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Website URL</Label>
+                      {isEditingBusiness ? (
+                        <Input
+                          value={formData.website_url}
+                          onChange={(e) => setFormData(prev => ({ ...prev, website_url: e.target.value }))}
+                          placeholder="https://..."
+                        />
+                      ) : formData.website_url ? (
+                        <a 
+                          href={formData.website_url.startsWith('http') ? formData.website_url : `https://${formData.website_url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium py-2 text-primary hover:underline flex items-center gap-2"
+                        >
+                          {formData.website_url}
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      ) : (
+                        <p className="font-medium py-2">-</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Google Business Profile</Label>
+                      {isEditingBusiness ? (
+                        <Input
+                          value={formData.gmb_link}
+                          onChange={(e) => setFormData(prev => ({ ...prev, gmb_link: e.target.value }))}
+                          placeholder="https://..."
+                        />
+                      ) : formData.gmb_link ? (
+                        <a 
+                          href={formData.gmb_link.startsWith('http') ? formData.gmb_link : `https://${formData.gmb_link}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium py-2 text-primary hover:underline flex items-center gap-2"
+                        >
+                          {formData.gmb_link}
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      ) : (
+                        <p className="font-medium py-2">-</p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -900,9 +949,18 @@ export default function ClientList() {
                         <div className="flex flex-wrap gap-2">
                           {formData.social_links.length > 0 ? (
                             formData.social_links.map((link, i) => (
-                              <Badge key={i} variant="secondary">
-                                {link.platform}: {link.url}
-                              </Badge>
+                              <a
+                                key={i}
+                                href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-primary hover:underline"
+                              >
+                                <Badge variant="secondary" className="capitalize">
+                                  {link.platform}
+                                </Badge>
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
                             ))
                           ) : (
                             <p className="text-muted-foreground">No social links</p>
