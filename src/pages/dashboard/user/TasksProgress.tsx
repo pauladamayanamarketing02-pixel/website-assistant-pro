@@ -367,47 +367,20 @@ export default function TasksProgress() {
   if (viewMode === 'view' && selectedTask) {
     const createdDate = selectedTask.created_at ? selectedTask.created_at.slice(0, 10) : '';
 
-    const requiresAssignee = editData.status !== 'pending';
-    const hasSelectedAssignee = !!editData.assignee && editData.assignee !== 'none';
+    const deriveStatusFromAssignee = (assignee: string) =>
+      assignee && assignee !== 'none' ? ('assigned' as Task['status']) : ('pending' as Task['status']);
 
-    // Only allow editing of the rest of the fields after an assignee is chosen (when status is not pending)
-    const canEditDetails = isEditing && (!requiresAssignee || hasSelectedAssignee);
+    // Only allow editing of the fields when Edit mode is enabled
+    const canEditDetails = isEditing;
 
-    const handleStatusChange = (value: string) => {
-      const nextStatus = value as Task['status'];
-
-      if (nextStatus === 'pending') {
-        // Pending must always have no assignee
-        setEditData((p) => ({ ...p, status: nextStatus, assignee: 'none' }));
-        return;
-      }
-
-      // For any non-pending status, assignee becomes mandatory before other fields unlock
-      if (!editData.assignee || editData.assignee === 'none') {
-        toast({
-          variant: 'destructive',
-          title: 'Please select an assignee first',
-          description: 'Select an assignee to enable the other fields.',
-        });
-      }
-
-      setEditData((p) => ({ ...p, status: nextStatus }));
-    };
+    const derivedStatus = deriveStatusFromAssignee(editData.assignee);
 
     const handleSaveChanges = async () => {
       if (!user) return;
 
-      if (requiresAssignee && !hasSelectedAssignee) {
-        toast({
-          variant: 'destructive',
-          title: 'Please select an assignee first',
-          description: 'Assignee is required for this status.',
-        });
-        return;
-      }
-
       const nextPlatform = editData.type === 'social_media' ? (editData.platform || null) : null;
-      const nextAssignedTo = requiresAssignee && hasSelectedAssignee ? editData.assignee : null;
+      const nextAssignedTo = editData.assignee && editData.assignee !== 'none' ? editData.assignee : null;
+      const nextStatus = deriveStatusFromAssignee(editData.assignee);
 
       const { data: updated, error } = await supabase
         .from('tasks')
@@ -417,7 +390,7 @@ export default function TasksProgress() {
           type: (editData.type as any) || null,
           platform: nextPlatform as any,
           deadline: editData.deadline || null,
-          status: editData.status as any,
+          status: nextStatus as any,
           assigned_to: nextAssignedTo,
         })
         .eq('id', selectedTask.id)
@@ -446,14 +419,6 @@ export default function TasksProgress() {
       setIsEditing(false);
     };
 
-    const statusOptions: Task['status'][] = [
-      'pending',
-      'assigned',
-      'in_progress',
-      'ready_for_review',
-      'completed',
-    ];
-
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4">
@@ -478,22 +443,9 @@ export default function TasksProgress() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Select
-                  value={editData.status}
-                  onValueChange={handleStatusChange}
-                  disabled={!isEditing}
-                >
-                  <SelectTrigger className="h-9 w-[190px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {statusConfig[s].label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Badge variant="outline" className={statusConfig[derivedStatus].className}>
+                  {statusConfig[derivedStatus].label}
+                </Badge>
 
                 <Button
                   variant="outline"
@@ -545,11 +497,18 @@ export default function TasksProgress() {
                   <Input value={businessName || ''} disabled className="bg-muted" />
                 </div>
                 <div className="space-y-2">
+                  <Label>Created</Label>
+                  <Input type="date" value={createdDate} disabled className="bg-muted" />
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="space-y-2">
                   <Label>Assignee</Label>
                   <Select
-                    value={isEditing ? editData.assignee : (selectedTask.assigned_to || 'none')}
+                    value={isEditing ? editData.assignee : selectedTask.assigned_to || 'none'}
                     onValueChange={(value) => setEditData((p) => ({ ...p, assignee: value }))}
-                    disabled={!isEditing || !requiresAssignee}
+                    disabled={!isEditing}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select assignee" />
@@ -563,9 +522,23 @@ export default function TasksProgress() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {!requiresAssignee && (
-                    <p className="text-xs text-muted-foreground">Assignee is disabled while status is Pending.</p>
-                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Input value={statusConfig[derivedStatus].label} disabled className="bg-muted" />
+                  <p className="text-xs text-muted-foreground">Status otomatis mengikuti pilihan Assignee.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-deadline">Deadline</Label>
+                  <Input
+                    id="edit-deadline"
+                    type="date"
+                    value={editData.deadline}
+                    disabled={!canEditDetails}
+                    onChange={(e) => setEditData((p) => ({ ...p, deadline: e.target.value }))}
+                  />
                 </div>
               </div>
 
@@ -608,23 +581,6 @@ export default function TasksProgress() {
                       <SelectItem value="linkedin">LinkedIn</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Created</Label>
-                  <Input type="date" value={createdDate} disabled className="bg-muted" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-deadline">Deadline</Label>
-                  <Input
-                    id="edit-deadline"
-                    type="date"
-                    value={editData.deadline}
-                    disabled={!canEditDetails}
-                    onChange={(e) => setEditData((p) => ({ ...p, deadline: e.target.value }))}
-                  />
                 </div>
               </div>
 
@@ -888,12 +844,12 @@ export default function TasksProgress() {
               )}
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="assignee">Assignee</Label>
-                <Select 
+                <Select
                   value={formData.assignee || 'none'}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, assignee: value }))}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, assignee: value }))}
                 >
                   <SelectTrigger id="assignee">
                     <SelectValue placeholder="Select assignee" />
@@ -908,13 +864,24 @@ export default function TasksProgress() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Input
+                  value={formData.assignee && formData.assignee !== 'none' ? 'Assigned' : 'Pending'}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">Status otomatis mengikuti pilihan Assignee.</p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="deadline">Deadline</Label>
                 <Input
                   id="deadline"
                   type="date"
                   value={formData.deadline}
-                  onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, deadline: e.target.value }))}
                 />
               </div>
             </div>
