@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Save, Building2, FileText, User, Users, ArrowLeft, Pencil, X, Plus, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -244,6 +245,18 @@ export default function MyBusiness() {
         const businessNumber = (data as any).business_number as number | null;
         const businessId = businessNumber ? `B${businessNumber.toString().padStart(5, '0')}` : '';
 
+        const rawHours = Array.isArray((data as any).hours) ? (data as any).hours : [];
+        const normalizedHours = rawHours
+          .map((h: any) => {
+            if (!h || typeof h !== 'object') return null;
+            const day = String(h.day ?? h.Day ?? '').trim();
+            const opensAt = String(h.opensAt ?? h.opens_at ?? h.opens ?? h.open ?? '').trim();
+            const closesAt = String(h.closesAt ?? h.closes_at ?? h.closes ?? h.close ?? '').trim();
+            if (!day || !opensAt || !closesAt) return null;
+            return { day, opensAt, closesAt };
+          })
+          .filter(Boolean) as { day: string; opensAt: string; closesAt: string }[];
+
         const dbFormData: BusinessData = {
           name: (data as any).business_name || '',
           business_type: (data as any).business_type || '',
@@ -264,7 +277,7 @@ export default function MyBusiness() {
           last_name: lastName,
           social_media_links: socialLinks,
           businessId,
-          hours: Array.isArray((data as any).hours) ? (data as any).hours : [],
+          hours: normalizedHours,
         };
         
         setOriginalFormData(dbFormData);
@@ -897,13 +910,24 @@ export default function MyBusiness() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="business_address">Business Address</Label>
-                <Input
-                  id="business_address"
-                  value={formData.business_address}
-                  onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
-                  placeholder="123 Business St"
-                  disabled={!isEditing}
-                />
+                {isEditing ? (
+                  <>
+                    <Textarea
+                      id="business_address"
+                      value={formData.business_address}
+                      onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
+                      placeholder="123 Business St"
+                      className="min-h-[96px] max-h-[160px] resize-none overflow-auto"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Please enter the full business address including your service area.
+                    </p>
+                  </>
+                ) : (
+                  <div className="rounded-md border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap break-words min-h-[96px]">
+                    {formData.business_address || '-'}
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">
