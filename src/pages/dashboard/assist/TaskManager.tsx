@@ -425,6 +425,20 @@ const fetchAssistUsers = async () => {
 
       if (error) throw error;
 
+      // Sync task status with Work Log status (only for allowed transitions)
+      if (workLogForm.status === 'in_progress' || workLogForm.status === 'ready_for_review') {
+        const { error: taskUpdateError } = await supabase
+          .from('tasks')
+          .update({ status: workLogForm.status as any })
+          .eq('id', selectedTask.id);
+
+        if (taskUpdateError) throw taskUpdateError;
+
+        // Update UI immediately
+        setSelectedTask((prev) => (prev ? { ...prev, status: workLogForm.status as any } : prev));
+        setTasks((prev) => prev.map((t) => (t.id === selectedTask.id ? { ...t, status: workLogForm.status as any } : t)));
+      }
+
       toast({
         title: 'Work Log Added',
         description: 'Your work log has been saved.',
@@ -629,57 +643,91 @@ const fetchAssistUsers = async () => {
                       View History
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg">
+                  <DialogContent className="max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>Work Log History</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-2 max-h-80 overflow-y-auto mt-2">
-                      {workLogs.map((log) => (
-                        <div key={log.id} className="p-3 bg-muted rounded-lg text-sm">
-                          <div className="flex items-center justify-between mb-1">
-                            <Badge variant="outline">{log.status.replace(/_/g, ' ')}</Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(log.created_at).toLocaleString()}
-                            </span>
-                          </div>
-                          {log.time_spent && (
-                            <p className="text-muted-foreground">Time: {log.time_spent} min</p>
-                          )}
-                          {log.work_description && <p className="mt-1">{log.work_description}</p>}
-                          <div className="flex gap-2 mt-2">
-                            {log.shared_url && (
-                              <a
-                                href={log.shared_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline text-xs"
-                              >
-                                View URL
-                              </a>
-                            )}
-                            {log.file_url && (
-                              <a
-                                href={log.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline text-xs"
-                              >
-                                View File
-                              </a>
-                            )}
-                            {log.screenshot_url && (
-                              <a
-                                href={log.screenshot_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline text-xs"
-                              >
-                                View Screenshot
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+
+                    <div className="mt-2 max-h-[26rem] overflow-y-auto pr-1">
+                      <div className="space-y-3">
+                        {workLogs.map((log) => {
+                          const statusKey = log.status as Task['status'];
+                          const badgeCfg = statusConfig[statusKey] ?? {
+                            label: log.status.replace(/_/g, ' '),
+                            icon: FileText,
+                            className: 'bg-muted text-muted-foreground',
+                          };
+                          const StatusIcon = badgeCfg.icon;
+
+                          return (
+                            <div
+                              key={log.id}
+                              className="rounded-lg border bg-background p-4 text-sm"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className={cn('gap-1', badgeCfg.className)}>
+                                      <StatusIcon className="h-3.5 w-3.5" />
+                                      {badgeCfg.label}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(log.created_at).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  {log.time_spent != null && (
+                                    <div className="mt-2 flex items-center gap-2 text-muted-foreground">
+                                      <Clock className="h-4 w-4" />
+                                      <span>Time Spent: {log.time_spent} min</span>
+                                    </div>
+                                  )}
+                                  {log.work_description && (
+                                    <p className="mt-2 whitespace-pre-wrap leading-relaxed">{log.work_description}</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {(log.shared_url || log.file_url || log.screenshot_url) && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {log.shared_url && (
+                                    <a
+                                      href={log.shared_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                                    >
+                                      <LinkIcon className="h-4 w-4" />
+                                      Shared URL
+                                    </a>
+                                  )}
+                                  {log.file_url && (
+                                    <a
+                                      href={log.file_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                                    >
+                                      <Upload className="h-4 w-4" />
+                                      File
+                                    </a>
+                                  )}
+                                  {log.screenshot_url && (
+                                    <a
+                                      href={log.screenshot_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                                    >
+                                      <Image className="h-4 w-4" />
+                                      Screenshot
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
