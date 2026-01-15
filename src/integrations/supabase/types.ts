@@ -585,7 +585,12 @@ export type Database = {
         | "x"
         | "threads"
         | "linkedin"
-      task_status: "pending" | "in_progress" | "completed"
+      task_status:
+        | "pending"
+        | "assigned"
+        | "in_progress"
+        | "ready_for_review"
+        | "completed"
       task_type: "blog" | "social_media" | "email_marketing" | "ads" | "others"
     }
     CompositeTypes: {
@@ -725,7 +730,13 @@ export const Constants = {
         "threads",
         "linkedin",
       ],
-      task_status: ["pending", "in_progress", "completed"],
+      task_status: [
+        "pending",
+        "assigned",
+        "in_progress",
+        "ready_for_review",
+        "completed",
+      ],
       task_type: ["blog", "social_media", "email_marketing", "ads", "others"],
     },
   },
