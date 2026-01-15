@@ -165,6 +165,11 @@ export default function TaskManager() {
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [savingWorkLog, setSavingWorkLog] = useState(false);
 
+  // Work log delete request (assist -> business owner approval)
+  const [activeDeleteRequestLogId, setActiveDeleteRequestLogId] = useState<string | null>(null);
+  const [deleteRequestReason, setDeleteRequestReason] = useState('');
+  const [sendingDeleteRequest, setSendingDeleteRequest] = useState(false);
+
   useEffect(() => {
     fetchTasks();
     fetchClients();
@@ -319,6 +324,15 @@ const fetchAssistUsers = async () => {
     const safeH = Number.isFinite(h) && h >= 0 ? h : 0;
     const safeM = Number.isFinite(m) && m >= 0 ? m : 0;
     return safeH * 60 + safeM;
+  };
+
+  const formatMinutesAsHoursMinutes = (totalMinutes: number | null | undefined) => {
+    const safe = typeof totalMinutes === 'number' && Number.isFinite(totalMinutes) && totalMinutes > 0 ? totalMinutes : 0;
+    const h = Math.floor(safe / 60);
+    const m = safe % 60;
+    if (h === 0 && m === 0) return '0h 0m';
+    if (h === 0) return `0h ${m}m`;
+    return `${h}h ${m}m`;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -479,6 +493,50 @@ const fetchAssistUsers = async () => {
       });
     } finally {
       setSavingWorkLog(false);
+    }
+  };
+
+  const handleSendDeleteRequest = async (workLogId: string) => {
+    if (!selectedTask || !user) return;
+
+    const reason = deleteRequestReason.trim();
+    if (!reason) {
+      toast({
+        variant: 'destructive',
+        title: 'Reason required',
+        description: 'Please provide a reason for deleting this work log.',
+      });
+      return;
+    }
+
+    setSendingDeleteRequest(true);
+    try {
+      const { error } = await supabase.from('work_log_delete_requests').insert({
+        work_log_id: workLogId,
+        task_id: selectedTask.id,
+        requester_id: user.id,
+        owner_id: selectedTask.user_id,
+        reason,
+        status: 'pending',
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request sent',
+        description: 'Delete request has been sent to the business owner for approval.',
+      });
+
+      setActiveDeleteRequestLogId(null);
+      setDeleteRequestReason('');
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err?.message || 'Failed to send delete request.',
+      });
+    } finally {
+      setSendingDeleteRequest(false);
     }
   };
 
@@ -673,8 +731,17 @@ const fetchAssistUsers = async () => {
                       <DialogTitle>Work Log History</DialogTitle>
                     </DialogHeader>
 
-                    <div className="mt-2 max-h-[26rem] overflow-y-auto pr-1">
+                     <div className="mt-2 max-h-[26rem] overflow-y-auto pr-1">
                       <div className="space-y-3">
+                        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                          <div className="text-xs text-muted-foreground">Total Time Spent (history)</div>
+                          <div className="mt-1 font-medium text-foreground">
+                            {formatMinutesAsHoursMinutes(
+                              workLogs.reduce((sum, l) => sum + (typeof l.time_spent === 'number' ? l.time_spent : 0), 0)
+                            )}
+                          </div>
+                        </div>
+
                         {workLogs.map((log) => {
                           const statusKey = log.status as Task['status'];
                           const badgeCfg = statusConfig[statusKey] ?? {
@@ -683,12 +750,10 @@ const fetchAssistUsers = async () => {
                             className: 'bg-muted text-muted-foreground',
                           };
                           const StatusIcon = badgeCfg.icon;
+                          const isDeleteActive = activeDeleteRequestLogId === log.id;
 
                           return (
-                            <div
-                              key={log.id}
-                              className="rounded-lg border bg-background p-4 text-sm"
-                            >
+                            <div key={log.id} className="rounded-lg border bg-background p-4 text-sm">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
@@ -700,15 +765,33 @@ const fetchAssistUsers = async () => {
                                       {new Date(log.created_at).toLocaleString()}
                                     </span>
                                   </div>
-                                  {log.time_spent != null && (
-                                    <div className="mt-2 flex items-center gap-2 text-muted-foreground">
+
+                                  <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
+                                    <span className="inline-flex items-center gap-2">
                                       <Clock className="h-4 w-4" />
-                                      <span>Time Spent: {log.time_spent} min</span>
-                                    </div>
-                                  )}
+                                      <span>
+                                        Time Spent: {formatMinutesAsHoursMinutes(log.time_spent)}
+                                      </span>
+                                    </span>
+                                  </div>
+
                                   {log.work_description && (
                                     <p className="mt-2 whitespace-pre-wrap leading-relaxed">{log.work_description}</p>
                                   )}
+                                </div>
+
+                                <div className="shrink-0">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setActiveDeleteRequestLogId(log.id);
+                                      setDeleteRequestReason('');
+                                    }}
+                                  >
+                                    Delete
+                                  </Button>
                                 </div>
                               </div>
 
@@ -747,6 +830,42 @@ const fetchAssistUsers = async () => {
                                       Screenshot
                                     </a>
                                   )}
+                                </div>
+                              )}
+
+                              {isDeleteActive && (
+                                <div className="mt-4 space-y-3 rounded-lg border bg-muted/30 p-3">
+                                  <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">Reason for delete request</Label>
+                                    <Textarea
+                                      value={deleteRequestReason}
+                                      onChange={(e) => setDeleteRequestReason(e.target.value)}
+                                      placeholder="Contoh: salah upload file, time spent keliru, dll"
+                                      rows={3}
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => {
+                                        setActiveDeleteRequestLogId(null);
+                                        setDeleteRequestReason('');
+                                      }}
+                                      disabled={sendingDeleteRequest}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={() => handleSendDeleteRequest(log.id)}
+                                      disabled={sendingDeleteRequest}
+                                    >
+                                      {sendingDeleteRequest ? 'Sending...' : 'Send Request'}
+                                    </Button>
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -812,7 +931,10 @@ const fetchAssistUsers = async () => {
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Total Time Spent: <span className="font-medium text-foreground">{getTotalMinutes(workLogForm.hours, workLogForm.minutes)} min</span>
+                  Total Time Spent (input):{' '}
+                  <span className="font-medium text-foreground">
+                    {formatMinutesAsHoursMinutes(getTotalMinutes(workLogForm.hours, workLogForm.minutes))}
+                  </span>
                 </p>
               </div>
 
