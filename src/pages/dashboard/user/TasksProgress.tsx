@@ -372,7 +372,7 @@ export default function TasksProgress() {
 
       const nextPlatform = editData.type === 'social_media' ? (editData.platform || null) : null;
 
-      const { error } = await supabase
+      const { data: updatedTask, error } = await supabase
         .from('tasks')
         .update({
           title: editData.title,
@@ -382,9 +382,11 @@ export default function TasksProgress() {
           deadline: editData.deadline || null,
         })
         .eq('id', selectedTask.id)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('*')
+        .single();
 
-      if (error) {
+      if (error || !updatedTask) {
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -392,6 +394,17 @@ export default function TasksProgress() {
         });
         return;
       }
+
+      // Keep UI in sync immediately
+      setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? (updatedTask as Task) : t)));
+      setSelectedTask(updatedTask as Task);
+      setEditData({
+        title: updatedTask.title,
+        description: updatedTask.description || '',
+        type: updatedTask.type || '',
+        platform: updatedTask.platform || '',
+        deadline: updatedTask.deadline ? updatedTask.deadline.slice(0, 10) : '',
+      });
 
       toast({
         title: 'Saved',
@@ -425,53 +438,82 @@ export default function TasksProgress() {
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Task Info */}
           <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <CardTitle>Task Info</CardTitle>
                 <CardDescription>Update the core details of this task</CardDescription>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={config.className}>
-                  {config.label}
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing((v) => !v)}
-                  aria-pressed={isEditing}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
+              <div className="flex flex-col items-start gap-3 md:items-end">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">Sortir:</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {workLogStatuses.map((status) => {
+                      const isActive = workLogStatusFilter === status;
+                      const label = statusConfig[status].label;
+                      return (
+                        <Button
+                          key={status}
+                          type="button"
+                          size="sm"
+                          variant={isActive ? 'default' : 'outline'}
+                          onClick={() =>
+                            setWorkLogStatusFilter((prev) => (prev === status ? null : status))
+                          }
+                          className={cn(isActive && 'shadow-glow')}
+                          aria-pressed={isActive}
+                        >
+                          {label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={config.className}>
+                    {config.label}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing((v) => !v)}
+                    aria-pressed={isEditing}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
               </div>
             </CardHeader>
 
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>Task ID</Label>
-                <Input value={formatTaskId(selectedTask.task_number || 0)} disabled className="bg-muted font-mono" />
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Task ID</Label>
+                  <Input value={formatTaskId(selectedTask.task_number || 0)} disabled className="bg-muted font-mono" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Business Name</Label>
+                  <Input value={businessName || ''} disabled className="bg-muted" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Assignee</Label>
+                  <Input value={getAssistName(selectedTask.assigned_to)} disabled className="bg-muted" />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-title">Task Title</Label>
+                <Label htmlFor="edit-title">Task Title *</Label>
                 <Input
                   id="edit-title"
                   value={editData.title}
                   disabled={!isEditing}
                   onChange={(e) => setEditData((p) => ({ ...p, title: e.target.value }))}
+                  className="w-full"
                 />
-              </div>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Business Name</Label>
-                  <Input value={businessName || ''} disabled className="bg-muted" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Assignee</Label>
-                  <Input value={getAssistName(selectedTask.assigned_to)} disabled className="bg-muted" />
-                </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
@@ -576,28 +618,6 @@ export default function TasksProgress() {
               <CardDescription>Track your progress on this task</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {workLogStatuses.map((status) => {
-                  const isActive = workLogStatusFilter === status;
-                  const label = statusConfig[status].label;
-                  return (
-                    <Button
-                      key={status}
-                      type="button"
-                      size="sm"
-                      variant={isActive ? 'default' : 'outline'}
-                      onClick={() =>
-                        setWorkLogStatusFilter((prev) => (prev === status ? null : status))
-                      }
-                      className={cn(isActive && 'shadow-glow')}
-                      aria-pressed={isActive}
-                    >
-                      {label}
-                    </Button>
-                  );
-                })}
-              </div>
-
               {workLogsLoading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
@@ -610,56 +630,84 @@ export default function TasksProgress() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {visibleWorkLogs.map((log) => {
-                    const status = (log.status as Task['status'] | null) ?? null;
-                    const statusBadge = status ? statusConfig[status] : null;
+                  {visibleWorkLogs.map((log) => (
+                    <div key={log.id} className="rounded-lg border bg-card p-4 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-medium text-foreground">
+                          {new Date(log.created_at).toLocaleString()}
+                        </p>
+                        <Badge variant="outline" className="bg-muted text-muted-foreground">
+                          {log.status ? statusConfig[log.status as Task['status']]?.label ?? log.status : '-'}
+                        </Badge>
+                      </div>
 
-                    return (
-                      <div key={log.id} className="rounded-lg border bg-card p-4 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-foreground">
-                              {new Date(log.created_at).toLocaleString()}
-                            </p>
-                            {typeof log.time_spent === 'number' && (
-                              <p className="text-xs text-muted-foreground">Time spent: {log.time_spent} min</p>
-                            )}
-                          </div>
-                          {statusBadge ? (
-                            <Badge variant="outline" className={statusBadge.className}>
-                              {statusBadge.label}
-                            </Badge>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Time Spent (minutes)</p>
+                          <p className="text-sm text-foreground">
+                            {typeof log.time_spent === 'number' ? log.time_spent : '-'}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Shared URL</p>
+                          {log.shared_url ? (
+                            <a
+                              className="text-sm text-primary hover:underline break-all"
+                              href={log.shared_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {log.shared_url}
+                            </a>
                           ) : (
-                            <Badge variant="outline" className="bg-muted text-muted-foreground">
-                              -
-                            </Badge>
+                            <p className="text-sm text-muted-foreground">-</p>
                           )}
                         </div>
 
-                        {log.work_description && (
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{log.work_description}</p>
-                        )}
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Upload File</p>
+                          {log.file_url ? (
+                            <a
+                              className="text-sm text-primary hover:underline"
+                              href={log.file_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open file
+                            </a>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">-</p>
+                          )}
+                        </div>
 
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                          {log.shared_url && (
-                            <a className="text-primary hover:underline" href={log.shared_url} target="_blank" rel="noreferrer">
-                              Shared URL
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Screenshot</p>
+                          {log.screenshot_url ? (
+                            <a
+                              className="text-sm text-primary hover:underline"
+                              href={log.screenshot_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open screenshot
                             </a>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">-</p>
                           )}
-                          {log.file_url && (
-                            <a className="text-primary hover:underline" href={log.file_url} target="_blank" rel="noreferrer">
-                              File
-                            </a>
-                          )}
-                          {log.screenshot_url && (
-                            <a className="text-primary hover:underline" href={log.screenshot_url} target="_blank" rel="noreferrer">
-                              Screenshot
-                            </a>
+                        </div>
+
+                        <div className="space-y-1 sm:col-span-2">
+                          <p className="text-xs text-muted-foreground">Work Description</p>
+                          {log.work_description ? (
+                            <p className="text-sm text-foreground whitespace-pre-wrap">{log.work_description}</p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">-</p>
                           )}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -688,38 +736,35 @@ export default function TasksProgress() {
             <CardTitle>Task Details</CardTitle>
             <CardDescription>Fill in the details for your new task</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Task ID</Label>
-                <Input
-                  value={formatTaskId(nextTaskNumber)}
-                  disabled
-                  className="bg-muted font-mono"
-                />
-                <p className="text-xs text-muted-foreground">Auto-generated ID</p>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Task ID</Label>
+                  <Input value={formatTaskId(nextTaskNumber)} disabled className="bg-muted font-mono" />
+                  <p className="text-xs text-muted-foreground">Auto-generated ID</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Business Name</Label>
+                  <Input
+                    value={businessName || ''}
+                    placeholder="Your business name"
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="title">Task Title *</Label>
                 <Input
                   id="title"
                   placeholder="Enter task title..."
                   value={formData.title}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, title: e.target.value }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                  className="w-full"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Business Name</Label>
-                <Input
-                  value={businessName || ''}
-                  placeholder="Your business name"
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-            </div>
 
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
