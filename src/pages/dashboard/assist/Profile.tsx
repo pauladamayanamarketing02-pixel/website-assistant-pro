@@ -431,98 +431,103 @@ export default function AssistProfile() {
               )}
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Business Address</Label>
-            {isEditing ? (
-              <Input
-                value={profile.business_address}
-                onChange={(e) => setProfile((prev) => ({ ...prev, business_address: e.target.value }))}
-                placeholder="123 Business St"
-              />
-            ) : (
-              <p className="py-2 font-medium">{profile.business_address || '-'}</p>
-            )}
-          </div>
+          
+          {/* Business Address and Business Hours side by side */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Business Address</Label>
+              {isEditing ? (
+                <Input
+                  value={profile.business_address}
+                  onChange={(e) => setProfile((prev) => ({ ...prev, business_address: e.target.value }))}
+                  placeholder="123 Business St"
+                />
+              ) : (
+                <p className="py-2 font-medium">{profile.business_address || '-'}</p>
+              )}
+            </div>
 
-          {/* Hours Section */}
-          <div className="space-y-4">
-            <Label>Business Hours</Label>
-            {profile.hours.length > 0 && (
-              <div className="space-y-2">
-                {profile.hours.map((hour, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                    <span className="font-medium min-w-[100px]">{hour.day}</span>
-                    <span className="text-sm text-muted-foreground">{hour.opensAt} - {hour.closesAt}</span>
-                    {isEditing && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setProfile({ ...profile, hours: profile.hours.filter((_, i) => i !== index) })}
-                        className="ml-auto"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            {isEditing && (
-              <div className="grid gap-2 md:grid-cols-4">
-                <Select value={newHour.day} onValueChange={(v) => setNewHour({ ...newHour, day: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Monday">Monday</SelectItem>
-                    <SelectItem value="Tuesday">Tuesday</SelectItem>
-                    <SelectItem value="Wednesday">Wednesday</SelectItem>
-                    <SelectItem value="Thursday">Thursday</SelectItem>
-                    <SelectItem value="Friday">Friday</SelectItem>
-                    <SelectItem value="Saturday">Saturday</SelectItem>
-                    <SelectItem value="Sunday">Sunday</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={newHour.opensAt} onValueChange={(v) => setNewHour({ ...newHour, opensAt: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Opens At" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {Array.from({ length: 24 }, (_, i) => i).map(hour => 
-                      ['00', '30'].map(min => {
-                        const time = `${String(hour).padStart(2, '0')}:${min}`;
-                        return <SelectItem key={time} value={time}>{time}</SelectItem>;
-                      })
-                    )}
-                  </SelectContent>
-                </Select>
-                <Select value={newHour.closesAt} onValueChange={(v) => setNewHour({ ...newHour, closesAt: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Closes At" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {Array.from({ length: 24 }, (_, i) => i).map(hour => 
-                      ['00', '30'].map(min => {
-                        const time = `${String(hour).padStart(2, '0')}:${min}`;
-                        return <SelectItem key={time} value={time}>{time}</SelectItem>;
-                      })
-                    )}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (newHour.day && newHour.opensAt && newHour.closesAt) {
-                      setProfile({ ...profile, hours: [...profile.hours, newHour] });
-                      setNewHour({ day: '', opensAt: '', closesAt: '' });
-                    }
-                  }}
-                  disabled={!newHour.day || !newHour.opensAt || !newHour.closesAt}
-                >
-                  <Plus className="h-4 w-4 mr-2" />Add
-                </Button>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label>Business Hours</Label>
+              {profile.hours.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  {profile.hours.map((hour, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded text-xs">
+                      <span className="font-medium min-w-[70px]">{hour.day}</span>
+                      <span className="text-muted-foreground">{hour.opensAt} - {hour.closesAt}</span>
+                      {isEditing && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setProfile({ ...profile, hours: profile.hours.filter((_, i) => i !== index) })}
+                          className="ml-auto h-6 w-6 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isEditing && (
+                <div className="flex gap-1">
+                  <Select value={newHour.day} onValueChange={(v) => setNewHour({ ...newHour, day: v })}>
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="Day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Monday">Mon</SelectItem>
+                      <SelectItem value="Tuesday">Tue</SelectItem>
+                      <SelectItem value="Wednesday">Wed</SelectItem>
+                      <SelectItem value="Thursday">Thu</SelectItem>
+                      <SelectItem value="Friday">Fri</SelectItem>
+                      <SelectItem value="Saturday">Sat</SelectItem>
+                      <SelectItem value="Sunday">Sun</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={newHour.opensAt} onValueChange={(v) => setNewHour({ ...newHour, opensAt: v })}>
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="Opens" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {Array.from({ length: 24 }, (_, i) => i).map(hour => 
+                        ['00', '30'].map(min => {
+                          const time = `${String(hour).padStart(2, '0')}:${min}`;
+                          return <SelectItem key={time} value={time}>{time}</SelectItem>;
+                        })
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Select value={newHour.closesAt} onValueChange={(v) => setNewHour({ ...newHour, closesAt: v })}>
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="Closes" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {Array.from({ length: 24 }, (_, i) => i).map(hour => 
+                        ['00', '30'].map(min => {
+                          const time = `${String(hour).padStart(2, '0')}:${min}`;
+                          return <SelectItem key={time} value={time}>{time}</SelectItem>;
+                        })
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (newHour.day && newHour.opensAt && newHour.closesAt) {
+                        setProfile({ ...profile, hours: [...profile.hours, newHour] });
+                        setNewHour({ day: '', opensAt: '', closesAt: '' });
+                      }
+                    }}
+                    disabled={!newHour.day || !newHour.opensAt || !newHour.closesAt}
+                    className="px-2"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
           </div>
