@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, X, Calendar, User, ArrowLeft, Pencil } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, X, Calendar, User, ArrowLeft, Pencil, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -126,6 +127,11 @@ export default function TasksProgress() {
     deadline: '',
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const [editUploadedFile, setEditUploadedFile] = useState<File | null>(null);
+
+  const [screenshotPreviewUrl, setScreenshotPreviewUrl] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -246,6 +252,8 @@ export default function TasksProgress() {
       deadline: '',
     });
     setUploadedFile(null);
+    setEditUploadedFile(null);
+    setScreenshotPreviewUrl(null);
     setSelectedTask(null);
     setViewMode('list');
   };
@@ -332,6 +340,8 @@ export default function TasksProgress() {
 
   const handleViewTask = (task: Task) => {
     setSelectedTask(task);
+    setEditUploadedFile(null);
+    setScreenshotPreviewUrl(null);
     setEditData({
       title: task.title,
       description: task.description || '',
@@ -385,6 +395,28 @@ export default function TasksProgress() {
       const nextAssignedTo = editData.assignee && editData.assignee !== 'none' ? editData.assignee : null;
       const nextStatus = deriveStatusFromAssignee(editData.assignee);
 
+      let nextFileUrl: string | null = selectedTask.file_url;
+
+      // Upload new file if user selected one in Edit mode
+      if (editUploadedFile) {
+        const filePath = `${user.id}/tasks/${Date.now()}-${editUploadedFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('user-files')
+          .upload(filePath, editUploadedFile);
+
+        if (uploadError) {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to upload file.',
+          });
+          return;
+        }
+
+        const { data: urlData } = supabase.storage.from('user-files').getPublicUrl(filePath);
+        nextFileUrl = urlData.publicUrl;
+      }
+
       const { data: updated, error } = await supabase
         .from('tasks')
         .update({
@@ -395,6 +427,7 @@ export default function TasksProgress() {
           deadline: editData.deadline || null,
           status: nextStatus as any,
           assigned_to: nextAssignedTo,
+          file_url: nextFileUrl,
         })
         .eq('id', selectedTask.id)
         .eq('user_id', user.id)
@@ -419,6 +452,7 @@ export default function TasksProgress() {
         title: 'Saved',
         description: 'Task updated successfully.',
       });
+      setEditUploadedFile(null);
       setIsEditing(false);
     };
 
@@ -456,6 +490,7 @@ export default function TasksProgress() {
                   onClick={() => {
                     setIsEditing((v) => {
                       const next = !v;
+                      setEditUploadedFile(null);
                       if (next) {
                         setEditData({
                           title: selectedTask.title,
@@ -599,8 +634,65 @@ export default function TasksProgress() {
               </div>
 
               <div className="space-y-2">
-                <Label>File</Label>
-                {selectedTask.file_url ? (
+                <Label>Upload File</Label>
+
+                {canEditDetails ? (
+                  <div className="space-y-2">
+                    <input
+                      ref={editFileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        setEditUploadedFile(f);
+                      }}
+                    />
+
+                    <div
+                      className={cn(
+                        'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50',
+                        !canEditDetails && 'opacity-60 cursor-not-allowed'
+                      )}
+                      onClick={() => editFileInputRef.current?.click()}
+                    >
+                      {editUploadedFile ? (
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm truncate">{editUploadedFile.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              setEditUploadedFile(null);
+                              if (editFileInputRef.current) editFileInputRef.current.value = '';
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Click to upload file</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedTask.file_url && !editUploadedFile && (
+                      <a
+                        href={selectedTask.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        <Upload className="h-4 w-4" />
+                        View current file
+                      </a>
+                    )}
+                  </div>
+                ) : selectedTask.file_url ? (
                   <a
                     href={selectedTask.file_url}
                     target="_blank"
@@ -687,9 +779,17 @@ export default function TasksProgress() {
                           <div className="space-y-1">
                             <p className="text-xs text-muted-foreground">Screenshot</p>
                             {log.screenshot_url ? (
-                              <a className="text-sm text-primary hover:underline" href={log.screenshot_url} target="_blank" rel="noreferrer">
-                                Open screenshot
-                              </a>
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="h-auto p-0 text-sm"
+                                onClick={() => setScreenshotPreviewUrl(log.screenshot_url as string)}
+                              >
+                                <span className="inline-flex items-center gap-2">
+                                  <ImageIcon className="h-4 w-4" />
+                                  View screenshot
+                                </span>
+                              </Button>
                             ) : (
                               <p className="text-sm text-foreground">-</p>
                             )}
@@ -700,6 +800,24 @@ export default function TasksProgress() {
                   ))}
                 </div>
               )}
+
+              <Dialog open={!!screenshotPreviewUrl} onOpenChange={(open) => !open && setScreenshotPreviewUrl(null)}>
+                <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Screenshot Preview</DialogTitle>
+                  </DialogHeader>
+                  {screenshotPreviewUrl ? (
+                    <div className="mt-2 overflow-hidden rounded-lg border bg-muted/20">
+                      <img
+                        src={screenshotPreviewUrl}
+                        alt="Work log screenshot preview"
+                        className="h-auto w-full"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : null}
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, X, ArrowLeft, Eye, FileText, Link as LinkIcon, Image, Camera, User } from 'lucide-react';
+import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, Download, X, ArrowLeft, Eye, FileText, Link as LinkIcon, Image, Camera, User } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -692,11 +692,11 @@ const fetchAssistUsers = async () => {
                   <Label className="text-muted-foreground">File</Label>
                   <a
                     href={selectedTask.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block mt-1 text-primary hover:underline"
+                    download
+                    className="mt-1 inline-flex items-center gap-2 text-primary hover:underline"
                   >
-                    View File
+                    <Download className="h-4 w-4" />
+                    Download File
                   </a>
                 </div>
               )}
@@ -840,7 +840,7 @@ const fetchAssistUsers = async () => {
                                     <Textarea
                                       value={deleteRequestReason}
                                       onChange={(e) => setDeleteRequestReason(e.target.value)}
-                                      placeholder="Contoh: salah upload file, time spent keliru, dll"
+                                      placeholder="Examples: wrong file uploaded, incorrect time spent, etc."
                                       rows={3}
                                     />
                                   </div>
@@ -929,13 +929,6 @@ const fetchAssistUsers = async () => {
                     </Select>
                   </div>
                 </div>
-
-                <p className="text-xs text-muted-foreground">
-                  Total Time Spent (input):{' '}
-                  <span className="font-medium text-foreground">
-                    {formatMinutesAsHoursMinutes(getTotalMinutes(workLogForm.hours, workLogForm.minutes))}
-                  </span>
-                </p>
               </div>
 
               <div className="space-y-2">
