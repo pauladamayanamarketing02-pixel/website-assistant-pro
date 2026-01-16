@@ -57,30 +57,30 @@ export default function AssistMessages() {
   // Fetch users (clients)
   useEffect(() => {
     const fetchUsers = async () => {
-      const { data: roles } = await supabase
+      const { data: roles } = await (supabase as any)
         .from('user_roles')
         .select('user_id')
         .eq('role', 'user');
 
       if (roles) {
-        const userIds = roles.map(r => r.user_id);
-        const { data: profiles } = await supabase
+        const userIds = (roles as any[]).map((r) => r.user_id);
+        const { data: profiles } = await (supabase as any)
           .from('profiles')
           .select('id, name, email, business_name')
           .in('id', userIds);
 
         if (profiles) {
           // Fetch business names
-          const { data: businesses } = await supabase
+          const { data: businesses } = await (supabase as any)
             .from('businesses')
             .select('user_id, business_name')
             .in('user_id', userIds);
 
-          const usersWithBusiness = profiles.map(p => {
-            const business = businesses?.find(b => b.user_id === p.id);
+          const usersWithBusiness = (profiles as any[]).map((p) => {
+            const business = (businesses as any[])?.find((b: any) => b.user_id === p.id);
             return {
               ...p,
-              business_name: business?.business_name || p.business_name || null
+              business_name: business?.business_name || p.business_name || null,
             };
           });
 
@@ -101,16 +101,16 @@ export default function AssistMessages() {
     const fetchMessages = async () => {
       if (!user || !selectedUser) return;
 
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('messages')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
       if (data) {
-        setMessages(data);
+        setMessages((data as unknown as Message[]) ?? []);
         // Mark messages as read
-        await supabase
+        await (supabase as any)
           .from('messages')
           .update({ is_read: true })
           .eq('receiver_id', user.id)
@@ -187,7 +187,7 @@ export default function AssistMessages() {
         }
       }
 
-      const { error } = await supabase.from('messages').insert({
+      const { error } = await (supabase as any).from('messages').insert({
         sender_id: user.id,
         receiver_id: selectedUser.id,
         content: newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : ''),
@@ -213,7 +213,7 @@ export default function AssistMessages() {
     if (!user || !selectedUser) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('messages')
         .delete()
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${user.id})`);

@@ -104,31 +104,31 @@ export default function ConfigPage() {
   }, []);
 
   const fetchPackages = async () => {
-    const { data, error } = await supabase
+    const { data } = await (supabase as any)
       .from('packages')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (data) {
-      setPackages(data);
+      setPackages((data as any) || []);
     }
     setLoadingPackages(false);
   };
 
   const fetchAssistUsers = async () => {
-    const { data: userRoles } = await supabase
+    const { data: userRoles } = await (supabase as any)
       .from('user_roles')
       .select('user_id')
       .eq('role', 'assist');
 
-    const assistIds = userRoles?.map(r => r.user_id) || [];
+    const assistIds = (userRoles as any[])?.map((r) => r.user_id) || [];
 
-    const { data: profiles } = await supabase
+    const { data: profiles } = await (supabase as any)
       .from('profiles')
       .select('id, name, email, phone, status')
       .in('id', assistIds);
 
-    setAssistUsers((profiles || []).map(p => ({ ...p, status: (p as any).status || 'active' })));
+    setAssistUsers(((profiles as any[]) || []).map((p) => ({ ...p, status: (p as any).status || 'active' })));
     setLoadingAssist(false);
   };
 
@@ -140,7 +140,7 @@ export default function ConfigPage() {
   const handleSavePackage = async () => {
     if (!editingPackage) return;
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('packages')
       .update({
         name: editingPackage.name,
@@ -163,7 +163,7 @@ export default function ConfigPage() {
   const handleToggleAssistStatus = async (assist: AssistUser) => {
     const newStatus = assist.status === 'active' ? 'inactive' : 'active';
     
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('profiles')
       .update({ status: newStatus } as any)
       .eq('id', assist.id);
@@ -181,7 +181,7 @@ export default function ConfigPage() {
 
   const handleDeleteAssist = async (assist: AssistUser) => {
     // Delete from profiles first
-    const { error: profileError } = await supabase
+    const { error: profileError } = await (supabase as any)
       .from('profiles')
       .delete()
       .eq('id', assist.id);
@@ -192,7 +192,7 @@ export default function ConfigPage() {
     }
 
     // Delete from user_roles
-    const { error: roleError } = await supabase
+    const { error: roleError } = await (supabase as any)
       .from('user_roles')
       .delete()
       .eq('user_id', assist.id);
@@ -224,7 +224,7 @@ export default function ConfigPage() {
 
       if (authData.user) {
         // Create profile
-        await supabase.from('profiles').insert({
+        await (supabase as any).from('profiles').insert({
           id: authData.user.id,
           email: newAssistData.email,
           name: newAssistData.name,
@@ -232,7 +232,7 @@ export default function ConfigPage() {
         });
 
         // Create role
-        await supabase.from('user_roles').insert({
+        await (supabase as any).from('user_roles').insert({
           user_id: authData.user.id,
           role: 'assist',
         });

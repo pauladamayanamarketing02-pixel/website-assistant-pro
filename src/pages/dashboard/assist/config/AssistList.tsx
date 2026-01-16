@@ -22,14 +22,14 @@ export default function AssistList() {
   const fetchAssists = async () => {
     try {
       // Fetch user roles with 'assist' role
-      const { data: assistRoles, error: rolesError } = await supabase
+      const { data: assistRoles, error: rolesError } = await (supabase as any)
         .from('user_roles')
         .select('user_id')
         .eq('role', 'assist');
 
       if (rolesError) throw rolesError;
 
-      const assistIds = assistRoles?.map(r => r.user_id) || [];
+      const assistIds = (assistRoles as any[])?.map((r) => r.user_id) || [];
 
       if (assistIds.length === 0) {
         setAssists([]);
@@ -38,14 +38,14 @@ export default function AssistList() {
       }
 
       // Fetch profiles for assist users
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles, error: profilesError } = await (supabase as any)
         .from('profiles')
         .select('id, name, email, status')
         .in('id', assistIds);
 
       if (profilesError) throw profilesError;
 
-      setAssists(profiles || []);
+      setAssists((profiles as any) || []);
     } catch (error) {
       console.error('Error fetching assists:', error);
     } finally {

@@ -51,7 +51,7 @@ export default function Auth() {
       if (role === 'assist') {
         (async () => {
           try {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
               .from('profiles')
               .select('onboarding_completed')
               .eq('id', user.id)
@@ -59,7 +59,7 @@ export default function Auth() {
 
             if (error) throw error;
 
-            const completed = data?.onboarding_completed ?? false;
+            const completed = (data as any)?.onboarding_completed ?? false;
             navigate(completed ? '/dashboard/assist' : '/orientation/welcome');
           } catch (err) {
             console.error('Error checking onboarding status:', err);

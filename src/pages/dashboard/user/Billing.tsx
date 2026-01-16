@@ -54,32 +54,36 @@ export default function Billing() {
       if (!user) return;
 
       // Fetch invoices
-      const { data: invoiceData } = await supabase
+      const { data: invoiceData } = await (supabase as any)
         .from('invoices')
-        .select(`
+        .select(
+          `
           id, amount, status, paid_at, created_at,
           packages (name)
-        `)
+        `
+        )
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (invoiceData) {
-        setInvoices(invoiceData);
+        setInvoices((invoiceData as any) || []);
       }
 
       // Fetch active package
-      const { data: pkgData } = await supabase
+      const { data: pkgData } = await (supabase as any)
         .from('user_packages')
-        .select(`
+        .select(
+          `
           started_at,
           packages (name, price)
-        `)
+        `
+        )
         .eq('user_id', user.id)
         .eq('status', 'active')
         .maybeSingle();
 
       if (pkgData) {
-        setActivePackage(pkgData);
+        setActivePackage(pkgData as any);
       }
 
       setLoading(false);

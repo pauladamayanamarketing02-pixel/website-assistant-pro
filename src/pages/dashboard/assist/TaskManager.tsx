@@ -197,38 +197,38 @@ export default function TaskManager() {
     if (user?.id) setSortByAssist(user.id);
   }, [user?.id]);
 
-const fetchTasks = async () => {
-    const { data } = await supabase
+ const fetchTasks = async () => {
+    const { data } = await (supabase as any)
       .from('tasks')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (data) {
-      setTasks(data as Task[]);
+      setTasks((data as unknown as Task[]) ?? []);
       // Calculate next task number starting from 100
-      const maxNum = data.reduce((max, t) => Math.max(max, t.task_number || 0), 99);
+      const maxNum = (data as any[]).reduce((max, t) => Math.max(max, t.task_number || 0), 99);
       setNextTaskNumber(maxNum + 1);
     }
     setLoading(false);
   };
 
-const fetchClients = async () => {
+ const fetchClients = async () => {
     // Only fetch users with 'user' role (not assist)
-    const { data: userRoles } = await supabase
+    const { data: userRoles } = await (supabase as any)
       .from('user_roles')
       .select('user_id')
       .eq('role', 'user');
 
-    const userIds = userRoles?.map(r => r.user_id) || [];
+    const userIds = (userRoles as any[])?.map((r) => r.user_id) || [];
 
-    const { data: businesses } = await supabase
+    const { data: businesses } = await (supabase as any)
       .from('businesses')
       .select('user_id, business_name')
       .in('user_id', userIds);
 
-    const filteredClients: Client[] = (businesses || [])
-      .filter(b => b.business_name)
-      .map(business => ({
+    const filteredClients: Client[] = ((businesses as any[]) || [])
+      .filter((b) => b.business_name)
+      .map((business) => ({
         id: business.user_id,
         name: business.business_name || '',
         email: '',
@@ -240,27 +240,27 @@ const fetchClients = async () => {
     setClients(filteredClients);
   };
 
-const fetchAssistUsers = async () => {
-    const { data: userRoles } = await supabase
+ const fetchAssistUsers = async () => {
+    const { data: userRoles } = await (supabase as any)
       .from('user_roles')
       .select('user_id')
       .eq('role', 'assist');
 
-    const assistIds = userRoles?.map((r) => r.user_id) || [];
+    const assistIds = (userRoles as any[])?.map((r) => r.user_id) || [];
 
-    const { data: profiles } = await supabase
+    const { data: profiles } = await (supabase as any)
       .from('profiles')
       .select('id, name, email')
       .in('id', assistIds)
       .order('name', { ascending: true });
 
     // Sort by full name
-    const sorted = (profiles || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const sorted = ((profiles as any[]) || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')) as AssistUser[];
     setAssistUsers(sorted);
 
     // Set current assist full name for disabled Assignee field
     if (user) {
-      const currentAssist = (profiles || []).find((p) => p.id === user.id);
+      const currentAssist = (sorted || []).find((p) => p.id === user.id);
       if (currentAssist?.name) {
         setAssistName(currentAssist.name);
       }
@@ -268,28 +268,28 @@ const fetchAssistUsers = async () => {
   };
 
   const fetchDeleteRequests = async (taskId: string) => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('work_log_delete_requests')
       .select('*')
       .eq('task_id', taskId)
       .order('created_at', { ascending: false });
 
-    setDeleteRequests((data || []) as WorkLogDeleteRequest[]);
+    setDeleteRequests(((data as any[]) || []) as WorkLogDeleteRequest[]);
   };
 
   const fetchWorkLogs = async (taskId: string) => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('task_work_logs')
       .select('*')
       .eq('task_id', taskId)
       .order('created_at', { ascending: false });
 
-    setWorkLogs((data || []) as WorkLog[]);
+    setWorkLogs(((data as any[]) || []) as WorkLog[]);
   };
 
   // Real-time subscription for tasks
   useEffect(() => {
-    const channel = supabase
+    const channel = (supabase as any)
       .channel('assist-tasks-realtime')
       .on(
         'postgres_changes',
@@ -298,13 +298,13 @@ const fetchAssistUsers = async () => {
           schema: 'public',
           table: 'tasks',
         },
-        (payload) => {
+        (payload: any) => {
           if (payload.eventType === 'INSERT') {
-            setTasks(prev => [payload.new as Task, ...prev]);
+            setTasks((prev) => [payload.new as Task, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
-            setTasks(prev => prev.map(t => t.id === payload.new.id ? payload.new as Task : t));
+            setTasks((prev) => prev.map((t) => (t.id === payload.new.id ? (payload.new as Task) : t)));
           } else if (payload.eventType === 'DELETE') {
-            setTasks(prev => prev.filter(t => t.id !== payload.old.id));
+            setTasks((prev) => prev.filter((t) => t.id !== payload.old.id));
           }
         }
       )
@@ -420,15 +420,15 @@ const fetchAssistUsers = async () => {
       }
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('tasks')
       .insert({
         user_id: formData.clientId,
         task_number: nextTaskNumber,
         title: formData.title,
         description: formData.description || null,
-        type: formData.type as any || null,
-        platform: formData.type === 'social_media' ? formData.platform as any : null,
+        type: (formData.type as any) || null,
+        platform: formData.type === 'social_media' ? (formData.platform as any) : null,
         assigned_to: user.id,
         deadline: formData.deadline || null,
         file_url: fileUrl,
@@ -436,7 +436,7 @@ const fetchAssistUsers = async () => {
         status: 'pending',
       })
       .select()
-      .single();
+      .maybeSingle();
 
     setUploading(false);
 
@@ -499,7 +499,7 @@ const fetchAssistUsers = async () => {
 
       const totalMinutes = getTotalMinutes(workLogForm.hours, workLogForm.minutes);
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('task_work_logs')
         .insert({
           task_id: selectedTask.id,
@@ -516,7 +516,7 @@ const fetchAssistUsers = async () => {
 
       // Sync task status with Work Log status (only for allowed transitions)
       if (workLogForm.status === 'in_progress' || workLogForm.status === 'ready_for_review') {
-        const { error: taskUpdateError } = await supabase
+        const { error: taskUpdateError } = await (supabase as any)
           .from('tasks')
           .update({ status: workLogForm.status as any })
           .eq('id', selectedTask.id);
@@ -562,7 +562,7 @@ const fetchAssistUsers = async () => {
 
     setSendingDeleteRequest(true);
     try {
-      const { error } = await supabase.from('work_log_delete_requests').insert({
+      const { error } = await (supabase as any).from('work_log_delete_requests').insert({
         work_log_id: workLogId,
         task_id: selectedTask.id,
         requester_id: user.id,

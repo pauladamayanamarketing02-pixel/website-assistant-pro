@@ -217,19 +217,19 @@ export default function ClientList() {
 
   const fetchClients = async () => {
     try {
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles, error: profilesError } = await (supabase as any)
         .from('profiles')
         .select('id, name, email, phone, business_name');
 
       if (profilesError) throw profilesError;
 
-      const { data: businesses, error: businessesError } = await supabase
+      const { data: businesses, error: businessesError } = await (supabase as any)
         .from('businesses')
         .select('id, user_id, business_name, business_number');
 
       if (businessesError) throw businessesError;
 
-      const { data: userRoles, error: rolesError } = await supabase
+      const { data: userRoles, error: rolesError } = await (supabase as any)
         .from('user_roles')
         .select('user_id, role')
         .eq('role', 'user');
@@ -294,14 +294,14 @@ export default function ClientList() {
     
     try {
       // Fetch business data
-      const { data: business } = await supabase
+      const { data: business } = await (supabase as any)
         .from('businesses')
         .select('*')
         .eq('user_id', client.id)
         .maybeSingle();
 
       // Fetch profile data
-      const { data: profileData } = await supabase
+      const { data: profileData } = await (supabase as any)
         .from('profiles')
         .select('phone, phone_secondary, name, email')
         .eq('id', client.id)
@@ -437,32 +437,32 @@ export default function ClientList() {
       }
 
       // Fetch gallery
-      const { data: galleryData } = await supabase
+      const { data: galleryData } = await (supabase as any)
         .from('user_gallery')
         .select('*')
         .eq('user_id', client.id)
         .order('created_at', { ascending: false });
 
-      setGallery(galleryData || []);
+      setGallery((galleryData as any) || []);
 
       // Fetch packages
-      const { data: packagesData } = await supabase
+      const { data: packagesData } = await (supabase as any)
         .from('user_packages')
         .select(`id, package_id, status, started_at, expires_at`)
         .eq('user_id', client.id);
 
       if (packagesData) {
         const packagesWithDetails = await Promise.all(
-          packagesData.map(async (up) => {
-            const { data: pkg } = await supabase
+          (packagesData as any[]).map(async (up) => {
+            const { data: pkg } = await (supabase as any)
               .from('packages')
               .select('name, price, type, features')
               .eq('id', up.package_id)
-              .single();
+              .maybeSingle();
             return { ...up, package: pkg };
           })
         );
-        setUserPackages(packagesWithDetails);
+        setUserPackages(packagesWithDetails as any);
       }
     } catch (error) {
       console.error('Error fetching client data:', error);
@@ -676,7 +676,7 @@ export default function ClientList() {
         .from('user-files')
         .getPublicUrl(filePath);
 
-      const { data: dbData, error: dbError } = await supabase
+      const { data: dbData, error: dbError } = await (supabase as any)
         .from('user_gallery')
         .insert({
           user_id: selectedClient.id,
@@ -686,10 +686,10 @@ export default function ClientList() {
           size: file.size,
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (dbData) {
-        setGallery(prev => [dbData, ...prev]);
+        setGallery((prev) => [dbData as any, ...prev]);
       }
     }
 
@@ -710,7 +710,7 @@ export default function ClientList() {
       await supabase.storage.from('user-files').remove([filePath]);
     }
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('user_gallery')
       .delete()
       .eq('id', item.id);
