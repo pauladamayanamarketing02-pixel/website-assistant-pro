@@ -642,31 +642,6 @@ export default function TasksProgress() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={selectedTask.status !== 'ready_for_review'}
-                  onClick={() => setConfirmCompleteOpen(true)}
-                >
-                  <CheckSquare className="h-4 w-4 mr-2" />
-                  Mark as Completed
-                </Button>
-
-                <AlertDialog open={confirmCompleteOpen} onOpenChange={setConfirmCompleteOpen}>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Mark task as completed?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to mark this task as completed?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>No</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleMarkCompleted}>Yes</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => {
                     setIsEditing((v) => {
                       const next = !v;
@@ -898,9 +873,38 @@ export default function TasksProgress() {
 
           {/* Work Log History */}
           <Card>
-            <CardHeader>
-              <CardTitle>Work Log History</CardTitle>
-              <CardDescription>Track your progress on this task</CardDescription>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle>Work Log History</CardTitle>
+                <CardDescription>Track your progress on this task</CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={selectedTask.status === 'ready_for_review' ? 'default' : 'outline'}
+                  disabled={selectedTask.status !== 'ready_for_review'}
+                  onClick={() => setConfirmCompleteOpen(true)}
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Mark as Completed
+                </Button>
+
+                <AlertDialog open={confirmCompleteOpen} onOpenChange={setConfirmCompleteOpen}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Mark task as completed?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to mark this task as completed?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>No</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleMarkCompleted}>Yes</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-3">
@@ -930,7 +934,7 @@ export default function TasksProgress() {
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-sm font-medium text-foreground">Work Log</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {new Date(req.created_at).toLocaleString()}
+                                  {new Date(relatedLog?.created_at || req.created_at).toLocaleString()}
                                 </span>
                               </div>
 
