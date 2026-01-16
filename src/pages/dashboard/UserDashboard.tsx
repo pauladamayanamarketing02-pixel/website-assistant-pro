@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Routes, Route } from 'react-router-dom';
 import { 
-  Home, Building2, Sparkles, FileText, ImageIcon, 
+  Home, Building2, Sparkles, ImageIcon, 
   CheckSquare, MessageCircle, Package, CreditCard, 
-  BarChart3, Settings, LogOut 
+  BarChart3, Settings, LogOut, CalendarDays 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 import DashboardOverview from './user/Overview';
 import MyBusiness from './user/MyBusiness';
+import ContentPlanner from './user/ContentPlanner';
 import AICreation from './user/AICreation';
 import MyGallery from './user/MyGallery';
 import TasksProgress from './user/TasksProgress';
@@ -25,6 +26,7 @@ import UserSettings from './user/Settings';
 const menuItems = [
   { title: 'Overview', url: '/dashboard/user', icon: Home },
   { title: 'My Business', url: '/dashboard/user/business', icon: Building2 },
+  { title: 'Content Planner', url: '/dashboard/user/content-planner', icon: CalendarDays },
   { title: 'Tasks & Progress', url: '/dashboard/user/tasks', icon: CheckSquare },
   { title: 'AI Creation', url: '/dashboard/user/ai-creation', icon: Sparkles },
   { title: 'My Gallery', url: '/dashboard/user/gallery', icon: ImageIcon },
@@ -119,6 +121,7 @@ export default function UserDashboard() {
           <Routes>
             <Route index element={<DashboardOverview />} />
             <Route path="business" element={<MyBusiness />} />
+            <Route path="content-planner" element={<ContentPlanner />} />
             <Route path="tasks" element={<TasksProgress />} />
             <Route path="ai-creation" element={<AICreation />} />
             <Route path="gallery" element={<MyGallery />} />
