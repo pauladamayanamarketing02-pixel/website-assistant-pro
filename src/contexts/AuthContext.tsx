@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-type AppRole = 'user' | 'assist';
+type AppRole = 'user' | 'assist' | 'super_admin';
 
 interface AuthContextType {
   user: User | null;
@@ -101,7 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (roleData?.role !== selectedRole) {
           await supabase.auth.signOut();
-          throw new Error(`You are not registered as a ${selectedRole === 'user' ? 'Business Owner' : 'Marketing Assist'}. Please select the correct role.`);
+          const roleLabel = selectedRole === 'user' ? 'Business Owner' : selectedRole === 'assist' ? 'Marketing Assist' : 'Super Admin';
+          throw new Error(`You are not registered as a ${roleLabel}. Please select the correct role.`);
         }
 
         setRole(roleData.role as AppRole);
