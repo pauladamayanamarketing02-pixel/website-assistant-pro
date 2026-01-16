@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Routes, Route } from 'react-router-dom';
-import { 
-  Home, Users, CheckSquare, Sparkles, MessageCircle, BarChart3, 
-  Globe, Settings, LogOut, User
+import {
+  Home,
+  Users,
+  CheckSquare,
+  Sparkles,
+  MessageCircle,
+  BarChart3,
+  Globe,
+  Settings,
+  User,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  SidebarProvider, Sidebar, SidebarContent, SidebarGroup, 
-  SidebarGroupContent, SidebarMenu, SidebarMenuButton, 
-  SidebarMenuItem, SidebarTrigger 
-} from '@/components/ui/sidebar';
-import { NavLink } from '@/components/NavLink';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
+import { AssistSidebar, type AssistNavItem } from '@/components/assist/AssistSidebar';
 
 // Import components
 import ClientList from './assist/ClientList';
@@ -26,7 +28,7 @@ import ConfigPage from './assist/config/ConfigPage';
 import AssistSettings from './assist/Settings';
 import AssistProfile from './assist/Profile';
 
-const mainMenuItems = [
+const mainMenuItems: AssistNavItem[] = [
   { title: 'Overview', url: '/dashboard/assist', icon: Home },
   { title: 'Profile', url: '/dashboard/assist/profile', icon: User },
   { title: 'Client List', url: '/dashboard/assist/clients', icon: Users },
@@ -36,6 +38,7 @@ const mainMenuItems = [
   { title: 'Reports', url: '/dashboard/assist/reports', icon: BarChart3 },
   { title: 'EasyMarketingAssist', url: '/dashboard/assist/ema', icon: Globe },
   { title: 'Config', url: '/dashboard/assist/config', icon: Settings },
+  { title: 'Settings', url: '/dashboard/assist/settings', icon: Settings },
 ];
 
 function DashboardOverview() {
@@ -130,79 +133,32 @@ export default function AssistDashboard() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <Sidebar className="border-r">
-          <div className="p-4 border-b">
-            <div className="rounded-lg bg-sidebar-accent/40 p-3 ring-1 ring-sidebar-border/60">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary shadow-glow">
-                  <span className="text-lg font-bold text-primary-foreground">E</span>
-                </div>
-                <div className="leading-tight">
-                  <div className="text-sm font-semibold tracking-tight text-sidebar-foreground">EasyMarketingAssist</div>
-                  <div className="text-xs font-medium text-sidebar-foreground/80">Assistant Dashboard</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {mainMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink 
-                          to={item.url} 
-                          end={item.url === '/dashboard/assist'} 
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent" 
-                          activeClassName="bg-sidebar-accent text-sidebar-primary"
-                        >
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+        <AssistSidebar items={mainMenuItems} onLogout={signOut} />
 
-                  {/* Settings */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to="/dashboard/assist/settings" 
-                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent" 
-                        activeClassName="bg-sidebar-accent text-sidebar-primary"
-                      >
-                        <Settings className="h-4 w-4" />
-                        <span>Settings</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <div className="mt-auto p-4 border-t">
-            <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </Sidebar>
-        <main className="flex-1 p-6 bg-background overflow-auto">
-          <SidebarTrigger className="mb-4 md:hidden" />
-          <Routes>
-            <Route index element={<DashboardOverview />} />
-            <Route path="profile" element={<AssistProfile />} />
-            <Route path="clients" element={<ClientList />} />
-            <Route path="tasks" element={<TaskManager />} />
-            <Route path="ai-generator" element={<AIGenerator />} />
-            <Route path="messages" element={<AssistMessages />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="ema" element={<EasyMarketingAssist />} />
-            <Route path="config" element={<ConfigPage />} />
-            <Route path="settings" element={<AssistSettings />} />
-          </Routes>
-        </main>
+        <div className="flex-1 min-w-0">
+          <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
+            <SidebarTrigger />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">Assist Dashboard</div>
+              <div className="text-xs text-muted-foreground truncate">Workspace</div>
+            </div>
+          </header>
+
+          <main className="p-6 bg-background overflow-auto">
+            <Routes>
+              <Route index element={<DashboardOverview />} />
+              <Route path="profile" element={<AssistProfile />} />
+              <Route path="clients" element={<ClientList />} />
+              <Route path="tasks" element={<TaskManager />} />
+              <Route path="ai-generator" element={<AIGenerator />} />
+              <Route path="messages" element={<AssistMessages />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="ema" element={<EasyMarketingAssist />} />
+              <Route path="config" element={<ConfigPage />} />
+              <Route path="settings" element={<AssistSettings />} />
+            </Routes>
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );

@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Routes, Route } from 'react-router-dom';
-import { 
-  Home, Building2, Sparkles, ImageIcon, 
-  CheckSquare, MessageCircle, Package, CreditCard, 
-  BarChart3, Settings, LogOut, CalendarDays 
+import {
+  Home,
+  Building2,
+  Sparkles,
+  ImageIcon,
+  CheckSquare,
+  MessageCircle,
+  Package,
+  CreditCard,
+  BarChart3,
+  Settings,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger } from '@/components/ui/sidebar';
-import { NavLink } from '@/components/NavLink';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
+import { UserSidebar, type UserNavItem } from '@/components/user/UserSidebar';
 
 import DashboardOverview from './user/Overview';
 import MyBusiness from './user/MyBusiness';
@@ -23,7 +30,7 @@ import Billing from './user/Billing';
 import Reporting from './user/Reporting';
 import UserSettings from './user/Settings';
 
-const menuItems = [
+const menuItems: UserNavItem[] = [
   { title: 'Overview', url: '/dashboard/user', icon: Home },
   { title: 'My Business', url: '/dashboard/user/business', icon: Building2 },
   { title: 'Content Planner', url: '/dashboard/user/content-planner', icon: CalendarDays },
@@ -51,7 +58,7 @@ export default function UserDashboard() {
     // Check if user completed onboarding
     const checkOnboarding = async () => {
       if (!user) return;
-      
+
       const { data: business } = await supabase
         .from('businesses')
         .select('onboarding_completed')
@@ -82,66 +89,33 @@ export default function UserDashboard() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <Sidebar className="border-r">
-          <div className="p-4 border-b">
-            <div className="rounded-lg bg-sidebar-accent/40 p-3 ring-1 ring-sidebar-border/60">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary shadow-glow">
-                  <span className="text-lg font-bold text-primary-foreground">E</span>
-                </div>
-                <div className="leading-tight">
-                  <div className="text-sm font-semibold tracking-tight text-sidebar-foreground">EasyMarketingAssist</div>
-                  <div className="text-xs font-medium text-sidebar-foreground/80">Business Dashboard</div>
-                </div>
-              </div>
+        <UserSidebar items={menuItems} onLogout={signOut} />
+
+        <div className="flex-1 min-w-0">
+          <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
+            <SidebarTrigger />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">User Dashboard</div>
+              <div className="text-xs text-muted-foreground truncate">Workspace</div>
             </div>
-          </div>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink
-                          to={item.url}
-                          end={item.url === '/dashboard/user'}
-                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent"
-                          activeClassName="bg-sidebar-accent text-sidebar-primary"
-                        >
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <div className="mt-auto p-4 border-t">
-            <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </Sidebar>
-        <main className="flex-1 p-6 bg-background overflow-auto">
-          <SidebarTrigger className="mb-4 md:hidden" />
-          <Routes>
-            <Route index element={<DashboardOverview />} />
-            <Route path="business" element={<MyBusiness />} />
-            <Route path="content-planner" element={<ContentPlanner />} />
-            <Route path="tasks" element={<TasksProgress />} />
-            <Route path="ai-creation" element={<AICreation />} />
-            <Route path="gallery" element={<MyGallery />} />
-            <Route path="messages" element={<Messages />} />
-            <Route path="package" element={<MyPackage />} />
-            <Route path="billing" element={<Billing />} />
-            <Route path="reporting" element={<Reporting />} />
-            <Route path="settings" element={<UserSettings />} />
-          </Routes>
-        </main>
+          </header>
+
+          <main className="p-6 bg-background overflow-auto">
+            <Routes>
+              <Route index element={<DashboardOverview />} />
+              <Route path="business" element={<MyBusiness />} />
+              <Route path="content-planner" element={<ContentPlanner />} />
+              <Route path="tasks" element={<TasksProgress />} />
+              <Route path="ai-creation" element={<AICreation />} />
+              <Route path="gallery" element={<MyGallery />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="package" element={<MyPackage />} />
+              <Route path="billing" element={<Billing />} />
+              <Route path="reporting" element={<Reporting />} />
+              <Route path="settings" element={<UserSettings />} />
+            </Routes>
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );
