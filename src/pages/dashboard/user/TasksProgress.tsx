@@ -175,6 +175,11 @@ export default function TasksProgress() {
   const [deleteRequestsLoading, setDeleteRequestsLoading] = useState(false);
   const [decidingRequestId, setDecidingRequestId] = useState<string | null>(null);
 
+  // Approve delete request confirmation
+  const [confirmApproveOpen, setConfirmApproveOpen] = useState(false);
+  const [confirmApproveRequest, setConfirmApproveRequest] = useState<WorkLogDeleteRequest | null>(null);
+  const [approveCanceledRequestIds, setApproveCanceledRequestIds] = useState<Set<string>>(() => new Set());
+
   // Mark completed confirmation
   const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
 
@@ -577,6 +582,44 @@ export default function TasksProgress() {
       }
     };
 
+    const handleCancelApproveDeleteRequest = async (req: WorkLogDeleteRequest) => {
+      if (!user || !selectedTask) return;
+
+      // Disable the button (white/outline disabled) after choosing "No"
+      setApproveCanceledRequestIds((prev) => {
+        const next = new Set(prev);
+        next.add(req.id);
+        return next;
+      });
+
+      setConfirmApproveOpen(false);
+      setConfirmApproveRequest(null);
+
+      try {
+        // As requested: when answering "No", set task status to "In Progress"
+        const { data: updated, error } = await supabase
+          .from('tasks')
+          .update({ status: 'in_progress' as any })
+          .eq('id', selectedTask.id)
+          .eq('user_id', user.id)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+
+        if (updated) {
+          setSelectedTask(updated as Task);
+          setTasks((prev) => prev.map((t) => (t.id === updated.id ? (updated as Task) : t)));
+        }
+      } catch (err: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: err?.message || 'Failed to update task status.',
+        });
+      }
+    };
+
     const handleMarkCompleted = async () => {
       if (!user || !selectedTask) return;
 
@@ -635,8 +678,8 @@ export default function TasksProgress() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={statusConfig[derivedStatus].className}>
-                  {statusConfig[derivedStatus].label}
+                <Badge variant="outline" className={statusConfig[selectedTask.status].className}>
+                  {statusConfig[selectedTask.status].label}
                 </Badge>
 
                 <Button
@@ -719,8 +762,8 @@ export default function TasksProgress() {
 
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <Input value={statusConfig[derivedStatus].label} disabled className="bg-muted" />
-                  <p className="text-xs text-muted-foreground">Status updates automatically after assignee selection.</p>
+                  <Input value={statusConfig[selectedTask.status].label} disabled className="bg-muted" />
+                  <p className="text-xs text-muted-foreground">Status updates automatically based on progress.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -963,8 +1006,12 @@ export default function TasksProgress() {
                               </Button>
                               <Button
                                 size="sm"
-                                disabled={decidingRequestId === req.id}
-                                onClick={() => handleDecideDeleteRequest(req, 'approved')}
+                                variant={approveCanceledRequestIds.has(req.id) ? 'outline' : 'default'}
+                                disabled={decidingRequestId === req.id || approveCanceledRequestIds.has(req.id)}
+                                onClick={() => {
+                                  setConfirmApproveRequest(req);
+                                  setConfirmApproveOpen(true);
+                                }}
                               >
                                 Approve
                               </Button>
@@ -976,6 +1023,42 @@ export default function TasksProgress() {
                   )}
                 </div>
               </div>
+
+              <AlertDialog
+                open={confirmApproveOpen}
+                onOpenChange={(open) => {
+                  setConfirmApproveOpen(open);
+                  if (!open) setConfirmApproveRequest(null);
+                }}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Approve delete request?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      If you approve, the selected work log will be deleted permanently.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel
+                      onClick={() => {
+                        if (confirmApproveRequest) void handleCancelApproveDeleteRequest(confirmApproveRequest);
+                      }}
+                    >
+                      No
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        if (confirmApproveRequest)
+                          void handleDecideDeleteRequest(confirmApproveRequest, 'approved');
+                        setConfirmApproveOpen(false);
+                        setConfirmApproveRequest(null);
+                      }}
+                    >
+                      Yes
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               {workLogsLoading ? (
                 <div className="space-y-3">
