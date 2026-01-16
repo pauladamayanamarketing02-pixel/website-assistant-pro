@@ -262,13 +262,14 @@ export default function TasksProgress() {
       if (!user || !selectedTask || viewMode !== 'view') return;
       setDeleteRequestsLoading(true);
 
-      const { data, error } = await supabase
-        .from('work_log_delete_requests')
-        .select('*')
-        .eq('task_id', selectedTask.id)
-        .order('created_at', { ascending: false });
+        const { data, error } = await supabase
+          .from('work_log_delete_requests')
+          .select('*')
+          .eq('task_id', selectedTask.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
 
-      if (!error && data) setDeleteRequests(data as WorkLogDeleteRequest[]);
+        if (!error && data) setDeleteRequests(data as WorkLogDeleteRequest[]);
       setDeleteRequestsLoading(false);
     };
 
@@ -555,11 +556,15 @@ export default function TasksProgress() {
           setWorkLogs((prev) => prev.filter((l) => l.id !== req.work_log_id));
         }
 
-        setDeleteRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: decision, decided_by: user.id, decided_at: new Date().toISOString() } : r)));
+        // Hide the request after a decision (only pending requests are shown)
+        setDeleteRequests((prev) => prev.filter((r) => r.id !== req.id));
 
         toast({
           title: decision === 'approved' ? 'Approved' : 'Rejected',
-          description: decision === 'approved' ? 'Work log deleted from database.' : 'Work log remains in history (Rejected).',
+          description:
+            decision === 'approved'
+              ? 'Work log deleted from database.'
+              : 'Work log remains in history (Rejected).',
         });
       } catch (err: any) {
         toast({
@@ -916,25 +921,33 @@ export default function TasksProgress() {
                     <div className="mt-1 text-sm text-muted-foreground">No delete requests.</div>
                   ) : (
                     <div className="mt-2 space-y-2">
-                      {deleteRequests.map((req) => (
-                        <div key={req.id} className="flex flex-col gap-2 rounded-md border bg-background p-3 md:flex-row md:items-center md:justify-between">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground">Work Log</span>
-                              <Badge variant="outline" className={cn(
-                                req.status === 'approved'
-                                  ? 'bg-muted text-muted-foreground'
-                                  : req.status === 'rejected'
-                                    ? 'bg-muted text-muted-foreground'
-                                    : 'bg-secondary text-secondary-foreground'
-                              )}>
-                                {req.status.toUpperCase()}
-                              </Badge>
-                            </div>
-                            <div className="mt-1 text-sm text-muted-foreground">Reason: {req.reason}</div>
-                          </div>
+                      {deleteRequests.map((req) => {
+                        const relatedLog = workLogs.find((l) => l.id === req.work_log_id);
 
-                          {req.status === 'pending' ? (
+                        return (
+                          <div key={req.id} className="flex flex-col gap-2 rounded-md border bg-background p-3 md:flex-row md:items-center md:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-medium text-foreground">Work Log</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(req.created_at).toLocaleString()}
+                                </span>
+                              </div>
+
+                              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                <div>
+                                  <div className="text-xs text-muted-foreground">Time Spent (minutes)</div>
+                                  <div className="text-sm text-foreground">
+                                    {typeof relatedLog?.time_spent === 'number' ? relatedLog.time_spent : '-'}
+                                  </div>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-xs text-muted-foreground">Reason</div>
+                                  <div className="text-sm text-muted-foreground break-words">{req.reason}</div>
+                                </div>
+                              </div>
+                            </div>
+
                             <div className="flex items-center gap-2">
                               <Button
                                 size="sm"
@@ -949,12 +962,12 @@ export default function TasksProgress() {
                                 disabled={decidingRequestId === req.id}
                                 onClick={() => handleDecideDeleteRequest(req, 'approved')}
                               >
-                                Approve & Delete
+                                Approve
                               </Button>
                             </div>
-                          ) : null}
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

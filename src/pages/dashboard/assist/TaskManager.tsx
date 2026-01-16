@@ -50,6 +50,20 @@ interface WorkLog {
   created_at: string;
 }
 
+interface WorkLogDeleteRequest {
+  id: string;
+  work_log_id: string;
+  task_id: string;
+  requester_id: string;
+  owner_id: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface Client {
   id: string;
   name: string;
@@ -165,7 +179,9 @@ export default function TaskManager() {
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [savingWorkLog, setSavingWorkLog] = useState(false);
 
-  // Work log delete request (assist -> business owner approval)
+  // Work log delete requests (assist -> business owner approval)
+  const [deleteRequests, setDeleteRequests] = useState<WorkLogDeleteRequest[]>([]);
+
   const [activeDeleteRequestLogId, setActiveDeleteRequestLogId] = useState<string | null>(null);
   const [deleteRequestReason, setDeleteRequestReason] = useState('');
   const [sendingDeleteRequest, setSendingDeleteRequest] = useState(false);
@@ -251,6 +267,16 @@ const fetchAssistUsers = async () => {
     }
   };
 
+  const fetchDeleteRequests = async (taskId: string) => {
+    const { data } = await supabase
+      .from('work_log_delete_requests')
+      .select('*')
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: false });
+
+    setDeleteRequests((data || []) as WorkLogDeleteRequest[]);
+  };
+
   const fetchWorkLogs = async (taskId: string) => {
     const { data } = await supabase
       .from('task_work_logs')
@@ -288,6 +314,31 @@ const fetchAssistUsers = async () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Real-time subscription for delete requests (so assist can see rejected/pending updates)
+  useEffect(() => {
+    if (!selectedTask || viewMode !== 'view') return;
+
+    const channel = supabase
+      .channel(`work-log-delete-requests-${selectedTask.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'work_log_delete_requests',
+          filter: `task_id=eq.${selectedTask.id}`,
+        },
+        () => {
+          fetchDeleteRequests(selectedTask.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTask?.id, viewMode]);
 
   const resetForm = () => {
     setFormData({
@@ -527,6 +578,8 @@ const fetchAssistUsers = async () => {
         description: 'Delete request has been sent to the business owner for approval.',
       });
 
+      await fetchDeleteRequests(selectedTask.id);
+
       setActiveDeleteRequestLogId(null);
       setDeleteRequestReason('');
     } catch (err: any) {
@@ -752,6 +805,10 @@ const fetchAssistUsers = async () => {
                           const StatusIcon = badgeCfg.icon;
                           const isDeleteActive = activeDeleteRequestLogId === log.id;
 
+                          const latestReqForLog = deleteRequests.find((r) => r.work_log_id === log.id);
+                          const deleteDisabled = latestReqForLog?.status === 'pending';
+                          const showRejectedLabel = latestReqForLog?.status === 'rejected';
+
                           return (
                             <div key={log.id} className="rounded-lg border bg-background p-4 text-sm">
                               <div className="flex items-start justify-between gap-3">
@@ -761,6 +818,13 @@ const fetchAssistUsers = async () => {
                                       <StatusIcon className="h-3.5 w-3.5" />
                                       {badgeCfg.label}
                                     </Badge>
+
+                                    {showRejectedLabel && (
+                                      <Badge variant="outline" className="bg-muted text-muted-foreground">
+                                        REJECTED DELETE
+                                      </Badge>
+                                    )}
+
                                     <span className="text-xs text-muted-foreground">
                                       {new Date(log.created_at).toLocaleString()}
                                     </span>
@@ -785,12 +849,13 @@ const fetchAssistUsers = async () => {
                                     type="button"
                                     variant="outline"
                                     size="sm"
+                                    disabled={deleteDisabled}
                                     onClick={() => {
                                       setActiveDeleteRequestLogId(log.id);
                                       setDeleteRequestReason('');
                                     }}
                                   >
-                                    Delete
+                                    {deleteDisabled ? 'Requested' : 'Delete'}
                                   </Button>
                                 </div>
                               </div>
@@ -1284,6 +1349,7 @@ const fetchAssistUsers = async () => {
                             setSelectedTask(task);
                             setViewMode('view');
                             setWorkLogs([]);
+                            setDeleteRequests([]);
                             setWorkLogFile(null);
                             setScreenshotFile(null);
                             setWorkLogForm({
@@ -1294,6 +1360,7 @@ const fetchAssistUsers = async () => {
                               status: getDefaultWorkLogStatusForTask(task),
                             });
                             fetchWorkLogs(task.id);
+                            fetchDeleteRequests(task.id);
                           }}
                         >
                           <Eye className="h-4 w-4 mr-2" />
