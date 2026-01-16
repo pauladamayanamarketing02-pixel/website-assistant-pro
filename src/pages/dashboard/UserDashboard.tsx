@@ -91,7 +91,7 @@ export default function UserDashboard() {
                 </div>
                 <div className="leading-tight">
                   <div className="text-sm font-semibold tracking-tight text-sidebar-foreground">EasyMarketingAssist</div>
-                  <div className="text-xs font-medium text-sidebar-foreground/80">User Portal</div>
+                  <div className="text-xs font-medium text-sidebar-foreground/80">Business Dashboard</div>
                 </div>
               </div>
             </div>
