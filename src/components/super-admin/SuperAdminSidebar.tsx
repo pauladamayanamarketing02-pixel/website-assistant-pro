@@ -26,17 +26,20 @@ export function SuperAdminSidebar({ items }: { items: SuperAdminNavItem[] }) {
   const { pathname } = useLocation();
 
   return (
-    <Sidebar className={open ? "w-72 border-r" : "w-14 border-r"}>
+    <Sidebar
+      className={(open ? "w-72" : "w-14") + " border-r border-sidebar-border bg-sidebar text-sidebar-foreground"}
+      collapsible="icon"
+    >
       <SidebarContent>
         {/* Brand */}
-        <div className="h-12 flex items-center gap-3 px-3 border-b">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
-            <Shield className="h-4 w-4 text-primary-foreground" />
+        <div className="h-12 flex items-center gap-3 px-3 border-b border-sidebar-border">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary">
+            <Shield className="h-4 w-4 text-sidebar-primary-foreground" />
           </div>
           {open && (
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-foreground truncate">Super Admin</div>
-              <div className="text-xs text-muted-foreground truncate">Control Center</div>
+              <div className="text-sm font-semibold text-sidebar-foreground truncate">Super Admin</div>
+              <div className="text-xs text-sidebar-foreground/70 truncate">Control Center</div>
             </div>
           )}
         </div>
@@ -53,20 +56,14 @@ export function SuperAdminSidebar({ items }: { items: SuperAdminNavItem[] }) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         className={
-                          "opacity-60 cursor-not-allowed hover:bg-transparent" +
+                          "opacity-60 cursor-not-allowed hover:bg-transparent text-sidebar-foreground/70" +
                           (active ? " bg-sidebar-accent text-sidebar-primary" : "")
                         }
                         aria-disabled
+                        title="Coming soon"
                       >
                         <item.icon className="h-4 w-4" />
-                        {open && (
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="truncate">{item.title}</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-sidebar-accent text-sidebar-foreground/80">
-                              soon
-                            </span>
-                          </div>
-                        )}
+                        {open && <span className="truncate">{item.title}</span>}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -78,7 +75,7 @@ export function SuperAdminSidebar({ items }: { items: SuperAdminNavItem[] }) {
                       <NavLink
                         to={item.url}
                         end={item.url === "/dashboard/super-admin"}
-                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent"
+                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
                         activeClassName="bg-sidebar-accent text-sidebar-primary"
                       >
                         <item.icon className="h-4 w-4" />
