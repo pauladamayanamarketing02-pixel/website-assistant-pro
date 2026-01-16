@@ -137,8 +137,8 @@ export default function SuperAdminLogin() {
 
         <Card className="shadow-soft">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Login</CardTitle>
-            <CardDescription>Masukkan email & password admin.</CardDescription>
+            <CardTitle className="text-2xl">Login Super Admin</CardTitle>
+            <CardDescription>Masukkan email &amp; password Super Admin.</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -185,14 +185,7 @@ export default function SuperAdminLogin() {
               </Button>
             </form>
           </CardContent>
-
-          <CardFooter className="text-xs text-muted-foreground">
-            Pastikan akun Anda memiliki role <span className="font-medium text-foreground">super_admin</span>.
-          </CardFooter>
         </Card>
-
-        {/* eslint-disable-next-line react/no-unescaped-entities */}
-        <p className="text-center text-xs text-muted-foreground">Redirect URL: {redirectTo}</p>
       </div>
     </div>
   );

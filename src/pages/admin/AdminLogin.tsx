@@ -183,13 +183,7 @@ export default function AdminLogin() {
               </Button>
             </form>
           </CardContent>
-
-          <CardFooter className="text-xs text-muted-foreground">
-            Pastikan akun Anda memiliki role <span className="font-medium text-foreground">admin</span>.
-          </CardFooter>
         </Card>
-
-        <p className="text-center text-xs text-muted-foreground">Redirect URL: {redirectTo}</p>
       </div>
     </div>
   );
