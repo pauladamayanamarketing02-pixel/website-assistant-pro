@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import type { LucideIcon } from "lucide-react";
+import { Users, type LucideIcon } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
 import {
@@ -28,8 +28,21 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
   return (
     <Sidebar className={open ? "w-72 border-r" : "w-14 border-r"}>
       <SidebarContent>
+        {/* Brand */}
+        <div className="h-12 flex items-center gap-3 px-3 border-b">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
+            <Users className="h-4 w-4 text-primary-foreground" />
+          </div>
+          {open && (
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">Admin</div>
+              <div className="text-xs text-muted-foreground truncate">Operasional</div>
+            </div>
+          )}
+        </div>
+
         <SidebarGroup>
-          <SidebarGroupLabel>Admin Operasional</SidebarGroupLabel>
+          {open && <SidebarGroupLabel>Menu</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
@@ -47,8 +60,8 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                       >
                         <item.icon className="h-4 w-4" />
                         {open && (
-                          <div className="flex items-center gap-2">
-                            <span>{item.title}</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="truncate">{item.title}</span>
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-sidebar-accent text-sidebar-foreground/80">
                               soon
                             </span>
@@ -69,7 +82,7 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                         activeClassName="bg-sidebar-accent text-sidebar-primary"
                       >
                         <item.icon className="h-4 w-4" />
-                        {open && <span>{item.title}</span>}
+                        {open && <span className="truncate">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
