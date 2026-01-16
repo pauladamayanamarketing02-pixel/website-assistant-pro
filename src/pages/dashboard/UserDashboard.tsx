@@ -95,7 +95,7 @@ export default function UserDashboard() {
           <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
             <SidebarTrigger />
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-foreground truncate">User Dashboard</div>
+              <div className="text-sm font-semibold text-foreground truncate">Business Dashboard</div>
               <div className="text-xs text-muted-foreground truncate">Workspace</div>
             </div>
           </header>
