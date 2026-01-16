@@ -110,14 +110,32 @@ export default function ContentPlanner() {
             <CardDescription>Pilih bulan untuk melihat rekomendasi konten.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Calendar
-              mode="single"
-              selected={month}
-              onSelect={(d) => d && setMonth(d)}
-              month={month}
-              onMonthChange={setMonth}
-              className="p-3 pointer-events-auto"
-            />
+            {/* Make calendar scale to the card size (bigger day cells) */}
+            <div className="w-full overflow-x-auto">
+              <div className="mx-auto w-full max-w-none">
+                <Calendar
+                  mode="single"
+                  selected={month}
+                  onSelect={(d) => d && setMonth(d)}
+                  month={month}
+                  onMonthChange={setMonth}
+                  className="w-full p-3 pointer-events-auto"
+                  classNames={{
+                    months: "w-full",
+                    month: "w-full space-y-6",
+                    caption: "flex justify-center pt-1 relative items-center",
+                    caption_label: "text-base font-semibold",
+                    table: "w-full border-collapse",
+                    head_row: "flex w-full",
+                    head_cell:
+                      "text-muted-foreground rounded-md w-full font-medium text-sm flex-1 text-center",
+                    row: "flex w-full mt-3",
+                    cell: "h-16 flex-1 text-center text-base p-0 relative focus-within:relative focus-within:z-20",
+                    day: "h-16 w-full p-0 font-normal aria-selected:opacity-100",
+                  }}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -179,4 +197,3 @@ export default function ContentPlanner() {
     </div>
   );
 }
-
