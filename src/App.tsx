@@ -15,6 +15,8 @@ import UserDashboard from "./pages/dashboard/UserDashboard";
 import AssistDashboard from "./pages/dashboard/AssistDashboard";
 import SuperAdminLogin from "./pages/super-admin/SuperAdminLogin";
 import SuperAdminDashboard from "./pages/dashboard/SuperAdminDashboard";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import Welcome from "./pages/onboarding/Welcome";
 import GetStarted from "./pages/onboarding/GetStarted";
@@ -52,6 +54,10 @@ const App = () => (
             {/* Super Admin */}
             <Route path="/super-admin/login" element={<SuperAdminLogin />} />
             <Route path="/dashboard/super-admin/*" element={<SuperAdminDashboard />} />
+
+            {/* Admin Operasional */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/dashboard/admin/*" element={<AdminDashboard />} />
             <Route path="/onboarding/welcome" element={<Welcome />} />
             <Route path="/onboarding/get-started" element={<GetStarted />} />
             <Route path="/onboarding/business-stage" element={<BusinessStage />} />
