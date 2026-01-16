@@ -1353,6 +1353,7 @@ const fetchAssistUsers = async () => {
                   <TableHead>Task ID</TableHead>
                   <TableHead>Business Name</TableHead>
                   <TableHead>Task Title</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Assignee</TableHead>
                   <TableHead>Deadline</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -1366,6 +1367,11 @@ const fetchAssistUsers = async () => {
                       <TableCell className="font-mono">{getTaskId(task)}</TableCell>
                       <TableCell className="font-medium">{getClientName(task.user_id)}</TableCell>
                       <TableCell className="font-medium">{task.title}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={config.className}>
+                          {config.label}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{getAssigneeName(task.assigned_to)}</TableCell>
                       <TableCell>
                         {task.deadline ? new Date(task.deadline).toLocaleDateString() : '-'}
