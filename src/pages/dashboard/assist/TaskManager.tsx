@@ -638,6 +638,8 @@ const fetchAssistUsers = async () => {
   // Task View Mode with Work Log
   if (viewMode === 'view' && selectedTask) {
     const config = statusConfig[selectedTask.status] ?? statusConfig.pending;
+    const isCompleted = selectedTask.status === 'completed';
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -756,7 +758,7 @@ const fetchAssistUsers = async () => {
 
               <div className="flex justify-end">
                 <Button disabled variant="secondary">
-                  Read-only
+                  {isCompleted ? 'Completed' : 'Read-only'}
                 </Button>
               </div>
             </CardContent>
@@ -849,8 +851,9 @@ const fetchAssistUsers = async () => {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    disabled={deleteDisabled}
+                                    disabled={deleteDisabled || isCompleted}
                                     onClick={() => {
+                                      if (isCompleted) return;
                                       setActiveDeleteRequestLogId(log.id);
                                       setDeleteRequestReason('');
                                     }}
@@ -907,6 +910,7 @@ const fetchAssistUsers = async () => {
                                       onChange={(e) => setDeleteRequestReason(e.target.value)}
                                       placeholder="Examples: wrong file uploaded, incorrect time spent, etc."
                                       rows={3}
+                                      disabled={sendingDeleteRequest || isCompleted}
                                     />
                                   </div>
                                   <div className="flex items-center justify-end gap-2">
@@ -926,7 +930,7 @@ const fetchAssistUsers = async () => {
                                       type="button"
                                       size="sm"
                                       onClick={() => handleSendDeleteRequest(log.id)}
-                                      disabled={sendingDeleteRequest}
+                                      disabled={sendingDeleteRequest || isCompleted}
                                     >
                                       {sendingDeleteRequest ? 'Sending...' : 'Send Request'}
                                     </Button>
@@ -943,137 +947,162 @@ const fetchAssistUsers = async () => {
               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label>Hours</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="1"
-                      value={workLogForm.hours}
-                      onChange={(e) => setWorkLogForm((prev) => ({ ...prev, hours: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Minutes</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={59}
-                      placeholder="30"
-                      value={workLogForm.minutes}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        if (raw === '') {
-                          setWorkLogForm((prev) => ({ ...prev, minutes: '' }));
-                          return;
+              <div className={cn(isCompleted && "pointer-events-none opacity-60")}>
+                <div className="space-y-3">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>Hours</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="1"
+                        value={workLogForm.hours}
+                        onChange={(e) => setWorkLogForm((prev) => ({ ...prev, hours: e.target.value }))}
+                        disabled={isCompleted}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Minutes</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={59}
+                        placeholder="30"
+                        value={workLogForm.minutes}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === '') {
+                            setWorkLogForm((prev) => ({ ...prev, minutes: '' }));
+                            return;
+                          }
+                          const n = Number.parseInt(raw, 10);
+                          const safe = Number.isFinite(n) ? Math.min(59, Math.max(0, n)) : 0;
+                          setWorkLogForm((prev) => ({ ...prev, minutes: String(safe) }));
+                        }}
+                        disabled={isCompleted}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={workLogForm.status}
+                        onValueChange={(value) =>
+                          setWorkLogForm((prev) => ({ ...prev, status: value as WorkLogStatus }))
                         }
-                        const n = Number.parseInt(raw, 10);
-                        const safe = Number.isFinite(n) ? Math.min(59, Math.max(0, n)) : 0;
-                        setWorkLogForm((prev) => ({ ...prev, minutes: String(safe) }));
-                      }}
+                        disabled={isCompleted}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workLogStatusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Work Description</Label>
+                  <Textarea
+                    placeholder="Describe what you worked on..."
+                    value={workLogForm.workDescription}
+                    onChange={(e) => setWorkLogForm((prev) => ({ ...prev, workDescription: e.target.value }))}
+                    rows={3}
+                    disabled={isCompleted}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <LinkIcon className="h-4 w-4" />
+                    Shared URL
+                  </Label>
+                  <Input
+                    placeholder="https://..."
+                    value={workLogForm.sharedUrl}
+                    onChange={(e) => setWorkLogForm((prev) => ({ ...prev, sharedUrl: e.target.value }))}
+                    disabled={isCompleted}
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Upload className="h-4 w-4" />
+                      Upload File
+                    </Label>
+                    <div
+                      className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50"
+                      onClick={() => (isCompleted ? undefined : workLogFileRef.current?.click())}
+                    >
+                      {workLogFile ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm truncate">{workLogFile.name}</span>
+                          <X
+                            className="h-4 w-4 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setWorkLogFile(null);
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Click to upload</span>
+                      )}
+                    </div>
+                    <input
+                      ref={workLogFileRef}
+                      type="file"
+                      onChange={(e) => e.target.files?.[0] && setWorkLogFile(e.target.files[0])}
+                      className="hidden"
+                      disabled={isCompleted}
                     />
                   </div>
+
                   <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={workLogForm.status}
-                      onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, status: value as WorkLogStatus }))}
+                    <Label className="flex items-center gap-2">
+                      <Camera className="h-4 w-4" />
+                      Screenshot
+                    </Label>
+                    <div
+                      className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50"
+                      onClick={() => (isCompleted ? undefined : screenshotRef.current?.click())}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {workLogStatusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {screenshotFile ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm truncate">{screenshotFile.name}</span>
+                          <X
+                            className="h-4 w-4 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setScreenshotFile(null);
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Click to upload</span>
+                      )}
+                    </div>
+                    <input
+                      ref={screenshotRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && setScreenshotFile(e.target.files[0])}
+                      className="hidden"
+                      disabled={isCompleted}
+                    />
                   </div>
                 </div>
+
+                <Button onClick={handleSaveWorkLog} disabled={savingWorkLog || isCompleted} className="w-full">
+                  {isCompleted ? 'Completed' : savingWorkLog ? 'Saving...' : 'Add Work Log'}
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <Label>Work Description</Label>
-                <Textarea
-                  placeholder="Describe what you worked on..."
-                  value={workLogForm.workDescription}
-                  onChange={(e) => setWorkLogForm(prev => ({ ...prev, workDescription: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4" />
-                  Shared URL
-                </Label>
-                <Input
-                  placeholder="https://..."
-                  value={workLogForm.sharedUrl}
-                  onChange={(e) => setWorkLogForm(prev => ({ ...prev, sharedUrl: e.target.value }))}
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Upload className="h-4 w-4" />
-                    Upload File
-                  </Label>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50"
-                    onClick={() => workLogFileRef.current?.click()}
-                  >
-                    {workLogFile ? (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm truncate">{workLogFile.name}</span>
-                        <X className="h-4 w-4 cursor-pointer" onClick={(e) => { e.stopPropagation(); setWorkLogFile(null); }} />
-                      </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Click to upload</span>
-                    )}
-                  </div>
-                  <input
-                    ref={workLogFileRef}
-                    type="file"
-                    onChange={(e) => e.target.files?.[0] && setWorkLogFile(e.target.files[0])}
-                    className="hidden"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Camera className="h-4 w-4" />
-                    Screenshot
-                  </Label>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50"
-                    onClick={() => screenshotRef.current?.click()}
-                  >
-                    {screenshotFile ? (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm truncate">{screenshotFile.name}</span>
-                        <X className="h-4 w-4 cursor-pointer" onClick={(e) => { e.stopPropagation(); setScreenshotFile(null); }} />
-                      </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Click to upload</span>
-                    )}
-                  </div>
-                  <input
-                    ref={screenshotRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => e.target.files?.[0] && setScreenshotFile(e.target.files[0])}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-
-              <Button onClick={handleSaveWorkLog} disabled={savingWorkLog} className="w-full">
-                {savingWorkLog ? 'Saving...' : 'Add Work Log'}
-              </Button>
             </CardContent>
           </Card>
         </div>

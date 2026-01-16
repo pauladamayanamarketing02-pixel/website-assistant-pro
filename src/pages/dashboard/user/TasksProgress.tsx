@@ -151,9 +151,12 @@ export default function TasksProgress() {
   const [businessName, setBusinessName] = useState('');
   const [statusFilters, setStatusFilters] = useState<Task['status'][]>([]);
 
+  // Hide completed tasks from the user task list page.
+  const baseVisibleTasks = tasks.filter((t) => t.status !== 'completed');
+
   const visibleTasks = statusFilters.length
-    ? tasks.filter((t) => statusFilters.includes(t.status))
-    : tasks;
+    ? baseVisibleTasks.filter((t) => statusFilters.includes(t.status))
+    : baseVisibleTasks;
 
   const [formData, setFormData] = useState({
     title: '',

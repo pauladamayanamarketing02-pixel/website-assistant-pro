@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { 
   BarChart3, TrendingUp, Eye, Users, MousePointerClick, 
   Calendar, Download, ArrowUp, ArrowDown 
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ReportingTasksCard } from '@/components/dashboard/ReportingTasksCard';
 
 interface MetricCard {
   title: string;
@@ -64,6 +65,11 @@ const performanceData = [
 export default function Reporting() {
   const [dateRange, setDateRange] = useState('30');
 
+  const days = useMemo(() => {
+    const n = Number.parseInt(dateRange, 10);
+    return Number.isFinite(n) ? n : 30;
+  }, [dateRange]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -81,8 +87,8 @@ export default function Reporting() {
               <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
               <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="60">Last 60 days</SelectItem>
               <SelectItem value="90">Last 90 days</SelectItem>
               <SelectItem value="365">Last year</SelectItem>
             </SelectContent>
@@ -120,6 +126,9 @@ export default function Reporting() {
           </Card>
         ))}
       </div>
+
+      {/* Reporting Tasks (Completed only) */}
+      <ReportingTasksCard days={days} />
 
       {/* Performance Breakdown */}
       <Card>
