@@ -28,6 +28,7 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
   return (
     <Sidebar
       className={(open ? "w-72" : "w-14") + " border-r border-sidebar-border bg-sidebar text-sidebar-foreground"}
+      collapsible="icon"
     >
       <SidebarContent>
         {/* Brand */}
