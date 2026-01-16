@@ -14,13 +14,16 @@ interface Invoice {
   status: string;
   paid_at: string | null;
   created_at: string;
-  // Joined data may come back as object OR array depending on relationship/cardinality.
-  packages: { name: string } | { name: string }[] | null;
+  packages: {
+    name: string;
+  } | null;
 }
 
 interface ActivePackage {
-  // Joined data may come back as object OR array.
-  packages: { name: string; price: number } | { name: string; price: number }[];
+  packages: {
+    name: string;
+    price: number;
+  };
   started_at: string;
 }
 
@@ -37,13 +40,6 @@ const topUpOptions = [
   { months: 12, label: '12 Months', discount: 10 },
   { months: 24, label: '24 Months', discount: 15 },
 ];
-
-const pickOne = <T,>(value: T | T[] | null | undefined): T | undefined =>
-  Array.isArray(value) ? value[0] : value ?? undefined;
-
-const getInvoicePackageName = (pkg: Invoice['packages']) => pickOne(pkg)?.name ?? 'N/A';
-const getActivePackageName = (pkg: ActivePackage['packages']) => pickOne(pkg)?.name ?? 'N/A';
-const getActivePackagePrice = (pkg: ActivePackage['packages']) => Number(pickOne(pkg)?.price ?? 0);
 
 export default function Billing() {
   const { user } = useAuth();
@@ -68,12 +64,7 @@ export default function Billing() {
         .order('created_at', { ascending: false });
 
       if (invoiceData) {
-        const normalized: Invoice[] = (invoiceData as any[]).map((row) => ({
-          ...row,
-          // keep as-is but normalize common array form to the first element
-          packages: Array.isArray(row.packages) ? row.packages : row.packages ?? null,
-        }));
-        setInvoices(normalized);
+        setInvoices(invoiceData);
       }
 
       // Fetch active package
@@ -88,23 +79,7 @@ export default function Billing() {
         .maybeSingle();
 
       if (pkgData) {
-        const normalized: ActivePackage | null = (() => {
-          const pkg = Array.isArray((pkgData as any).packages)
-            ? (pkgData as any).packages[0]
-            : (pkgData as any).packages;
-
-          if (!pkg) return null;
-
-          return {
-            started_at: (pkgData as any).started_at,
-            packages: {
-              name: pkg.name,
-              price: Number(pkg.price ?? 0),
-            },
-          };
-        })();
-
-        if (normalized) setActivePackage(normalized);
+        setActivePackage(pkgData);
       }
 
       setLoading(false);
@@ -115,7 +90,7 @@ export default function Billing() {
 
   const calculatePrice = (months: number, discount: number) => {
     if (!activePackage) return 0;
-    const basePrice = getActivePackagePrice(activePackage.packages) * months;
+    const basePrice = activePackage.packages.price * months;
     const discountAmount = (basePrice * discount) / 100;
     return basePrice - discountAmount;
   };
@@ -134,7 +109,7 @@ export default function Billing() {
       'Invoice Details',
       '',
       `Invoice ID,${invoice.id}`,
-      `Package,${getInvoicePackageName(invoice.packages)}`,
+      `Package,${invoice.packages?.name || 'N/A'}`,
       `Amount,$${invoice.amount}`,
       `Status,${invoice.status}`,
       `Created Date,${new Date(invoice.created_at).toLocaleDateString()}`,
@@ -171,7 +146,7 @@ export default function Billing() {
     // Generate CSV content for all invoices
     const headers = 'Invoice ID,Package,Amount,Status,Created Date,Paid Date';
     const rows = invoices.map(invoice => 
-      `${invoice.id},${getInvoicePackageName(invoice.packages)},$${invoice.amount},${invoice.status},${new Date(invoice.created_at).toLocaleDateString()},${invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString() : 'Not Paid'}`
+      `${invoice.id},${invoice.packages?.name || 'N/A'},$${invoice.amount},${invoice.status},${new Date(invoice.created_at).toLocaleDateString()},${invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString() : 'Not Paid'}`
     );
     const csvContent = [headers, ...rows].join('\n');
 
@@ -228,13 +203,13 @@ export default function Billing() {
           {activePackage ? (
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-foreground">{getActivePackageName(activePackage.packages)}</p>
+                <p className="font-semibold text-foreground">{activePackage.packages.name}</p>
                 <p className="text-sm text-muted-foreground">
                   Active since {new Date(activePackage.started_at).toLocaleDateString()}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-foreground">${getActivePackagePrice(activePackage.packages)}</p>
+                <p className="text-2xl font-bold text-foreground">${activePackage.packages.price}</p>
                 <p className="text-sm text-muted-foreground">/month</p>
               </div>
             </div>
@@ -262,7 +237,7 @@ export default function Billing() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {topUpOptions.map((option) => {
                 const totalPrice = calculatePrice(option.months, option.discount);
-                const originalPrice = getActivePackagePrice(activePackage.packages) * option.months;
+                const originalPrice = activePackage.packages.price * option.months;
                 const savings = originalPrice - totalPrice;
                 
                 return (
@@ -356,7 +331,7 @@ export default function Billing() {
                       </div>
                       <div>
                         <p className="font-medium text-foreground">
-                          {getInvoicePackageName(invoice.packages) || 'Package'}
+                          {invoice.packages?.name || 'Package'}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {new Date(invoice.created_at).toLocaleDateString()}

@@ -48,9 +48,7 @@ export default function Auth() {
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && user && role) {
-      if (role === 'super_admin') {
-        navigate('/dashboard/super-admin');
-      } else if (role === 'assist') {
+      if (role === 'assist') {
         (async () => {
           try {
             const { data, error } = await supabase

@@ -60,22 +60,15 @@ export default function MyPackage() {
         .maybeSingle();
 
       if (userPkg) {
-        // Joined `packages` may come back as an array; normalize to a single object.
-        const pkg = Array.isArray((userPkg as any).packages)
-          ? (userPkg as any).packages[0]
-          : (userPkg as any).packages;
-
-        if (pkg) {
-          setActivePackage({
-            ...(userPkg as any),
-            packages: {
-              ...pkg,
-              features: Array.isArray(pkg.features)
-                ? pkg.features
-                : JSON.parse((pkg.features as string) || '[]'),
-            },
-          });
-        }
+        setActivePackage({
+          ...userPkg,
+          packages: {
+            ...userPkg.packages,
+            features: Array.isArray(userPkg.packages.features)
+              ? userPkg.packages.features
+              : JSON.parse(userPkg.packages.features as string || '[]'),
+          },
+        });
       }
 
       // Fetch all available packages
