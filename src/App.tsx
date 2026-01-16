@@ -74,6 +74,9 @@ const App = () => (
             <Route path="/orientation/portfolio" element={<OrientationPortfolio />} />
             <Route path="/dashboard/user/*" element={<UserDashboard />} />
             <Route path="/dashboard/assist/*" element={<AssistDashboard />} />
+            
+            {/* Explicit 404 route (dipakai untuk redirect akses tanpa login) */}
+            <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

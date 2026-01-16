@@ -64,8 +64,9 @@ export default function SuperAdminDashboard() {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
 
+      // Requirement: sebelum login, halaman /dashboard/super-admin harus tampil 404
       if (!session?.user) {
-        navigate("/super-admin/login", { replace: true, state: { from: location.pathname } });
+        navigate("/404", { replace: true });
         return;
       }
 
@@ -80,7 +81,7 @@ export default function SuperAdminDashboard() {
 
       if (!isSuperAdmin) {
         await supabase.auth.signOut();
-        navigate("/super-admin/login", { replace: true });
+        navigate("/404", { replace: true });
         return;
       }
 
