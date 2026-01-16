@@ -94,17 +94,12 @@ export default function AdminDashboard() {
         <AdminSidebar items={navItems} />
 
         <div className="flex-1 min-w-0">
-          <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b bg-background/80 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
             <SidebarTrigger />
 
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary shrink-0">
-                <Users className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-foreground truncate">Admin Operasional</div>
-                <div className="text-xs text-muted-foreground truncate">Control Center</div>
-              </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">Admin Operasional</div>
+              <div className="text-xs text-muted-foreground truncate">Control Center</div>
             </div>
 
             <div className="ml-auto">
