@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OnboardingGate, OrientationGate } from "@/components/auth/OnboardingGates";
 import Home from "./pages/Home";
 import Services from "./pages/Services";
 import Packages from "./pages/Packages";
@@ -58,20 +59,111 @@ const App = () => (
             {/* Admin Operasional */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/dashboard/admin/*" element={<AdminDashboard />} />
-            <Route path="/onboarding/welcome" element={<Welcome />} />
-            <Route path="/onboarding/get-started" element={<GetStarted />} />
-            <Route path="/onboarding/business-stage" element={<BusinessStage />} />
-            <Route path="/onboarding/business-basics" element={<BusinessBasics />} />
-            <Route path="/onboarding/online-presence" element={<OnlinePresence />} />
-            <Route path="/onboarding/setup-new" element={<SetupNew />} />
-            <Route path="/onboarding/setup-growing" element={<SetupGrowing />} />
-            <Route path="/onboarding/recommended-package" element={<RecommendedPackage />} />
-            <Route path="/onboarding/select-package" element={<SelectPackage />} />
+            <Route
+              path="/onboarding/welcome"
+              element={
+                <OnboardingGate>
+                  <Welcome />
+                </OnboardingGate>
+              }
+            />
+            <Route
+              path="/onboarding/get-started"
+              element={
+                <OnboardingGate>
+                  <GetStarted />
+                </OnboardingGate>
+              }
+            />
+            <Route
+              path="/onboarding/business-stage"
+              element={
+                <OnboardingGate>
+                  <BusinessStage />
+                </OnboardingGate>
+              }
+            />
+            <Route
+              path="/onboarding/business-basics"
+              element={
+                <OnboardingGate>
+                  <BusinessBasics />
+                </OnboardingGate>
+              }
+            />
+            <Route
+              path="/onboarding/online-presence"
+              element={
+                <OnboardingGate>
+                  <OnlinePresence />
+                </OnboardingGate>
+              }
+            />
+            <Route
+              path="/onboarding/setup-new"
+              element={
+                <OnboardingGate>
+                  <SetupNew />
+                </OnboardingGate>
+              }
+            />
+            <Route
+              path="/onboarding/setup-growing"
+              element={
+                <OnboardingGate>
+                  <SetupGrowing />
+                </OnboardingGate>
+              }
+            />
+            <Route
+              path="/onboarding/recommended-package"
+              element={
+                <OnboardingGate>
+                  <RecommendedPackage />
+                </OnboardingGate>
+              }
+            />
+            <Route
+              path="/onboarding/select-package"
+              element={
+                <OnboardingGate>
+                  <SelectPackage />
+                </OnboardingGate>
+              }
+            />
             {/* Orientation (Assist onboarding) */}
-            <Route path="/orientation/welcome" element={<OrientationWelcome />} />
-            <Route path="/orientation/profile" element={<OrientationProfile />} />
-            <Route path="/orientation/skills" element={<OrientationSkills />} />
-            <Route path="/orientation/portfolio" element={<OrientationPortfolio />} />
+            <Route
+              path="/orientation/welcome"
+              element={
+                <OrientationGate>
+                  <OrientationWelcome />
+                </OrientationGate>
+              }
+            />
+            <Route
+              path="/orientation/profile"
+              element={
+                <OrientationGate>
+                  <OrientationProfile />
+                </OrientationGate>
+              }
+            />
+            <Route
+              path="/orientation/skills"
+              element={
+                <OrientationGate>
+                  <OrientationSkills />
+                </OrientationGate>
+              }
+            />
+            <Route
+              path="/orientation/portfolio"
+              element={
+                <OrientationGate>
+                  <OrientationPortfolio />
+                </OrientationGate>
+              }
+            />
             <Route path="/dashboard/user/*" element={<UserDashboard />} />
             <Route path="/dashboard/assist/*" element={<AssistDashboard />} />
             
