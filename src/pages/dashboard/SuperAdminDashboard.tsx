@@ -75,7 +75,8 @@ export default function SuperAdminDashboard() {
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      const isAdmin = roleData?.role === "admin";
+      // Type assertion: 'admin' will be added to database enum
+      const isAdmin = roleData?.role === ("admin" as any);
 
       if (!isAdmin) {
         await supabase.auth.signOut();

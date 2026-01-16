@@ -43,7 +43,8 @@ export default function SuperAdminLogin() {
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      if (roleData?.role === "admin") {
+      // Type assertion: 'admin' will be added to database enum
+      if (roleData?.role === ("admin" as any)) {
         navigate("/dashboard/super-admin", { replace: true });
         return;
       }
@@ -86,7 +87,8 @@ export default function SuperAdminLogin() {
 
       if (roleErr) throw roleErr;
 
-      if (roleData?.role !== "admin") {
+      // Type assertion: 'admin' will be added to database enum
+      if (roleData?.role !== ("admin" as any)) {
         await supabase.auth.signOut();
         throw new Error("Akun ini tidak memiliki akses Super Admin.");
       }
