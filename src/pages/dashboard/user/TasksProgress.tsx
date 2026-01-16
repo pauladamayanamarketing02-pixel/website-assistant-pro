@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { CheckSquare, Clock, AlertCircle, CheckCircle, Plus, Upload, X, Calendar, User, ArrowLeft, Pencil, Image as ImageIcon } from 'lucide-react';
+import {
+  CheckSquare,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  Plus,
+  Upload,
+  X,
+  Calendar,
+  User,
+  ArrowLeft,
+  Pencil,
+  Image as ImageIcon,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +27,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -46,11 +69,25 @@ interface WorkLog {
   user_id: string;
   created_at: string;
   status: string | null;
-  time_spent: number | null;
+  time_spent: number | null; // minutes
   work_description: string | null;
   file_url: string | null;
   screenshot_url: string | null;
   shared_url: string | null;
+}
+
+interface WorkLogDeleteRequest {
+  id: string;
+  work_log_id: string;
+  task_id: string;
+  requester_id: string;
+  owner_id: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const statusConfig: Record<Task['status'], { label: string; icon: any; className: string }> = {
@@ -133,6 +170,14 @@ export default function TasksProgress() {
 
   const [screenshotPreviewUrl, setScreenshotPreviewUrl] = useState<string | null>(null);
 
+  // Work log delete requests (approve/reject by business owner)
+  const [deleteRequests, setDeleteRequests] = useState<WorkLogDeleteRequest[]>([]);
+  const [deleteRequestsLoading, setDeleteRequestsLoading] = useState(false);
+  const [decidingRequestId, setDecidingRequestId] = useState<string | null>(null);
+
+  // Mark completed confirmation
+  const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     title: '',
@@ -211,6 +256,25 @@ export default function TasksProgress() {
     fetchWorkLogs();
   }, [user, selectedTask?.id, viewMode]);
 
+  // Fetch delete requests for selected task (business owner approval)
+  useEffect(() => {
+    const fetchDeleteRequests = async () => {
+      if (!user || !selectedTask || viewMode !== 'view') return;
+      setDeleteRequestsLoading(true);
+
+      const { data, error } = await supabase
+        .from('work_log_delete_requests')
+        .select('*')
+        .eq('task_id', selectedTask.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) setDeleteRequests(data as WorkLogDeleteRequest[]);
+      setDeleteRequestsLoading(false);
+    };
+
+    fetchDeleteRequests();
+  }, [user, selectedTask?.id, viewMode]);
+
   // Real-time subscription for tasks
   useEffect(() => {
     if (!user) return;
@@ -265,6 +329,13 @@ export default function TasksProgress() {
   };
 
   const formatTaskId = (num: number) => `T${String(num).padStart(5, '0')}`;
+
+  const formatMinutesAsHoursMinutes = (totalMinutes: number | null | undefined) => {
+    const safe = typeof totalMinutes === 'number' && Number.isFinite(totalMinutes) && totalMinutes > 0 ? totalMinutes : 0;
+    const h = Math.floor(safe / 60);
+    const m = safe % 60;
+    return `${h}h ${m}m`;
+  };
 
   const handleSubmit = async () => {
     if (!formData.title || !user) {
@@ -456,6 +527,85 @@ export default function TasksProgress() {
       setIsEditing(false);
     };
 
+    const handleDecideDeleteRequest = async (req: WorkLogDeleteRequest, decision: 'approved' | 'rejected') => {
+      if (!user) return;
+
+      setDecidingRequestId(req.id);
+      try {
+        const { error: updateError } = await supabase
+          .from('work_log_delete_requests')
+          .update({
+            status: decision,
+            decided_by: user.id,
+            decided_at: new Date().toISOString(),
+          })
+          .eq('id', req.id)
+          .eq('owner_id', user.id);
+
+        if (updateError) throw updateError;
+
+        if (decision === 'approved') {
+          const { error: deleteError } = await supabase
+            .from('task_work_logs')
+            .delete()
+            .eq('id', req.work_log_id);
+
+          if (deleteError) throw deleteError;
+
+          setWorkLogs((prev) => prev.filter((l) => l.id !== req.work_log_id));
+        }
+
+        setDeleteRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: decision, decided_by: user.id, decided_at: new Date().toISOString() } : r)));
+
+        toast({
+          title: decision === 'approved' ? 'Approved' : 'Rejected',
+          description: decision === 'approved' ? 'Work log deleted from database.' : 'Work log remains in history (Rejected).',
+        });
+      } catch (err: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: err?.message || 'Failed to process request.',
+        });
+      } finally {
+        setDecidingRequestId(null);
+      }
+    };
+
+    const handleMarkCompleted = async () => {
+      if (!user || !selectedTask) return;
+
+      try {
+        const { data: updated, error } = await supabase
+          .from('tasks')
+          .update({ status: 'completed' as any })
+          .eq('id', selectedTask.id)
+          .eq('user_id', user.id)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+
+        if (updated) {
+          setSelectedTask(updated as Task);
+          setTasks((prev) => prev.map((t) => (t.id === updated.id ? (updated as Task) : t)));
+        }
+
+        toast({
+          title: 'Completed',
+          description: 'Task marked as completed.',
+        });
+      } catch (err: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: err?.message || 'Failed to mark task as completed.',
+        });
+      } finally {
+        setConfirmCompleteOpen(false);
+      }
+    };
+
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4">
@@ -483,6 +633,31 @@ export default function TasksProgress() {
                 <Badge variant="outline" className={statusConfig[derivedStatus].className}>
                   {statusConfig[derivedStatus].label}
                 </Badge>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={selectedTask.status !== 'ready_for_review'}
+                  onClick={() => setConfirmCompleteOpen(true)}
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Mark as Completed
+                </Button>
+
+                <AlertDialog open={confirmCompleteOpen} onOpenChange={setConfirmCompleteOpen}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Mark task as completed?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to mark this task as completed?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>No</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleMarkCompleted}>Yes</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
 
                 <Button
                   variant="outline"
@@ -635,6 +810,7 @@ export default function TasksProgress() {
 
               <div className="space-y-2">
                 <Label>Upload File</Label>
+                <p className="text-xs text-muted-foreground">Only one file is allowed. Please zip or rar multiple files before upload.</p>
 
                 {canEditDetails ? (
                   <div className="space-y-2">
@@ -722,6 +898,68 @@ export default function TasksProgress() {
               <CardDescription>Track your progress on this task</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid gap-3">
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                  <div className="text-xs text-muted-foreground">Total Time Spent (history)</div>
+                  <div className="mt-1 font-medium text-foreground">
+                    {formatMinutesAsHoursMinutes(
+                      workLogs.reduce((sum, l) => sum + (typeof l.time_spent === 'number' ? l.time_spent : 0), 0)
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-card p-3 text-sm">
+                  <div className="text-xs text-muted-foreground">Delete Requests</div>
+                  {deleteRequestsLoading ? (
+                    <div className="mt-2 h-10 rounded bg-muted animate-pulse" />
+                  ) : deleteRequests.length === 0 ? (
+                    <div className="mt-1 text-sm text-muted-foreground">No delete requests.</div>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {deleteRequests.map((req) => (
+                        <div key={req.id} className="flex flex-col gap-2 rounded-md border bg-background p-3 md:flex-row md:items-center md:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-foreground">Work Log</span>
+                              <Badge variant="outline" className={cn(
+                                req.status === 'approved'
+                                  ? 'bg-muted text-muted-foreground'
+                                  : req.status === 'rejected'
+                                    ? 'bg-muted text-muted-foreground'
+                                    : 'bg-secondary text-secondary-foreground'
+                              )}>
+                                {req.status.toUpperCase()}
+                              </Badge>
+                            </div>
+                            <div className="mt-1 text-sm text-muted-foreground">Reason: {req.reason}</div>
+                          </div>
+
+                          {req.status === 'pending' ? (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={decidingRequestId === req.id}
+                                onClick={() => handleDecideDeleteRequest(req, 'rejected')}
+                              >
+                                Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                disabled={decidingRequestId === req.id}
+                                onClick={() => handleDecideDeleteRequest(req, 'approved')}
+                              >
+                                Approve & Delete
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {workLogsLoading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
