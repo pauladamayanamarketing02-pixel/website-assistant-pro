@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowLeft, UserCircle, Briefcase, Shield } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, UserCircle, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
  
-type AppRole = 'user' | 'assist' | 'super_admin';
+type AppRole = 'user' | 'assist';
 
 const loginSchema = z.object({
   email: z.string().trim().email('Please enter a valid email'),
@@ -195,7 +195,7 @@ export default function Auth() {
                 <RadioGroup
                   value={selectedRole}
                   onValueChange={(value) => setSelectedRole(value as AppRole)}
-                  className="grid grid-cols-3 gap-4"
+                  className="grid grid-cols-2 gap-4"
                 >
                   <div>
                     <RadioGroupItem
@@ -225,21 +225,6 @@ export default function Auth() {
                       <UserCircle className="mb-2 h-6 w-6 text-accent" />
                       <span className="text-sm font-medium">Marketing Assist</span>
                       <span className="text-xs text-muted-foreground">Freelancer</span>
-                    </Label>
-                  </div>
-                  <div>
-                    <RadioGroupItem
-                      value="super_admin"
-                      id="super_admin"
-                      className="peer sr-only"
-                    />
-                    <Label
-                      htmlFor="super_admin"
-                      className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-card p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
-                    >
-                      <Shield className="mb-2 h-6 w-6 text-primary" />
-                      <span className="text-sm font-medium">Super Admin</span>
-                      <span className="text-xs text-muted-foreground">Internal</span>
                     </Label>
                   </div>
                 </RadioGroup>
