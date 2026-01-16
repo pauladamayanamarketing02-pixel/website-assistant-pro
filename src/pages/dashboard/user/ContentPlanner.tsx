@@ -96,7 +96,7 @@ export default function ContentPlanner() {
           Content Planner
         </h1>
         <p className="text-muted-foreground">
-          Rencanakan konten per bulan, lihat rekomendasi ide, dan atur fokus konten.
+          Plan your content month by month, review recommended ideas, and stay focused.
         </p>
       </header>
 
@@ -104,10 +104,10 @@ export default function ContentPlanner() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-3">
-              <span>Kalender Bulanan</span>
+              <span>Monthly Calendar</span>
               <span className="text-sm font-medium text-muted-foreground">{format(month, "MMMM yyyy")}</span>
             </CardTitle>
-            <CardDescription>Pilih bulan untuk melihat rekomendasi konten.</CardDescription>
+            <CardDescription>Select a month to see content recommendations.</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Make calendar scale to the card size (bigger day cells) */}
@@ -143,16 +143,16 @@ export default function ContentPlanner() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5" />
-              Rekomendasi Konten
+              Content Recommendations
             </CardTitle>
-            <CardDescription>Ide konten yang direkomendasikan untuk bulan ini.</CardDescription>
+            <CardDescription>Recommended content ideas for this month.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <div className="text-sm font-medium">Sortir</div>
+              <div className="text-sm font-medium">Filter</div>
               <Select value={filter} onValueChange={(v) => setFilter(v as ContentFilter)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih tipe konten" />
+                  <SelectValue placeholder="Select a content type" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(FILTER_LABELS).map(([value, label]) => (
@@ -166,7 +166,7 @@ export default function ContentPlanner() {
 
             <div className="space-y-3">
               {recommendations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Belum ada rekomendasi untuk filter ini.</p>
+                <p className="text-sm text-muted-foreground">No recommendations for this filter yet.</p>
               ) : (
                 recommendations.map((rec) => (
                   <div key={rec.id} className="rounded-lg border border-border p-3">
@@ -183,9 +183,9 @@ export default function ContentPlanner() {
                 <Plus className="h-4 w-4 text-muted-foreground" />
               </div>
               <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-                <li>Buat item konten (title, platform, due date)</li>
-                <li>Attach asset dari My Gallery</li>
-                <li>Kirim draft ke Assist untuk review</li>
+                <li>Create content items (title, platform, due date)</li>
+                <li>Attach assets from My Gallery</li>
+                <li>Send drafts to Assist for review</li>
               </ul>
               <Button variant="outline" disabled className="w-full">
                 Coming soon
