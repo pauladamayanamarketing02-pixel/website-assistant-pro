@@ -13,7 +13,7 @@ import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import AssistDashboard from "./pages/dashboard/AssistDashboard";
-import NotFound from "./pages/NotFound";
+import SuperAdminDashboard from "./pages/dashboard/SuperAdminDashboard";
 import Welcome from "./pages/onboarding/Welcome";
 import GetStarted from "./pages/onboarding/GetStarted";
 import BusinessStage from "./pages/onboarding/BusinessStage";
@@ -62,7 +62,7 @@ const App = () => (
             <Route path="/orientation/portfolio" element={<OrientationPortfolio />} />
             <Route path="/dashboard/user/*" element={<UserDashboard />} />
             <Route path="/dashboard/assist/*" element={<AssistDashboard />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/dashboard/super-admin/*" element={<SuperAdminDashboard />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
