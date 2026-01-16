@@ -4,17 +4,21 @@ import {
   AlertCircle,
   BarChart3,
   Bell,
+  Briefcase,
   CheckSquare,
   ClipboardCheck,
   FileText,
   Globe,
   Image,
   LayoutDashboard,
+  LayoutTemplate,
   LogOut,
   MessageSquare,
   Newspaper,
+  Phone,
   Search,
   ShieldCheck,
+  TrendingUp,
   User,
   Users,
 } from "lucide-react";
@@ -57,6 +61,21 @@ export default function AdminDashboard() {
           { title: "Blog", url: "/dashboard/admin/website/blog", icon: Newspaper },
           { title: "Media Library", url: "/dashboard/admin/website/media", icon: Image },
           { title: "SEO", url: "/dashboard/admin/website/seo", icon: Search },
+          { title: "Contact", url: "/dashboard/admin/website/contact", icon: Phone },
+          { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
+          { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
+        ],
+      },
+      {
+        title: "Analytics",
+        url: "/dashboard/admin/analytics",
+        icon: TrendingUp,
+        children: [
+          { title: "Traffic", url: "/dashboard/admin/analytics/traffic", icon: TrendingUp },
+          { title: "Pages", url: "/dashboard/admin/analytics/pages", icon: FileText },
+          { title: "Blog Performance", url: "/dashboard/admin/analytics/blog-performance", icon: Newspaper },
+          { title: "Campaign (UTM)", url: "/dashboard/admin/analytics/campaign", icon: MessageSquare },
+          { title: "Conversion (read-only)", url: "/dashboard/admin/analytics/conversion", icon: BarChart3 },
         ],
       },
       { title: "Announcements", url: "/dashboard/admin/announcements", icon: Bell },
@@ -139,6 +158,16 @@ export default function AdminDashboard() {
               <Route path="website/blog" element={<AdminPlaceholder title="Blog" />} />
               <Route path="website/media" element={<AdminPlaceholder title="Media Library" />} />
               <Route path="website/seo" element={<AdminPlaceholder title="SEO" />} />
+              <Route path="website/contact" element={<AdminPlaceholder title="Contact" />} />
+              <Route path="website/services" element={<AdminPlaceholder title="Services" />} />
+              <Route path="website/layout" element={<AdminPlaceholder title="Layout" />} />
+
+              {/* Analytics */}
+              <Route path="analytics/traffic" element={<AdminPlaceholder title="Traffic" />} />
+              <Route path="analytics/pages" element={<AdminPlaceholder title="Analytics Pages" />} />
+              <Route path="analytics/blog-performance" element={<AdminPlaceholder title="Blog Performance" />} />
+              <Route path="analytics/campaign" element={<AdminPlaceholder title="Campaign (UTM)" />} />
+              <Route path="analytics/conversion" element={<AdminPlaceholder title="Conversion (read-only)" />} />
 
               <Route path="announcements" element={<AdminPlaceholder title="Announcements" />} />
               <Route path="qc" element={<AdminPlaceholder title="Quality Control" />} />
