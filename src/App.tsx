@@ -13,6 +13,8 @@ import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import AssistDashboard from "./pages/dashboard/AssistDashboard";
+import SuperAdminLogin from "./pages/super-admin/SuperAdminLogin";
+import SuperAdminDashboard from "./pages/dashboard/SuperAdminDashboard";
 import NotFound from "./pages/NotFound";
 import Welcome from "./pages/onboarding/Welcome";
 import GetStarted from "./pages/onboarding/GetStarted";
@@ -46,6 +48,10 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
+
+            {/* Super Admin */}
+            <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+            <Route path="/dashboard/super-admin/*" element={<SuperAdminDashboard />} />
             <Route path="/onboarding/welcome" element={<Welcome />} />
             <Route path="/onboarding/get-started" element={<GetStarted />} />
             <Route path="/onboarding/business-stage" element={<BusinessStage />} />
