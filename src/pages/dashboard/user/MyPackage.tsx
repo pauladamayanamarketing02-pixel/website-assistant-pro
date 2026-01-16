@@ -60,15 +60,19 @@ export default function MyPackage() {
         .maybeSingle();
 
       if (userPkg) {
+        const pkgObj = Array.isArray((userPkg as any).packages)
+          ? (userPkg as any).packages[0]
+          : (userPkg as any).packages;
+
         setActivePackage({
-          ...userPkg,
+          ...(userPkg as any),
           packages: {
-            ...userPkg.packages,
-            features: Array.isArray(userPkg.packages.features)
-              ? userPkg.packages.features
-              : JSON.parse(userPkg.packages.features as string || '[]'),
+            ...(pkgObj as any),
+            features: Array.isArray((pkgObj as any)?.features)
+              ? (pkgObj as any).features
+              : JSON.parse(((pkgObj as any)?.features as string) || '[]'),
           },
-        });
+        } as UserPackage);
       }
 
       // Fetch all available packages
@@ -79,12 +83,12 @@ export default function MyPackage() {
 
       if (allPkgs) {
         setAvailablePackages(
-          allPkgs.map(pkg => ({
-            ...pkg,
-            features: Array.isArray(pkg.features)
-              ? pkg.features
-              : JSON.parse(pkg.features as string || '[]'),
-          }))
+          (allPkgs as any[]).map((pkg) => ({
+            ...(pkg as any),
+            features: Array.isArray((pkg as any).features)
+              ? (pkg as any).features
+              : JSON.parse(((pkg as any).features as string) || '[]'),
+          })) as AvailablePackage[]
         );
       }
 

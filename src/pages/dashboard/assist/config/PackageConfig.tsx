@@ -32,17 +32,19 @@ export default function PackageConfig() {
 
   const fetchPackages = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('packages')
         .select('*')
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      setPackages(data?.map(p => ({
-        ...p,
-        features: Array.isArray(p.features) ? p.features as string[] : []
-      })) || []);
+      setPackages(
+        (data as any[])?.map((p) => ({
+          ...p,
+          features: Array.isArray((p as any).features) ? ((p as any).features as string[]) : [],
+        })) || []
+      );
     } catch (error) {
       console.error('Error fetching packages:', error);
     } finally {

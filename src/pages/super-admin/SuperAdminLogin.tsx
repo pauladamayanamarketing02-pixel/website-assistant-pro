@@ -28,7 +28,7 @@ export default function SuperAdminLogin() {
   const redirectTo = useMemo(() => `${window.location.origin}/dashboard/super-admin`, []);
 
   useEffect(() => {
-    // Jika sudah login dan punya role admin → langsung masuk.
+    // Jika sudah login dan punya role super_admin → langsung masuk.
     (async () => {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
@@ -43,13 +43,13 @@ export default function SuperAdminLogin() {
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      // Type assertion: 'admin' will be added to database enum
-      if (roleData?.role === ("admin" as any)) {
+      // Type assertion: role enum tidak selalu sinkron dengan types.ts
+      if (roleData?.role === ("super_admin" as any)) {
         navigate("/dashboard/super-admin", { replace: true });
         return;
       }
 
-      // Jika session ada tapi bukan admin → logout supaya tidak nyangkut.
+      // Jika session ada tapi bukan super admin → logout supaya tidak nyangkut.
       await supabase.auth.signOut();
       setChecking(false);
     })();
@@ -87,8 +87,8 @@ export default function SuperAdminLogin() {
 
       if (roleErr) throw roleErr;
 
-      // Type assertion: 'admin' will be added to database enum
-      if (roleData?.role !== ("admin" as any)) {
+      // Type assertion: role enum tidak selalu sinkron dengan types.ts
+      if (roleData?.role !== ("super_admin" as any)) {
         await supabase.auth.signOut();
         throw new Error("Akun ini tidak memiliki akses Super Admin.");
       }
@@ -187,7 +187,7 @@ export default function SuperAdminLogin() {
           </CardContent>
 
           <CardFooter className="text-xs text-muted-foreground">
-            Pastikan akun Anda memiliki role <span className="font-medium text-foreground">admin</span>.
+            Pastikan akun Anda memiliki role <span className="font-medium text-foreground">super_admin</span>.
           </CardFooter>
         </Card>
 

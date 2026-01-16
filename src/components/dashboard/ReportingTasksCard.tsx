@@ -54,7 +54,7 @@ export function ReportingTasksCard({ days }: { days: number }) {
     const run = async () => {
       if (!user) return;
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("tasks")
         .select("id, task_number, title, status, type, platform, created_at, updated_at")
         .eq("user_id", user.id)
@@ -63,7 +63,7 @@ export function ReportingTasksCard({ days }: { days: number }) {
         .gte("updated_at", sinceIso)
         .order("updated_at", { ascending: false });
 
-      if (!error && data) setTasks(data as TaskRow[]);
+      if (!error && data) setTasks((data as unknown as TaskRow[]) ?? []);
       if (error) setTasks([]);
       setLoading(false);
     };

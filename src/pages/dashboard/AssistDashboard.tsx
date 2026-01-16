@@ -98,7 +98,7 @@ export default function AssistDashboard() {
     if (!loading && user && role === 'assist') {
       (async () => {
         try {
-          const { data, error } = await supabase
+          const { data, error } = await (supabase as any)
             .from('profiles')
             .select('onboarding_completed')
             .eq('id', user.id)
@@ -106,7 +106,7 @@ export default function AssistDashboard() {
 
           if (error) throw error;
 
-          const completed = data?.onboarding_completed ?? false;
+          const completed = (data as any)?.onboarding_completed ?? false;
 
           if (!completed) {
             navigate('/orientation/welcome');

@@ -85,14 +85,14 @@ export default function AssistProfile() {
     const fetchProfile = async () => {
       if (!user) return;
 
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (data) {
-        const fullPhone = data.phone || '';
+        const fullPhone = (data as any).phone || '';
         let phoneCode = '';
         let phoneNumber = fullPhone;
         const phoneMatch = fullPhone.match(/^(\+\d+)\s*(.*)$/);
@@ -128,9 +128,9 @@ export default function AssistProfile() {
         }
 
         setProfile({
-          name: data.name || '',
-          email: data.email || '',
-          phone: data.phone || '',
+          name: (data as any).name || '',
+          email: (data as any).email || '',
+          phone: (data as any).phone || '',
           phoneCode,
           phoneNumber,
           avatar_url: (data as any).avatar_url || '',

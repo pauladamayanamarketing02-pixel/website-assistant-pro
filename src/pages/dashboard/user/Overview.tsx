@@ -53,8 +53,12 @@ export default function DashboardOverview() {
           .eq('receiver_id', user.id)
           .eq('is_read', false);
 
+        const pkgObj = Array.isArray((userPackage as any)?.packages)
+          ? (userPackage as any).packages[0]
+          : (userPackage as any)?.packages;
+
         setData({
-          activePackage: userPackage?.packages?.name || null,
+          activePackage: (pkgObj as any)?.name || null,
           taskStats,
           unreadMessages: count || 0,
         });
