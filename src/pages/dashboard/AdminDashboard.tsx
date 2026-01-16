@@ -58,8 +58,9 @@ export default function AdminDashboard() {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
 
+      // Requirement: sebelum login, halaman /dashboard/admin harus tampil 404
       if (!session?.user) {
-        navigate("/admin/login", { replace: true, state: { from: location.pathname } });
+        navigate("/404", { replace: true });
         return;
       }
 
@@ -73,7 +74,7 @@ export default function AdminDashboard() {
 
       if (!isAdmin) {
         await supabase.auth.signOut();
-        navigate("/admin/login", { replace: true });
+        navigate("/404", { replace: true });
         return;
       }
 
