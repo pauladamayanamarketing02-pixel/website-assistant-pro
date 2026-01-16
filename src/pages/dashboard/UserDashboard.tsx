@@ -84,7 +84,15 @@ export default function UserDashboard() {
       <div className="min-h-screen flex w-full">
         <Sidebar className="border-r">
           <div className="p-4 border-b">
-            <span className="font-bold text-lg text-foreground">EasyMarketing</span>
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+                <span className="text-lg font-bold text-primary-foreground">E</span>
+              </div>
+              <div className="leading-tight">
+                <div className="text-sm font-semibold text-foreground">EasyMarketingAssist</div>
+                <div className="text-xs text-muted-foreground">User Portal</div>
+              </div>
+            </div>
           </div>
           <SidebarContent>
             <SidebarGroup>
