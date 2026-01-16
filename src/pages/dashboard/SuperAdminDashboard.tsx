@@ -101,12 +101,12 @@ export default function SuperAdminDashboard() {
         <SuperAdminSidebar items={navItems} />
 
         <div className="flex-1 min-w-0">
-          <header className="h-12 flex items-center gap-3 border-b px-3">
+          <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b bg-background/80 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             {/* Trigger SELALU terlihat */}
             <SidebarTrigger />
 
             <div className="flex items-center gap-2 min-w-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary shrink-0">
                 <Shield className="h-4 w-4 text-primary-foreground" />
               </div>
               <div className="min-w-0">
