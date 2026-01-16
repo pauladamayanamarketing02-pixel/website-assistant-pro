@@ -4,12 +4,16 @@ import {
   AlertCircle,
   BarChart3,
   Bell,
-  CalendarClock,
   CheckSquare,
   ClipboardCheck,
+  FileText,
+  Globe,
+  Image,
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  Newspaper,
+  Search,
   ShieldCheck,
   User,
   Users,
@@ -39,16 +43,26 @@ export default function AdminDashboard() {
   const navItems: AdminNavItem[] = useMemo(
     () => [
       { title: "Dashboard", url: "/dashboard/admin", icon: LayoutDashboard },
-      { title: "Users", url: "/dashboard/admin/users", icon: Users, disabled: true },
-      { title: "Assists", url: "/dashboard/admin/assists", icon: ShieldCheck, disabled: true },
-      { title: "Tasks", url: "/dashboard/admin/tasks", icon: CheckSquare, disabled: true },
-      { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3, disabled: true },
-      { title: "Support", url: "/dashboard/admin/support", icon: MessageSquare, disabled: true },
-      { title: "Quality Control", url: "/dashboard/admin/qc", icon: ClipboardCheck, disabled: true },
-      { title: "Schedule & SLA", url: "/dashboard/admin/schedule", icon: CalendarClock, disabled: true },
-      { title: "Announcements", url: "/dashboard/admin/announcements", icon: Bell, disabled: true },
-      { title: "Activity Logs", url: "/dashboard/admin/logs", icon: AlertCircle, disabled: true },
-      { title: "My Account", url: "/dashboard/admin/account", icon: User, disabled: true },
+      { title: "Bussines User", url: "/dashboard/admin/business-users", icon: Users },
+      { title: "Assistant", url: "/dashboard/admin/assistants", icon: ShieldCheck },
+      { title: "Tasks", url: "/dashboard/admin/tasks", icon: CheckSquare },
+      { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
+      { title: "Support", url: "/dashboard/admin/support", icon: MessageSquare },
+      {
+        title: "Website",
+        url: "/dashboard/admin/website",
+        icon: Globe,
+        children: [
+          { title: "Pages", url: "/dashboard/admin/website/pages", icon: FileText },
+          { title: "Blog", url: "/dashboard/admin/website/blog", icon: Newspaper },
+          { title: "Media Library", url: "/dashboard/admin/website/media", icon: Image },
+          { title: "SEO", url: "/dashboard/admin/website/seo", icon: Search },
+        ],
+      },
+      { title: "Announcements", url: "/dashboard/admin/announcements", icon: Bell },
+      { title: "Quality Control", url: "/dashboard/admin/qc", icon: ClipboardCheck },
+      { title: "Activity Logs", url: "/dashboard/admin/logs", icon: AlertCircle },
+      { title: "My Account", url: "/dashboard/admin/account", icon: User },
     ],
     []
   );
@@ -114,14 +128,20 @@ export default function AdminDashboard() {
           <main className="p-6 bg-background overflow-auto">
             <Routes>
               <Route index element={<AdminOverview />} />
-              <Route path="users" element={<AdminPlaceholder title="Users" />} />
-              <Route path="assists" element={<AdminPlaceholder title="Assists" />} />
+              <Route path="business-users" element={<AdminPlaceholder title="Bussines User" />} />
+              <Route path="assistants" element={<AdminPlaceholder title="Assistant" />} />
               <Route path="tasks" element={<AdminPlaceholder title="Tasks" />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
               <Route path="support" element={<AdminPlaceholder title="Support" />} />
-              <Route path="qc" element={<AdminPlaceholder title="Quality Control" />} />
-              <Route path="schedule" element={<AdminPlaceholder title="Schedule & SLA" />} />
+
+              {/* Website */}
+              <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
+              <Route path="website/blog" element={<AdminPlaceholder title="Blog" />} />
+              <Route path="website/media" element={<AdminPlaceholder title="Media Library" />} />
+              <Route path="website/seo" element={<AdminPlaceholder title="SEO" />} />
+
               <Route path="announcements" element={<AdminPlaceholder title="Announcements" />} />
+              <Route path="qc" element={<AdminPlaceholder title="Quality Control" />} />
               <Route path="logs" element={<AdminPlaceholder title="Activity Logs" />} />
               <Route path="account" element={<AdminPlaceholder title="My Account" />} />
             </Routes>

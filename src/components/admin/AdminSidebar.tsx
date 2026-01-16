@@ -1,5 +1,6 @@
+import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Users, type LucideIcon } from "lucide-react";
+import { ChevronDown, Users, type LucideIcon } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
 import {
@@ -11,6 +12,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -19,11 +23,26 @@ export type AdminNavItem = {
   url: string;
   icon: LucideIcon;
   disabled?: boolean;
+  children?: AdminNavItem[];
 };
 
 export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
   const { open } = useSidebar();
   const { pathname } = useLocation();
+
+  const isActive = (url: string) => pathname === url;
+  const isInBranch = (url: string) => pathname === url || pathname.startsWith(url + "/");
+
+  const defaultExpanded = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    items.forEach((item) => {
+      if (item.children?.length) map[item.title] = isInBranch(item.url);
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, pathname]);
+
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(defaultExpanded);
 
   return (
     <Sidebar
@@ -52,7 +71,10 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const active = pathname === item.url;
+                const active = isActive(item.url);
+                const branchActive = isInBranch(item.url);
+                const hasChildren = !!item.children?.length;
+                const isExpanded = expanded[item.title] ?? branchActive;
 
                 if (item.disabled) {
                   return (
@@ -68,6 +90,47 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                         <item.icon className="h-4 w-4" />
                         {open && <span className="truncate">{item.title}</span>}
                       </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                }
+
+                if (hasChildren) {
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        onClick={() => setExpanded((p) => ({ ...p, [item.title]: !(p[item.title] ?? branchActive) }))}
+                        className={
+                          "flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70" +
+                          (branchActive ? " bg-sidebar-accent text-sidebar-primary" : "")
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {open && (
+                          <>
+                            <span className="truncate flex-1">{item.title}</span>
+                            <ChevronDown className={"h-4 w-4 transition-transform " + (isExpanded ? "rotate-180" : "rotate-0")} />
+                          </>
+                        )}
+                      </SidebarMenuButton>
+
+                      {open && isExpanded && (
+                        <SidebarMenuSub>
+                          {item.children!.map((child) => (
+                            <SidebarMenuSubItem key={child.title}>
+                              <SidebarMenuSubButton asChild>
+                                <NavLink
+                                  to={child.url}
+                                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
+                                  activeClassName="bg-sidebar-accent text-sidebar-primary"
+                                >
+                                  <child.icon className="h-4 w-4" />
+                                  <span className="truncate">{child.title}</span>
+                                </NavLink>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      )}
                     </SidebarMenuItem>
                   );
                 }
