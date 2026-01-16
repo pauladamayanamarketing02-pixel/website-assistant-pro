@@ -132,13 +132,15 @@ export default function AssistDashboard() {
       <div className="min-h-screen flex w-full">
         <Sidebar className="border-r">
           <div className="p-4 border-b">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                <span className="text-lg font-bold text-primary-foreground">E</span>
-              </div>
-              <div className="leading-tight">
-                <div className="text-sm font-semibold text-foreground">EasyMarketingAssist</div>
-                <div className="text-xs text-muted-foreground">Assist Portal</div>
+            <div className="rounded-lg bg-sidebar-accent/40 p-3 ring-1 ring-sidebar-border/60">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary shadow-glow">
+                  <span className="text-lg font-bold text-primary-foreground">E</span>
+                </div>
+                <div className="leading-tight">
+                  <div className="text-sm font-semibold tracking-tight text-sidebar-foreground">EasyMarketingAssist</div>
+                  <div className="text-xs font-medium text-sidebar-foreground/80">Assist Portal</div>
+                </div>
               </div>
             </div>
           </div>
