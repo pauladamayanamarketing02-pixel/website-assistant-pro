@@ -32,6 +32,7 @@ import AdminOverview from "./admin/Overview";
 import AdminPlaceholder from "./admin/Placeholder";
 import AdminWebsiteBlog from "./admin/WebsiteBlog";
 import AdminBusinessUsers from "./admin/BusinessUsers";
+import AdminAssistants from "./admin/Assistants";
 
 function LoadingScreen() {
   return (
@@ -150,7 +151,7 @@ export default function AdminDashboard() {
             <Routes>
               <Route index element={<AdminOverview />} />
               <Route path="business-users" element={<AdminBusinessUsers />} />
-              <Route path="assistants" element={<AdminPlaceholder title="Assistant" />} />
+              <Route path="assistants" element={<AdminAssistants />} />
               <Route path="tasks" element={<AdminPlaceholder title="Tasks" />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
               <Route path="support" element={<AdminPlaceholder title="Support" />} />
