@@ -1,5 +1,17 @@
 import * as React from "react";
 
+import { Lock, Unlock } from "lucide-react";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -172,6 +184,8 @@ export default function ContentCreation() {
     uniqueNonEmpty(["General", ...FALLBACK_ROWS.map((r) => r.category)]),
   );
 
+  const [lockedContentTypes, setLockedContentTypes] = React.useState<Set<string>>(() => new Set());
+
   const [manageDialogOpen, setManageDialogOpen] = React.useState(false);
   const [manageTab, setManageTab] = React.useState<"category" | "content">("category");
 
@@ -182,6 +196,14 @@ export default function ContentCreation() {
   const [newContentType, setNewContentType] = React.useState("");
   const [editingContentType, setEditingContentType] = React.useState<string | null>(null);
   const [editingContentTypeDraft, setEditingContentTypeDraft] = React.useState("");
+
+  type ConfirmActionState =
+    | { kind: "delete_category"; name: string }
+    | { kind: "save_edit_category" }
+    | { kind: "delete_type"; name: string }
+    | { kind: "save_edit_type" };
+
+  const [confirmAction, setConfirmAction] = React.useState<ConfirmActionState | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -366,7 +388,75 @@ export default function ContentCreation() {
 
   const deleteContentType = (name: string) => {
     setContentTypes((p) => p.filter((t) => t !== name));
+    setLockedContentTypes((prev) => {
+      const next = new Set(prev);
+      next.delete(name);
+      return next;
+    });
     if (editingContentType === name) cancelEditContentType();
+  };
+
+  const toggleContentTypeLock = (name: string) => {
+    setLockedContentTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  const getConfirmCopy = React.useCallback(() => {
+    if (!confirmAction) return null;
+
+    switch (confirmAction.kind) {
+      case "delete_category":
+        return {
+          title: "Delete category?",
+          description: `Are you sure you want to delete \"${confirmAction.name}\"? This action cannot be undone.`,
+          confirmLabel: "Yes, delete",
+        };
+      case "save_edit_category":
+        return {
+          title: "Save changes?",
+          description: `Save changes to category \"${editingCategory ?? ""}\"?`,
+          confirmLabel: "Yes, save",
+        };
+      case "delete_type":
+        return {
+          title: "Delete type content?",
+          description: `Are you sure you want to delete \"${confirmAction.name}\"? This action cannot be undone.`,
+          confirmLabel: "Yes, delete",
+        };
+      case "save_edit_type":
+        return {
+          title: "Save changes?",
+          description: `Save changes to type content \"${editingContentType ?? ""}\"?`,
+          confirmLabel: "Yes, save",
+        };
+    }
+  }, [confirmAction, editingCategory, editingContentType]);
+
+  const confirmCopy = getConfirmCopy();
+
+  const handleConfirm = () => {
+    if (!confirmAction) return;
+
+    switch (confirmAction.kind) {
+      case "delete_category":
+        deleteCategory(confirmAction.name);
+        break;
+      case "save_edit_category":
+        saveEditCategory();
+        break;
+      case "delete_type":
+        deleteContentType(confirmAction.name);
+        break;
+      case "save_edit_type":
+        saveEditContentType();
+        break;
+    }
+
+    setConfirmAction(null);
   };
 
   if (createOpen) {
@@ -529,7 +619,7 @@ export default function ContentCreation() {
             <Tabs value={manageTab} onValueChange={(v) => setManageTab(v as "category" | "content")}>
               <TabsList>
                 <TabsTrigger value="category">Category</TabsTrigger>
-                <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="content">Type Content</TabsTrigger>
               </TabsList>
 
               <TabsContent value="category" className="space-y-4">
@@ -563,7 +653,7 @@ export default function ContentCreation() {
                             <div className="flex flex-wrap justify-end gap-2">
                               {isEditing ? (
                                 <>
-                                  <Button type="button" size="sm" onClick={saveEditCategory}>
+                                  <Button type="button" size="sm" onClick={() => setConfirmAction({ kind: "save_edit_category" })}>
                                     Save
                                   </Button>
                                   <Button type="button" size="sm" variant="outline" onClick={cancelEditCategory}>
@@ -575,7 +665,12 @@ export default function ContentCreation() {
                                   Edit
                                 </Button>
                               )}
-                              <Button type="button" size="sm" variant="outline" onClick={() => deleteCategory(c)}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setConfirmAction({ kind: "delete_category", name: c })}
+                              >
                                 Delete
                               </Button>
                             </div>
@@ -617,6 +712,8 @@ export default function ContentCreation() {
                   <TableBody>
                     {contentTypes.map((t) => {
                       const isEditing = editingContentType === t;
+                      const isLocked = lockedContentTypes.has(t);
+
                       return (
                         <TableRow key={t}>
                           <TableCell>
@@ -631,9 +728,21 @@ export default function ContentCreation() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={isEditing}
+                                onClick={() => toggleContentTypeLock(t)}
+                                aria-label={isLocked ? "Unlock" : "Lock"}
+                                title={isLocked ? "Unlock" : "Lock"}
+                              >
+                                {isLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                              </Button>
+
                               {isEditing ? (
                                 <>
-                                  <Button type="button" size="sm" onClick={saveEditContentType}>
+                                  <Button type="button" size="sm" onClick={() => setConfirmAction({ kind: "save_edit_type" })}>
                                     Save
                                   </Button>
                                   <Button type="button" size="sm" variant="outline" onClick={cancelEditContentType}>
@@ -641,11 +750,23 @@ export default function ContentCreation() {
                                   </Button>
                                 </>
                               ) : (
-                                <Button type="button" size="sm" variant="secondary" onClick={() => startEditContentType(t)}>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={isLocked}
+                                  onClick={() => startEditContentType(t)}
+                                >
                                   Edit
                                 </Button>
                               )}
-                              <Button type="button" size="sm" variant="outline" onClick={() => deleteContentType(t)}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={isLocked}
+                                onClick={() => setConfirmAction({ kind: "delete_type", name: t })}
+                              >
                                 Delete
                               </Button>
                             </div>
@@ -665,6 +786,19 @@ export default function ContentCreation() {
                 </Table>
               </TabsContent>
             </Tabs>
+
+            <AlertDialog open={!!confirmAction} onOpenChange={(open) => (!open ? setConfirmAction(null) : undefined)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{confirmCopy?.title}</AlertDialogTitle>
+                  <AlertDialogDescription>{confirmCopy?.description}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>No</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleConfirm}>{confirmCopy?.confirmLabel ?? "Yes"}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setManageDialogOpen(false)}>
@@ -796,7 +930,7 @@ export default function ContentCreation() {
           <Tabs value={manageTab} onValueChange={(v) => setManageTab(v as "category" | "content")}>
             <TabsList>
               <TabsTrigger value="category">Category</TabsTrigger>
-              <TabsTrigger value="content">Content</TabsTrigger>
+              <TabsTrigger value="content">Type Content</TabsTrigger>
             </TabsList>
 
             <TabsContent value="category" className="space-y-4">
@@ -830,7 +964,7 @@ export default function ContentCreation() {
                           <div className="flex flex-wrap justify-end gap-2">
                             {isEditing ? (
                               <>
-                                <Button type="button" size="sm" onClick={saveEditCategory}>
+                                <Button type="button" size="sm" onClick={() => setConfirmAction({ kind: "save_edit_category" })}>
                                   Save
                                 </Button>
                                 <Button type="button" size="sm" variant="outline" onClick={cancelEditCategory}>
@@ -842,7 +976,12 @@ export default function ContentCreation() {
                                 Edit
                               </Button>
                             )}
-                            <Button type="button" size="sm" variant="outline" onClick={() => deleteCategory(c)}>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setConfirmAction({ kind: "delete_category", name: c })}
+                            >
                               Delete
                             </Button>
                           </div>
@@ -884,6 +1023,8 @@ export default function ContentCreation() {
                 <TableBody>
                   {contentTypes.map((t) => {
                     const isEditing = editingContentType === t;
+                    const isLocked = lockedContentTypes.has(t);
+
                     return (
                       <TableRow key={t}>
                         <TableCell>
@@ -898,9 +1039,21 @@ export default function ContentCreation() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isEditing}
+                              onClick={() => toggleContentTypeLock(t)}
+                              aria-label={isLocked ? "Unlock" : "Lock"}
+                              title={isLocked ? "Unlock" : "Lock"}
+                            >
+                              {isLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                            </Button>
+
                             {isEditing ? (
                               <>
-                                <Button type="button" size="sm" onClick={saveEditContentType}>
+                                <Button type="button" size="sm" onClick={() => setConfirmAction({ kind: "save_edit_type" })}>
                                   Save
                                 </Button>
                                 <Button type="button" size="sm" variant="outline" onClick={cancelEditContentType}>
@@ -908,11 +1061,23 @@ export default function ContentCreation() {
                                 </Button>
                               </>
                             ) : (
-                              <Button type="button" size="sm" variant="secondary" onClick={() => startEditContentType(t)}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={isLocked}
+                                onClick={() => startEditContentType(t)}
+                              >
                                 Edit
                               </Button>
                             )}
-                            <Button type="button" size="sm" variant="outline" onClick={() => deleteContentType(t)}>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isLocked}
+                              onClick={() => setConfirmAction({ kind: "delete_type", name: t })}
+                            >
                               Delete
                             </Button>
                           </div>
@@ -932,6 +1097,19 @@ export default function ContentCreation() {
               </Table>
             </TabsContent>
           </Tabs>
+
+          <AlertDialog open={!!confirmAction} onOpenChange={(open) => (!open ? setConfirmAction(null) : undefined)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{confirmCopy?.title}</AlertDialogTitle>
+                <AlertDialogDescription>{confirmCopy?.description}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>No</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirm}>{confirmCopy?.confirmLabel ?? "Yes"}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setManageDialogOpen(false)}>
