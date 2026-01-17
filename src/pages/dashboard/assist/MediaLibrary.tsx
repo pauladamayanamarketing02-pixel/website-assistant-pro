@@ -230,11 +230,17 @@ export default function AssistMediaLibrary() {
   }, []);
 
   const refreshContentTypes = React.useCallback(async () => {
-    const { data, error } = await supabase.from("media_types").select("name, is_locked").order("name", { ascending: true });
+    const { data, error } = await supabase
+      .from("media_types")
+      .select("name, is_locked")
+      .order("name", { ascending: true });
     if (error) throw error;
 
     const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
-    setContentTypes(uniqueNonEmpty(rows.map((r) => r.name)));
+
+    // Always keep the default types visible in the UI, even if they haven't been seeded yet.
+    // This prevents the main table header from becoming only the last-added type (e.g. "234").
+    setContentTypes(uniqueNonEmpty([...(IMPORT_TYPES as unknown as string[]), ...rows.map((r) => r.name)]));
 
     const locked = new Set(rows.filter((r) => Boolean(r.is_locked)).map((r) => lockKey(r.name)));
     for (const k of PERMANENT_CONTENT_TYPES) locked.add(k);
@@ -264,7 +270,7 @@ export default function AssistMediaLibrary() {
       setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
 
       const typeRows = (typeData ?? []) as Array<{ name: string; is_locked?: boolean }>;
-      setContentTypes(uniqueNonEmpty(typeRows.map((t) => t.name)));
+      setContentTypes(uniqueNonEmpty([...(IMPORT_TYPES as unknown as string[]), ...typeRows.map((t) => t.name)]));
       const locked = new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name)));
       for (const k of PERMANENT_CONTENT_TYPES) locked.add(k);
       setLockedContentTypes(locked);
