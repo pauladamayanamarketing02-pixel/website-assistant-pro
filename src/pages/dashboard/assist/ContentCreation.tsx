@@ -164,6 +164,19 @@ export default function ContentCreation() {
   const [detailsLoading, setDetailsLoading] = React.useState(false);
   const [detailsSaving, setDetailsSaving] = React.useState(false);
 
+  type DetailsListItem = {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    contentType: string;
+    platform: string;
+    scheduledAt: string | null;
+    images: Record<ImageSlotKey, string>;
+  };
+
+  const [detailsItems, setDetailsItems] = React.useState<DetailsListItem[]>([]);
+
   const [detailsForm, setDetailsForm] = React.useState({
     title: "",
     description: "",
@@ -339,6 +352,7 @@ export default function ContentCreation() {
   const openDetails = (row: ContentRow) => {
     setActiveRow(row);
     setDetailsItemId(null);
+    setDetailsItems([]);
     setDetailsLoading(true);
 
     // Reset optimistic UI first
@@ -359,7 +373,7 @@ export default function ContentCreation() {
     });
     setDetailsOpen(true);
 
-    // Load latest content item for this business (if any)
+    // Load ALL content items for this business (sorted)
     void (async () => {
       const { data, error } = await supabase
         .from("content_items")
@@ -367,9 +381,10 @@ export default function ContentCreation() {
           "id, title, description, platform, scheduled_at, image_primary_url, image_second_url, image_third_url, content_categories(name), content_types(name)",
         )
         .eq("business_id", row.businessId)
+        .is("deleted_at", null)
+        .order("scheduled_at", { ascending: true, nullsFirst: false })
         .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1000);
 
       if (error) {
         setDetailsLoading(false);
@@ -377,30 +392,26 @@ export default function ContentCreation() {
         return;
       }
 
-      if (!data) {
-        setDetailsLoading(false);
-        return;
-      }
-
-      const catName = (data as any).content_categories?.name as string | undefined;
-      const typeName = (data as any).content_types?.name as string | undefined;
-
-      setDetailsItemId(data.id);
-      setDetailsForm({
-        title: data.title ?? "",
-        description: data.description ?? "",
-        category: catName ?? "",
-        contentType: typeName ?? "",
-        platform: data.platform ?? "",
-        scheduledAt: data.scheduled_at ? toDatetimeLocalInput(data.scheduled_at) : "",
+      const items: DetailsListItem[] = ((data ?? []) as any[]).map((d) => {
+        const catName = (d as any).content_categories?.name as string | undefined;
+        const typeName = (d as any).content_types?.name as string | undefined;
+        return {
+          id: d.id as string,
+          title: (d.title ?? "") as string,
+          description: (d.description ?? "") as string,
+          category: (catName ?? "") as string,
+          contentType: (typeName ?? "") as string,
+          platform: (d.platform ?? "") as string,
+          scheduledAt: (d.scheduled_at ?? null) as string | null,
+          images: {
+            primary: (d.image_primary_url ?? "") as string,
+            second: (d.image_second_url ?? "") as string,
+            third: (d.image_third_url ?? "") as string,
+          },
+        };
       });
-      setDetailsSortCategory(catName ?? "");
-      setDetailsSortTypeContent(typeName ?? "");
-      setImages({
-        primary: { url: data.image_primary_url ?? "", originalUrl: data.image_primary_url ?? "" },
-        second: { url: data.image_second_url ?? "", originalUrl: data.image_second_url ?? "" },
-        third: { url: data.image_third_url ?? "", originalUrl: data.image_third_url ?? "" },
-      });
+
+      setDetailsItems(items);
       setDetailsLoading(false);
     })();
   };
@@ -409,6 +420,7 @@ export default function ContentCreation() {
     setDetailsOpen(false);
     setActiveRow(null);
     setDetailsItemId(null);
+    setDetailsItems([]);
     setDetailsLoading(false);
     setDetailsSaving(false);
   };
@@ -507,51 +519,43 @@ export default function ContentCreation() {
           "id, title, description, platform, scheduled_at, image_primary_url, image_second_url, image_third_url, content_categories(name), content_types(name)",
         )
         .eq("business_id", activeRow.businessId)
+        .is("deleted_at", null)
+        .order("scheduled_at", { ascending: true, nullsFirst: false })
         .order("updated_at", { ascending: false })
-        .limit(1);
+        .limit(1000);
 
       if (categoryId) q = q.eq("category_id", categoryId);
       if (contentTypeId) q = q.eq("content_type_id", contentTypeId);
 
-      const { data, error } = await q.maybeSingle();
+      const { data, error } = await q;
       if (error) throw error;
 
-      if (!data) {
-        setDetailsItemId(null);
-        setDetailsForm((p) => ({
-          ...p,
-          title: "",
-          description: "",
-          platform: "",
-          scheduledAt: "",
-        }));
-        setImages({
-          primary: { url: "", originalUrl: "" },
-          second: { url: "", originalUrl: "" },
-          third: { url: "", originalUrl: "" },
-        });
-        return;
-      }
+      const items: DetailsListItem[] = ((data ?? []) as any[]).map((d) => {
+        const cat = (d as any).content_categories?.name as string | undefined;
+        const type = (d as any).content_types?.name as string | undefined;
 
-      const cat = (data as any).content_categories?.name as string | undefined;
-      const type = (data as any).content_types?.name as string | undefined;
+        return {
+          id: d.id as string,
+          title: (d.title ?? "") as string,
+          description: (d.description ?? "") as string,
+          category: (cat ?? "") as string,
+          contentType: (type ?? "") as string,
+          platform: (d.platform ?? "") as string,
+          scheduledAt: (d.scheduled_at ?? null) as string | null,
+          images: {
+            primary: (d.image_primary_url ?? "") as string,
+            second: (d.image_second_url ?? "") as string,
+            third: (d.image_third_url ?? "") as string,
+          },
+        };
+      });
 
-      setDetailsItemId(data.id);
-      setDetailsForm({
-        title: data.title ?? "",
-        description: data.description ?? "",
-        category: cat ?? categoryName,
-        contentType: type ?? typeName,
-        platform: data.platform ?? "",
-        scheduledAt: data.scheduled_at ? toDatetimeLocalInput(data.scheduled_at) : "",
-      });
-      setImages({
-        primary: { url: data.image_primary_url ?? "", originalUrl: data.image_primary_url ?? "" },
-        second: { url: data.image_second_url ?? "", originalUrl: data.image_second_url ?? "" },
-        third: { url: data.image_third_url ?? "", originalUrl: data.image_third_url ?? "" },
-      });
+      setDetailsItems(items);
+      setDetailsItemId(items[0]?.id ?? null);
     } catch (e: any) {
       toast({ variant: "destructive", title: "Failed to load", description: e?.message ?? "Unknown error" });
+      setDetailsItems([]);
+      setDetailsItemId(null);
     } finally {
       setDetailsLoading(false);
     }
@@ -1099,134 +1103,84 @@ export default function ContentCreation() {
           <CardContent className="p-6">
             {detailsLoading ? (
               <div className="py-16 text-center text-sm text-muted-foreground">Loading content...</div>
-            ) : !detailsItemId ? (
+            ) : detailsItems.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="text-sm font-medium text-foreground">No results found</p>
                 <p className="mt-1 text-sm text-muted-foreground">Try changing the filters.</p>
               </div>
             ) : (
-              <div className="grid gap-6 lg:grid-cols-[1fr_4fr]">
-                {/* Images (≈20%) */}
-                <section className="space-y-4">
-                  <h2 className="text-lg font-semibold text-foreground">Images</h2>
+              <div className="space-y-6">
+                {detailsItems.map((item) => {
+                  const scheduledLabel = item.scheduledAt ? new Date(item.scheduledAt).toLocaleString("id-ID") : "-";
+                  const primary = item.images.primary || "/placeholder.svg";
+                  const second = item.images.second || "/placeholder.svg";
+                  const third = item.images.third || "/placeholder.svg";
 
-                  <ImageFieldCard
-                    label="Primary Image"
-                    value={images.primary.url}
-                    originalValue={images.primary.originalUrl}
-                    onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
-                    variant="compact"
-                  />
+                  return (
+                    <section key={item.id} className="rounded-lg border p-4">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                        <h2 className="text-lg font-semibold text-foreground">{item.title || "Untitled"}</h2>
+                        <p className="text-sm text-muted-foreground">Scheduled: {scheduledLabel}</p>
+                      </div>
 
-                  <div className="grid gap-4">
-                    <ImageFieldCard
-                      label="Secondary Image"
-                      value={images.second.url}
-                      originalValue={images.second.originalUrl}
-                      onChange={(next) => setImages((p) => ({ ...p, second: next }))}
-                      variant="compact"
-                    />
-                    <ImageFieldCard
-                      label="Third Image"
-                      value={images.third.url}
-                      originalValue={images.third.originalUrl}
-                      onChange={(next) => setImages((p) => ({ ...p, third: next }))}
-                      variant="compact"
-                    />
-                  </div>
-                </section>
+                      <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_4fr]">
+                        {/* Images */}
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-foreground">Images</p>
+                          <div className="grid gap-3">
+                            <img
+                              src={primary}
+                              alt="Primary image"
+                              loading="lazy"
+                              className="h-36 w-full rounded-md object-cover"
+                            />
+                            <div className="grid grid-cols-2 gap-3">
+                              <img
+                                src={second}
+                                alt="Secondary image"
+                                loading="lazy"
+                                className="h-24 w-full rounded-md object-cover"
+                              />
+                              <img
+                                src={third}
+                                alt="Third image"
+                                loading="lazy"
+                                className="h-24 w-full rounded-md object-cover"
+                              />
+                            </div>
+                          </div>
+                        </div>
 
-                {/* Content Details (≈80%) */}
-                <section className="space-y-4">
-                  <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
+                        {/* Content Details */}
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-foreground">Content Details</p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Category</p>
+                              <p className="text-sm text-foreground">{item.category || "-"}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Type Content</p>
+                              <p className="text-sm text-foreground">{item.contentType || "-"}</p>
+                            </div>
+                            <div className="sm:col-span-2">
+                              <p className="text-xs text-muted-foreground">Platform</p>
+                              <p className="text-sm text-foreground">{item.platform || "-"}</p>
+                            </div>
+                          </div>
 
-                  <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input
-                      value={detailsForm.title}
-                      onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
-                      placeholder="Title"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <RichTextEditor
-                      value={detailsForm.description}
-                      onChange={(v) => setDetailsForm((p) => ({ ...p, description: v }))}
-                      onSave={() => void 0}
-                      title="Description"
-                      description=""
-                      icon={Pencil}
-                      showTopBar={false}
-                      showSaveControls={false}
-                    />
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Category</Label>
-                      <Select value={detailsForm.category || undefined} onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose Category" />
-                        </SelectTrigger>
-                        <SelectContent className="z-50">
-                          {categories.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Type Content</Label>
-                      <Select
-                        value={detailsForm.contentType || undefined}
-                        onValueChange={(v) => {
-                          setDetailsForm((p) => ({
-                            ...p,
-                            contentType: v,
-                            platform: "", // reset when changing type
-                          }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose Type Content" />
-                        </SelectTrigger>
-                        <SelectContent className="z-50">
-                          {contentTypes.map((t) => (
-                            <SelectItem key={t} value={t}>
-                              {t}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <PlatformDropdown
-                    contentType={detailsForm.contentType}
-                    value={detailsForm.platform}
-                    onChange={(next) => setDetailsForm((p) => ({ ...p, platform: next }))}
-                  />
-
-                  <div className="space-y-2">
-                    <Label>Scheduled</Label>
-                    <Input
-                      type="datetime-local"
-                      value={detailsForm.scheduledAt}
-                      onChange={(e) => setDetailsForm((p) => ({ ...p, scheduledAt: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2">
-                    <Button type="button" onClick={() => void saveDetails()} disabled={detailsSaving || detailsLoading}>
-                      {detailsSaving ? "Saving..." : "Save"}
-                    </Button>
-                  </div>
-                </section>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Description</p>
+                            <div
+                              className="text-sm text-foreground"
+                              dangerouslySetInnerHTML={{ __html: item.description || "" }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
             )}
           </CardContent>
