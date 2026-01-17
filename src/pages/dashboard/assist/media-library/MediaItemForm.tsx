@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 type BusinessOption = {
   id: string;
   name: string;
+  publicId: string;
 };
 
 type Props = {
@@ -43,6 +44,7 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
   const [businessId, setBusinessId] = React.useState<string>("");
   const business = React.useMemo(() => businesses.find((b) => b.id === businessId), [businessId, businesses]);
   const businessName = business?.name ?? "";
+  const businessPublicId = business?.publicId ?? "";
 
   const [category, setCategory] = React.useState<string>("");
   const [mediaType, setMediaType] = React.useState<string>("");
@@ -124,7 +126,7 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
 
             <div className="space-y-2">
               <Label>Business ID</Label>
-              <Input value={businessId} disabled />
+              <Input value={businessPublicId} disabled />
             </div>
 
             <div className="space-y-2">
