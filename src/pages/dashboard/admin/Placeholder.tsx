@@ -21,7 +21,7 @@ const roadmap: Record<string, string[]> = {
 
   Website: ["Kelola halaman website", "Blog & artikel", "Media library", "SEO", "Contact", "Services", "Layout"],
   Pages: ["Daftar halaman", "Edit konten", "Publish / unpublish", "Preview"],
-  Blog: ["Article list", "Editor", "Categories & tags", "Publish"],
+  Blog: ["Daftar artikel", "Editor", "Kategori & tag", "Publish"],
   "Media Library": ["Upload gambar", "Folder/label", "Optimasi gambar", "Pakai di konten"],
   SEO: ["Meta title/description", "OG image", "Sitemap/robots", "Audit"],
   Contact: ["Edit informasi kontak", "Jam operasional", "CTA WhatsApp/Email", "Maps embed"],

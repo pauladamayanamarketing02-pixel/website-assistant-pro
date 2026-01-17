@@ -30,7 +30,6 @@ import { AdminSidebar, type AdminNavItem } from "@/components/admin/AdminSidebar
 
 import AdminOverview from "./admin/Overview";
 import AdminPlaceholder from "./admin/Placeholder";
-import AdminWebsiteBlog from "./admin/website/Blog";
 
 function LoadingScreen() {
   return (
@@ -156,7 +155,7 @@ export default function AdminDashboard() {
 
               {/* Website */}
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
-              <Route path="website/blog" element={<AdminWebsiteBlog />} />
+              <Route path="website/blog" element={<AdminPlaceholder title="Blog" />} />
               <Route path="website/media" element={<AdminPlaceholder title="Media Library" />} />
               <Route path="website/seo" element={<AdminPlaceholder title="SEO" />} />
               <Route path="website/contact" element={<AdminPlaceholder title="Contact" />} />
