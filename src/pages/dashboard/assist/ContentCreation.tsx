@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { ArrowLeft, Lock, Unlock, Pencil } from "lucide-react";
+import { ArrowLeft, Lock, Unlock, Pencil, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -53,9 +53,9 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
-import { RichTextEditor } from "@/components/dashboard/RichTextEditor";
-import PlatformDropdown from "@/pages/dashboard/assist/content-creation/PlatformDropdown";
+import ContentItemEditDialog, {
+  type ContentItemEditValues,
+} from "@/pages/dashboard/assist/content-creation/ContentItemEditDialog";
 import ContentItemForm from "@/pages/dashboard/assist/content-creation/ContentItemForm";
 
 type SortDirection = "asc" | "desc";
@@ -176,6 +176,10 @@ export default function ContentCreation() {
   };
 
   const [detailsItems, setDetailsItems] = React.useState<DetailsListItem[]>([]);
+
+  const [editItemOpen, setEditItemOpen] = React.useState(false);
+  const [editItem, setEditItem] = React.useState<DetailsListItem | null>(null);
+  const [deleteItemId, setDeleteItemId] = React.useState<string | null>(null);
 
   const [detailsForm, setDetailsForm] = React.useState({
     title: "",
@@ -632,6 +636,75 @@ export default function ContentCreation() {
       await fetchContentRows();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    } finally {
+      setDetailsSaving(false);
+    }
+  };
+
+  const openEditItem = (item: DetailsListItem) => {
+    setEditItem(item);
+    setEditItemOpen(true);
+  };
+
+  const saveEditItem = async (values: ContentItemEditValues) => {
+    if (!activeRow || !editItem) return;
+
+    setDetailsSaving(true);
+    try {
+      const [categoryId, contentTypeId] = await Promise.all([
+        resolveCategoryId(values.category),
+        resolveContentTypeId(values.contentType),
+      ]);
+
+      const scheduledAtIso = values.scheduledAt ? new Date(values.scheduledAt).toISOString() : null;
+
+      const payload = {
+        business_id: activeRow.businessId,
+        category_id: categoryId,
+        content_type_id: contentTypeId,
+        title: values.title.trim() || "Untitled",
+        description: values.description,
+        platform: values.platform.trim() || null,
+        scheduled_at: scheduledAtIso,
+        image_primary_url: values.primaryImageUrl || null,
+        image_second_url: values.secondaryImageUrl || null,
+        image_third_url: values.thirdImageUrl || null,
+      };
+
+      const { error } = await supabase.from("content_items").update(payload).eq("id", editItem.id);
+      if (error) throw error;
+
+      toast({ title: "Updated", description: "Content item updated." });
+      setEditItemOpen(false);
+      setEditItem(null);
+
+      await fetchDetailsItem(detailsSortCategory, detailsSortTypeContent);
+      await fetchContentRows();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Update failed", description: e?.message ?? "Unknown error" });
+    } finally {
+      setDetailsSaving(false);
+    }
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!deleteItemId) return;
+
+    setDetailsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("content_items")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", deleteItemId);
+      if (error) throw error;
+
+      toast({ title: "Deleted", description: "Content item deleted." });
+      setDeleteItemId(null);
+
+      await fetchDetailsItem(detailsSortCategory, detailsSortTypeContent);
+      await fetchContentRows();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Delete failed", description: e?.message ?? "Unknown error" });
     } finally {
       setDetailsSaving(false);
     }
@@ -1118,9 +1191,22 @@ export default function ContentCreation() {
 
                   return (
                     <section key={item.id} className="rounded-lg border p-4">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                        <h2 className="text-lg font-semibold text-foreground">{item.title || "Untitled"}</h2>
-                        <p className="text-sm text-muted-foreground">Scheduled: {scheduledLabel}</p>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+                        <div className="space-y-1">
+                          <h2 className="text-lg font-semibold text-foreground">{item.title || "Untitled"}</h2>
+                          <p className="text-sm text-muted-foreground">Scheduled: {scheduledLabel}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={() => openEditItem(item)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button type="button" variant="destructive" size="sm" onClick={() => setDeleteItemId(item.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Hapus
+                          </Button>
+                        </div>
                       </div>
 
                       <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_4fr]">
@@ -1185,6 +1271,52 @@ export default function ContentCreation() {
             )}
           </CardContent>
         </Card>
+
+        <ContentItemEditDialog
+          open={editItemOpen}
+          onOpenChange={(open) => {
+            setEditItemOpen(open);
+            if (!open) setEditItem(null);
+          }}
+          categories={categories}
+          contentTypes={contentTypes}
+          initialValues={(() => {
+            const item = editItem;
+            return {
+              title: item?.title ?? "",
+              description: item?.description ?? "",
+              category: item?.category ?? "",
+              contentType: item?.contentType ?? "",
+              platform: item?.platform ?? "",
+              scheduledAt: item?.scheduledAt ? toDatetimeLocalInput(item.scheduledAt) : "",
+              primaryImageUrl: item?.images.primary || "/placeholder.svg",
+              secondaryImageUrl: item?.images.second || "/placeholder.svg",
+              thirdImageUrl: item?.images.third || "/placeholder.svg",
+            } satisfies ContentItemEditValues;
+          })()}
+          saving={detailsSaving}
+          onSave={(values) => void saveEditItem(values)}
+          onDelete={() => {
+            if (!editItem) return;
+            setEditItemOpen(false);
+            setDeleteItemId(editItem.id);
+          }}
+        />
+
+        <AlertDialog open={Boolean(deleteItemId)} onOpenChange={(open) => !open && setDeleteItemId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus content?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Content ini akan dihapus dari daftar (soft delete). Kamu bisa lanjutkan?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void confirmDeleteItem()}>Hapus</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Manage dialog (Category / Content) */}
         <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
