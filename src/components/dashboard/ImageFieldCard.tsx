@@ -67,6 +67,7 @@ export default function ImageFieldCard({
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [urlDialogOpen, setUrlDialogOpen] = React.useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
   const [draftUrl, setDraftUrl] = React.useState(value);
 
   React.useEffect(() => {
@@ -75,7 +76,7 @@ export default function ImageFieldCard({
 
   const preview = () => {
     if (!value) return;
-    window.open(value, "_blank", "noopener,noreferrer");
+    setPreviewDialogOpen(true);
   };
 
   const copyUrl = async () => {
@@ -125,12 +126,20 @@ export default function ImageFieldCard({
 
       <CardContent className={variant === "compact" ? "space-y-2" : "space-y-3"}>
         <div className="overflow-hidden rounded-md border">
-          <img
-            src={value || "/placeholder.svg"}
-            alt={`${label} image preview`}
-            loading="lazy"
-            className={variant === "compact" ? "h-24 w-full object-cover" : "h-48 w-full object-cover"}
-          />
+          <button
+            type="button"
+            onClick={preview}
+            disabled={!value}
+            className="block w-full disabled:cursor-not-allowed"
+            aria-label={`Preview ${label}`}
+          >
+            <img
+              src={value || "/placeholder.svg"}
+              alt={`${label} image preview`}
+              loading="lazy"
+              className={variant === "compact" ? "h-24 w-full object-cover cursor-zoom-in" : "h-48 w-full object-cover cursor-zoom-in"}
+            />
+          </button>
         </div>
 
         <TooltipProvider delayDuration={150}>
@@ -168,6 +177,23 @@ export default function ImageFieldCard({
           onChange={onPickFile}
         />
       </CardContent>
+
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{label} Preview</DialogTitle>
+            <DialogDescription>Preview the current image.</DialogDescription>
+          </DialogHeader>
+          <div className="overflow-hidden rounded-md border">
+            <img
+              src={value || "/placeholder.svg"}
+              alt={`${label} full preview`}
+              className="max-h-[70vh] w-full object-contain"
+              loading="lazy"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={urlDialogOpen} onOpenChange={setUrlDialogOpen}>
         <DialogContent className="max-w-xl">
