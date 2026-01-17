@@ -164,11 +164,6 @@ export default function ImageFieldCard({
           </div>
         </TooltipProvider>
 
-        <div className="space-y-2">
-          <Label>Current URL</Label>
-          <Input value={value} readOnly />
-        </div>
-
         <input
           ref={fileInputRef}
           type="file"
