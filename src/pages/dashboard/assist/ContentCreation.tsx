@@ -50,6 +50,7 @@ type SortDirection = "asc" | "desc";
 type BusinessOption = {
   id: string;
   name: string;
+  publicId?: string;
 };
 
 type ContentRow = {
@@ -112,6 +113,11 @@ const FALLBACK_ROWS: ContentRow[] = [
 
 function safeName(name: string | null | undefined) {
   return (name ?? "(No name)").trim() || "(No name)";
+}
+
+function formatBusinessId(businessNumber: number | null | undefined) {
+  if (!businessNumber) return "";
+  return `B${businessNumber.toString().padStart(5, "0")}`;
 }
 
 function uniqueNonEmpty(values: string[]) {
@@ -183,7 +189,7 @@ export default function ContentCreation() {
     const loadBusinesses = async () => {
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, business_name")
+        .select("id, business_name, business_number")
         .order("business_name", { ascending: true, nullsFirst: false });
 
       if (cancelled) return;
@@ -197,6 +203,7 @@ export default function ContentCreation() {
       const list: BusinessOption[] = (data ?? []).map((b) => ({
         id: b.id,
         name: safeName(b.business_name),
+        publicId: formatBusinessId((b as any).business_number as number | null),
       }));
 
       setBusinesses(list);
@@ -365,12 +372,19 @@ export default function ContentCreation() {
   if (createOpen) {
     return (
       <ContentItemForm
-        businesses={businesses.length ? businesses : [{ id: "demo", name: "Demo Business" }]}
+        businesses={
+          businesses.length
+            ? businesses
+            : [{ id: "demo", name: "Demo Business", publicId: "B00000" }]
+        }
         categories={categories}
         contentTypes={contentTypes}
         onCancel={() => setCreateOpen(false)}
-        onSave={() => {
-          toast({ title: "Saved", description: "New content item saved (still placeholder)." });
+        onSave={(payload) => {
+          toast({
+            title: "Saved",
+            description: `New content item saved (still placeholder). Business ID: ${payload.businessPublicId}`,
+          });
           setCreateOpen(false);
         }}
       />
