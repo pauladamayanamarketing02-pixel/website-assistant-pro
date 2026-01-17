@@ -605,15 +605,67 @@ export default function ContentCreation() {
     setManageDialogOpen(true);
   };
 
-  const addCategory = () => {
+  const refreshCategories = React.useCallback(async () => {
+    const { data, error } = await supabase.from("content_categories").select("name").order("name", { ascending: true });
+    if (error) throw error;
+    const names = (data ?? []).map((c) => (c as any).name as string);
+    // Always keep "General" available in the UI
+    setCategories(uniqueNonEmpty(["General", ...names]));
+  }, []);
+
+  const refreshContentTypes = React.useCallback(async () => {
+    const { data, error } = await supabase.from("content_types").select("name").order("name", { ascending: true });
+    if (error) throw error;
+    const names = (data ?? []).map((t) => (t as any).name as string);
+    setContentTypes(uniqueNonEmpty([...(DEFAULT_CONTENT_TYPES as unknown as string[]), ...names]));
+  }, []);
+
+  const lookupCategoryIdInsensitive = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) return null;
+
+    const { data, error } = await supabase
+      .from("content_categories")
+      .select("id")
+      .ilike("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data?.id as string | undefined) ?? null;
+  };
+
+  const lookupContentTypeIdInsensitive = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) return null;
+
+    const { data, error } = await supabase
+      .from("content_types")
+      .select("id")
+      .ilike("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data?.id as string | undefined) ?? null;
+  };
+
+  const addCategory = async () => {
     const name = newCategory.trim();
     if (!name) return;
     if (categories.some((c) => c.toLowerCase() === name.toLowerCase())) {
-      toast({ title: "Category already exists", description: `Category "${name}" is already registered.` });
+      toast({ title: "Category already exists", description: `Category \"${name}\" is already registered.` });
       return;
     }
-    setCategories((p) => [...p, name]);
-    setNewCategory("");
+
+    try {
+      await resolveCategoryId(name);
+      await refreshCategories();
+      setNewCategory("");
+      toast({ title: "Saved", description: "Category saved to database." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    }
   };
 
   const startEditCategory = (name: string) => {
@@ -626,31 +678,61 @@ export default function ContentCreation() {
     setEditingCategoryDraft("");
   };
 
-  const saveEditCategory = () => {
+  const saveEditCategory = async () => {
     const from = (editingCategory ?? "").trim();
     const to = editingCategoryDraft.trim();
     if (!from || !to) return;
 
     if (categories.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
-      toast({ title: "Category name conflict", description: `Category "${to}" already exists.` });
+      toast({ title: "Category name conflict", description: `Category \"${to}\" already exists.` });
       return;
     }
 
-    setCategories((p) => p.map((c) => (c === from ? to : c)));
-    setDetailsForm((p) => (p.category === from ? { ...p, category: to } : p));
+    try {
+      const id = await lookupCategoryIdInsensitive(from);
+      if (!id) throw new Error("Category not found in database.");
 
-    cancelEditCategory();
+      const { error } = await supabase.from("content_categories").update({ name: to }).eq("id", id);
+      if (error) throw error;
+
+      // keep local fields synced (so the user sees the new name immediately)
+      setDetailsForm((p) => (p.category === from ? { ...p, category: to } : p));
+      setDetailsSortCategory((p) => (p === from ? to : p));
+
+      await refreshCategories();
+      cancelEditCategory();
+      toast({ title: "Saved", description: "Category updated." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    }
   };
 
-  const deleteCategory = (name: string) => {
-    setCategories((p) => p.filter((c) => c !== name));
-    setLockedCategories((prev) => {
-      const next = new Set(prev);
-      next.delete(name);
-      return next;
-    });
-    setDetailsForm((p) => (p.category === name ? { ...p, category: "" } : p));
-    if (editingCategory === name) cancelEditCategory();
+  const deleteCategory = async (name: string) => {
+    try {
+      const id = await lookupCategoryIdInsensitive(name);
+      if (!id) throw new Error("Category not found in database.");
+
+      const { error } = await supabase.from("content_categories").delete().eq("id", id);
+      if (error) throw error;
+
+      setLockedCategories((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+      setDetailsForm((p) => (p.category === name ? { ...p, category: "" } : p));
+      setDetailsSortCategory((p) => (p === name ? "" : p));
+      if (editingCategory === name) cancelEditCategory();
+
+      await refreshCategories();
+      toast({ title: "Deleted", description: "Category deleted." });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: e?.message ?? "Category may be in use by existing content items.",
+      });
+    }
   };
 
   const toggleCategoryLock = (name: string) => {
@@ -662,15 +744,22 @@ export default function ContentCreation() {
     });
   };
 
-  const addContentType = () => {
+  const addContentType = async () => {
     const name = newContentType.trim();
     if (!name) return;
     if (contentTypes.some((c) => c.toLowerCase() === name.toLowerCase())) {
-      toast({ title: "Column already exists", description: `Content "${name}" is already registered.` });
+      toast({ title: "Column already exists", description: `Content \"${name}\" is already registered.` });
       return;
     }
-    setContentTypes((p) => [...p, name]);
-    setNewContentType("");
+
+    try {
+      await resolveContentTypeId(name);
+      await refreshContentTypes();
+      setNewContentType("");
+      toast({ title: "Saved", description: "Type Content saved to database." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    }
   };
 
   const startEditContentType = (name: string) => {
@@ -683,28 +772,60 @@ export default function ContentCreation() {
     setEditingContentTypeDraft("");
   };
 
-  const saveEditContentType = () => {
+  const saveEditContentType = async () => {
     const from = (editingContentType ?? "").trim();
     const to = editingContentTypeDraft.trim();
     if (!from || !to) return;
 
     if (contentTypes.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
-      toast({ title: "Column name conflict", description: `Content "${to}" already exists.` });
+      toast({ title: "Column name conflict", description: `Content \"${to}\" already exists.` });
       return;
     }
 
-    setContentTypes((p) => p.map((c) => (c === from ? to : c)));
-    cancelEditContentType();
+    try {
+      const id = await lookupContentTypeIdInsensitive(from);
+      if (!id) throw new Error("Type Content not found in database.");
+
+      const { error } = await supabase.from("content_types").update({ name: to }).eq("id", id);
+      if (error) throw error;
+
+      setDetailsForm((p) => (p.contentType === from ? { ...p, contentType: to } : p));
+      setDetailsSortTypeContent((p) => (p === from ? to : p));
+
+      await refreshContentTypes();
+      cancelEditContentType();
+      toast({ title: "Saved", description: "Type Content updated." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    }
   };
 
-  const deleteContentType = (name: string) => {
-    setContentTypes((p) => p.filter((t) => t !== name));
-    setLockedContentTypes((prev) => {
-      const next = new Set(prev);
-      next.delete(name);
-      return next;
-    });
-    if (editingContentType === name) cancelEditContentType();
+  const deleteContentType = async (name: string) => {
+    try {
+      const id = await lookupContentTypeIdInsensitive(name);
+      if (!id) throw new Error("Type Content not found in database.");
+
+      const { error } = await supabase.from("content_types").delete().eq("id", id);
+      if (error) throw error;
+
+      setLockedContentTypes((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+      setDetailsForm((p) => (p.contentType === name ? { ...p, contentType: "", platform: "" } : p));
+      setDetailsSortTypeContent((p) => (p === name ? "" : p));
+      if (editingContentType === name) cancelEditContentType();
+
+      await refreshContentTypes();
+      toast({ title: "Deleted", description: "Type Content deleted." });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: e?.message ?? "Type Content may be in use by existing content items.",
+      });
+    }
   };
 
   const toggleContentTypeLock = (name: string) => {
@@ -749,25 +870,27 @@ export default function ContentCreation() {
 
   const confirmCopy = getConfirmCopy();
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!confirmAction) return;
 
-    switch (confirmAction.kind) {
-      case "delete_category":
-        deleteCategory(confirmAction.name);
-        break;
-      case "save_edit_category":
-        saveEditCategory();
-        break;
-      case "delete_type":
-        deleteContentType(confirmAction.name);
-        break;
-      case "save_edit_type":
-        saveEditContentType();
-        break;
+    try {
+      switch (confirmAction.kind) {
+        case "delete_category":
+          await deleteCategory(confirmAction.name);
+          break;
+        case "save_edit_category":
+          await saveEditCategory();
+          break;
+        case "delete_type":
+          await deleteContentType(confirmAction.name);
+          break;
+        case "save_edit_type":
+          await saveEditContentType();
+          break;
+      }
+    } finally {
+      setConfirmAction(null);
     }
-
-    setConfirmAction(null);
   };
 
   if (createOpen) {
