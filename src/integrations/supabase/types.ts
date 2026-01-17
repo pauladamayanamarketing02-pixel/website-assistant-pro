@@ -16,586 +16,124 @@ export type Database = {
     Tables: {
       businesses: {
         Row: {
-          bkb_content: string | null
-          brand_expert_content: string | null
-          business_address: string | null
-          business_name: string | null
-          business_number: number | null
-          business_type: string | null
-          city: string | null
-          country: string | null
+          business_id: string
+          city: string
+          country: string
           created_at: string
-          creator_links: Json | null
-          email: string | null
-          email_secondary: string | null
-          first_name: string | null
-          gmb_link: string | null
-          hours: Json | null
+          google_business_url: string | null
           id: string
-          last_name: string | null
+          name: string
           onboarding_completed: boolean | null
-          persona1_content: string | null
-          persona1_title: string | null
-          persona2_content: string | null
-          persona2_title: string | null
-          persona3_content: string | null
-          persona3_title: string | null
-          phone_number: string | null
-          social_links: Json | null
-          stage: string | null
+          package_addons: Json | null
+          phone: string | null
+          province: string
+          selected_package:
+            | Database["public"]["Enums"]["subscription_package"]
+            | null
+          social_media_url: string | null
+          stage: Database["public"]["Enums"]["business_stage"]
+          type: string
           updated_at: string
           user_id: string
           website_url: string | null
         }
         Insert: {
-          bkb_content?: string | null
-          brand_expert_content?: string | null
-          business_address?: string | null
-          business_name?: string | null
-          business_number?: number | null
-          business_type?: string | null
-          city?: string | null
-          country?: string | null
+          business_id: string
+          city: string
+          country?: string
           created_at?: string
-          creator_links?: Json | null
-          email?: string | null
-          email_secondary?: string | null
-          first_name?: string | null
-          gmb_link?: string | null
-          hours?: Json | null
+          google_business_url?: string | null
           id?: string
-          last_name?: string | null
+          name: string
           onboarding_completed?: boolean | null
-          persona1_content?: string | null
-          persona1_title?: string | null
-          persona2_content?: string | null
-          persona2_title?: string | null
-          persona3_content?: string | null
-          persona3_title?: string | null
-          phone_number?: string | null
-          social_links?: Json | null
-          stage?: string | null
+          package_addons?: Json | null
+          phone?: string | null
+          province: string
+          selected_package?:
+            | Database["public"]["Enums"]["subscription_package"]
+            | null
+          social_media_url?: string | null
+          stage: Database["public"]["Enums"]["business_stage"]
+          type: string
           updated_at?: string
           user_id: string
           website_url?: string | null
         }
         Update: {
-          bkb_content?: string | null
-          brand_expert_content?: string | null
-          business_address?: string | null
-          business_name?: string | null
-          business_number?: number | null
-          business_type?: string | null
-          city?: string | null
-          country?: string | null
+          business_id?: string
+          city?: string
+          country?: string
           created_at?: string
-          creator_links?: Json | null
-          email?: string | null
-          email_secondary?: string | null
-          first_name?: string | null
-          gmb_link?: string | null
-          hours?: Json | null
+          google_business_url?: string | null
           id?: string
-          last_name?: string | null
-          onboarding_completed?: boolean | null
-          persona1_content?: string | null
-          persona1_title?: string | null
-          persona2_content?: string | null
-          persona2_title?: string | null
-          persona3_content?: string | null
-          persona3_title?: string | null
-          phone_number?: string | null
-          social_links?: Json | null
-          stage?: string | null
-          updated_at?: string
-          user_id?: string
-          website_url?: string | null
-        }
-        Relationships: []
-      }
-      invoices: {
-        Row: {
-          amount: number
-          created_at: string
-          id: string
-          package_id: string | null
-          paid_at: string | null
-          status: string | null
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          id?: string
-          package_id?: string | null
-          paid_at?: string | null
-          status?: string | null
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          id?: string
-          package_id?: string | null
-          paid_at?: string | null
-          status?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      messages: {
-        Row: {
-          content: string
-          created_at: string
-          file_url: string | null
-          id: string
-          is_read: boolean | null
-          receiver_id: string
-          sender_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          file_url?: string | null
-          id?: string
-          is_read?: boolean | null
-          receiver_id: string
-          sender_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          file_url?: string | null
-          id?: string
-          is_read?: boolean | null
-          receiver_id?: string
-          sender_id?: string
-        }
-        Relationships: []
-      }
-      orders: {
-        Row: {
-          amount: number | null
-          billing_cycle: string | null
-          created_at: string
-          customer_email: string | null
-          customer_name: string | null
-          design: string | null
-          domain: string
-          id: string
-          status: string | null
-          user_id: string | null
-        }
-        Insert: {
-          amount?: number | null
-          billing_cycle?: string | null
-          created_at?: string
-          customer_email?: string | null
-          customer_name?: string | null
-          design?: string | null
-          domain: string
-          id?: string
-          status?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          amount?: number | null
-          billing_cycle?: string | null
-          created_at?: string
-          customer_email?: string | null
-          customer_name?: string | null
-          design?: string | null
-          domain?: string
-          id?: string
-          status?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      packages: {
-        Row: {
-          created_at: string
-          description: string | null
-          features: Json | null
-          id: string
-          is_active: boolean | null
-          name: string
-          price: number | null
-          type: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          features?: Json | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          price?: number | null
-          type: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          features?: Json | null
-          id?: string
-          is_active?: boolean | null
           name?: string
-          price?: number | null
+          onboarding_completed?: boolean | null
+          package_addons?: Json | null
+          phone?: string | null
+          province?: string
+          selected_package?:
+            | Database["public"]["Enums"]["subscription_package"]
+            | null
+          social_media_url?: string | null
+          stage?: Database["public"]["Enums"]["business_stage"]
           type?: string
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
         }
         Relationships: []
       }
       profiles: {
         Row: {
-          age: number | null
-          avatar_url: string | null
-          bio: string | null
-          business_address: string | null
-          business_name: string | null
-          city: string | null
-          country: string | null
-          created_at: string | null
+          created_at: string
           email: string
-          experience: string | null
-          hours: Json | null
+          first_name: string | null
+          full_name: string
           id: string
-          linkedin_url: string | null
-          name: string
-          onboarding_completed: boolean | null
-          phone: string | null
-          phone_secondary: string | null
-          portfolio_url: string | null
-          skills: string[] | null
-          social_links: Json | null
-          status: string | null
-          twitter_url: string | null
-          updated_at: string | null
+          last_name: string | null
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          age?: number | null
-          avatar_url?: string | null
-          bio?: string | null
-          business_address?: string | null
-          business_name?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
+          created_at?: string
           email: string
-          experience?: string | null
-          hours?: Json | null
-          id: string
-          linkedin_url?: string | null
-          name: string
-          onboarding_completed?: boolean | null
-          phone?: string | null
-          phone_secondary?: string | null
-          portfolio_url?: string | null
-          skills?: string[] | null
-          social_links?: Json | null
-          status?: string | null
-          twitter_url?: string | null
-          updated_at?: string | null
+          first_name?: string | null
+          full_name: string
+          id?: string
+          last_name?: string | null
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          age?: number | null
-          avatar_url?: string | null
-          bio?: string | null
-          business_address?: string | null
-          business_name?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
+          created_at?: string
           email?: string
-          experience?: string | null
-          hours?: Json | null
+          first_name?: string | null
+          full_name?: string
           id?: string
-          linkedin_url?: string | null
-          name?: string
-          onboarding_completed?: boolean | null
-          phone?: string | null
-          phone_secondary?: string | null
-          portfolio_url?: string | null
-          skills?: string[] | null
-          social_links?: Json | null
-          status?: string | null
-          twitter_url?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      task_work_logs: {
-        Row: {
-          created_at: string
-          file_url: string | null
-          id: string
-          screenshot_url: string | null
-          shared_url: string | null
-          status: string | null
-          task_id: string
-          time_spent: number | null
-          user_id: string
-          work_description: string | null
-        }
-        Insert: {
-          created_at?: string
-          file_url?: string | null
-          id?: string
-          screenshot_url?: string | null
-          shared_url?: string | null
-          status?: string | null
-          task_id: string
-          time_spent?: number | null
-          user_id: string
-          work_description?: string | null
-        }
-        Update: {
-          created_at?: string
-          file_url?: string | null
-          id?: string
-          screenshot_url?: string | null
-          shared_url?: string | null
-          status?: string | null
-          task_id?: string
-          time_spent?: number | null
-          user_id?: string
-          work_description?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_work_logs_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tasks: {
-        Row: {
-          assigned_to: string | null
-          created_at: string
-          deadline: string | null
-          description: string | null
-          file_url: string | null
-          id: string
-          notes: string | null
-          platform: Database["public"]["Enums"]["social_media_platform"] | null
-          status: Database["public"]["Enums"]["task_status"] | null
-          task_number: number | null
-          title: string
-          type: Database["public"]["Enums"]["task_type"] | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string
-          deadline?: string | null
-          description?: string | null
-          file_url?: string | null
-          id?: string
-          notes?: string | null
-          platform?: Database["public"]["Enums"]["social_media_platform"] | null
-          status?: Database["public"]["Enums"]["task_status"] | null
-          task_number?: number | null
-          title: string
-          type?: Database["public"]["Enums"]["task_type"] | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string
-          deadline?: string | null
-          description?: string | null
-          file_url?: string | null
-          id?: string
-          notes?: string | null
-          platform?: Database["public"]["Enums"]["social_media_platform"] | null
-          status?: Database["public"]["Enums"]["task_status"] | null
-          task_number?: number | null
-          title?: string
-          type?: Database["public"]["Enums"]["task_type"] | null
+          last_name?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
-      }
-      user_content: {
-        Row: {
-          content_type: Database["public"]["Enums"]["content_type"]
-          created_at: string
-          description: string | null
-          id: string
-          idea: string | null
-          platform: Database["public"]["Enums"]["social_media_platform"] | null
-          status: string | null
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content_type: Database["public"]["Enums"]["content_type"]
-          created_at?: string
-          description?: string | null
-          id?: string
-          idea?: string | null
-          platform?: Database["public"]["Enums"]["social_media_platform"] | null
-          status?: string | null
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content_type?: Database["public"]["Enums"]["content_type"]
-          created_at?: string
-          description?: string | null
-          id?: string
-          idea?: string | null
-          platform?: Database["public"]["Enums"]["social_media_platform"] | null
-          status?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_gallery: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          size: number | null
-          type: string
-          url: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          size?: number | null
-          type: string
-          url: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          size?: number | null
-          type?: string
-          url?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_packages: {
-        Row: {
-          created_at: string
-          expires_at: string | null
-          id: string
-          package_id: string
-          started_at: string
-          status: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          package_id: string
-          started_at?: string
-          status?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          package_id?: string
-          started_at?: string
-          status?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_packages_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       user_roles: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
-        }
-        Relationships: []
-      }
-      work_log_delete_requests: {
-        Row: {
-          created_at: string
-          decided_at: string | null
-          decided_by: string | null
-          id: string
-          owner_id: string
-          reason: string
-          requester_id: string
-          status: string
-          task_id: string
-          updated_at: string
-          work_log_id: string
-        }
-        Insert: {
-          created_at?: string
-          decided_at?: string | null
-          decided_by?: string | null
-          id?: string
-          owner_id: string
-          reason: string
-          requester_id: string
-          status?: string
-          task_id: string
-          updated_at?: string
-          work_log_id: string
-        }
-        Update: {
-          created_at?: string
-          decided_at?: string | null
-          decided_by?: string | null
-          id?: string
-          owner_id?: string
-          reason?: string
-          requester_id?: string
-          status?: string
-          task_id?: string
-          updated_at?: string
-          work_log_id?: string
         }
         Relationships: []
       }
@@ -604,13 +142,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_assist_accounts: {
-        Args: never
-        Returns: {
-          id: string
-          name: string
-        }[]
-      }
+      generate_business_id: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -624,23 +156,15 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "user" | "assist" | "admin" | "super_admin"
-      business_stage: "new" | "growing"
-      content_type: "blog" | "social_media" | "email_marketing" | "others"
-      package_type: "starter" | "growth" | "website" | "monthly" | "pro"
-      social_media_platform:
-        | "facebook"
-        | "instagram"
-        | "x"
-        | "threads"
-        | "linkedin"
-      task_status:
-        | "pending"
-        | "assigned"
-        | "in_progress"
-        | "ready_for_review"
-        | "completed"
-      task_type: "blog" | "social_media" | "email_marketing" | "ads" | "others"
+      app_role: "user" | "assistant"
+      business_stage: "new" | "existing"
+      subscription_package:
+        | "starter"
+        | "growth"
+        | "pro"
+        | "optimize"
+        | "scale"
+        | "dominate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -768,25 +292,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["user", "assist", "admin", "super_admin"],
-      business_stage: ["new", "growing"],
-      content_type: ["blog", "social_media", "email_marketing", "others"],
-      package_type: ["starter", "growth", "website", "monthly", "pro"],
-      social_media_platform: [
-        "facebook",
-        "instagram",
-        "x",
-        "threads",
-        "linkedin",
+      app_role: ["user", "assistant"],
+      business_stage: ["new", "existing"],
+      subscription_package: [
+        "starter",
+        "growth",
+        "pro",
+        "optimize",
+        "scale",
+        "dominate",
       ],
-      task_status: [
-        "pending",
-        "assigned",
-        "in_progress",
-        "ready_for_review",
-        "completed",
-      ],
-      task_type: ["blog", "social_media", "email_marketing", "ads", "others"],
     },
   },
 } as const
