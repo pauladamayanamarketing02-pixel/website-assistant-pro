@@ -362,6 +362,8 @@ export default function ContentCreation() {
         platform: data.platform ?? "",
         scheduledAt: data.scheduled_at ? toDatetimeLocalInput(data.scheduled_at) : "",
       });
+      setDetailsSortCategory(catName ?? "");
+      setDetailsSortTypeContent(typeName ?? "");
       setImages({
         primary: { url: data.image_primary_url ?? "", originalUrl: data.image_primary_url ?? "" },
         second: { url: data.image_second_url ?? "", originalUrl: data.image_second_url ?? "" },
@@ -425,6 +427,103 @@ export default function ContentCreation() {
 
     if (insertError) throw insertError;
     return created.id as string;
+  };
+
+  const lookupCategoryId = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) return null;
+
+    const { data, error } = await supabase
+      .from("content_categories")
+      .select("id")
+      .eq("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data?.id as string | undefined) ?? null;
+  };
+
+  const lookupContentTypeId = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) return null;
+
+    const { data, error } = await supabase
+      .from("content_types")
+      .select("id")
+      .eq("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data?.id as string | undefined) ?? null;
+  };
+
+  const fetchDetailsItem = async (categoryName: string, typeName: string) => {
+    if (!activeRow) return;
+
+    setDetailsLoading(true);
+    try {
+      const [categoryId, contentTypeId] = await Promise.all([
+        categoryName ? lookupCategoryId(categoryName) : Promise.resolve(null),
+        typeName ? lookupContentTypeId(typeName) : Promise.resolve(null),
+      ]);
+
+      let q = supabase
+        .from("content_items")
+        .select(
+          "id, title, description, platform, scheduled_at, image_primary_url, image_second_url, image_third_url, content_categories(name), content_types(name)",
+        )
+        .eq("business_id", activeRow.businessId)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (categoryId) q = q.eq("category_id", categoryId);
+      if (contentTypeId) q = q.eq("content_type_id", contentTypeId);
+
+      const { data, error } = await q.maybeSingle();
+      if (error) throw error;
+
+      if (!data) {
+        setDetailsItemId(null);
+        setDetailsForm((p) => ({
+          ...p,
+          title: "",
+          description: "",
+          platform: "",
+          scheduledAt: "",
+        }));
+        setImages({
+          primary: { url: "", originalUrl: "" },
+          second: { url: "", originalUrl: "" },
+          third: { url: "", originalUrl: "" },
+        });
+        toast({ title: "No content found", description: "No items match the selected filters." });
+        return;
+      }
+
+      const cat = (data as any).content_categories?.name as string | undefined;
+      const type = (data as any).content_types?.name as string | undefined;
+
+      setDetailsItemId(data.id);
+      setDetailsForm({
+        title: data.title ?? "",
+        description: data.description ?? "",
+        category: cat ?? categoryName,
+        contentType: type ?? typeName,
+        platform: data.platform ?? "",
+        scheduledAt: data.scheduled_at ? toDatetimeLocalInput(data.scheduled_at) : "",
+      });
+      setImages({
+        primary: { url: data.image_primary_url ?? "", originalUrl: data.image_primary_url ?? "" },
+        second: { url: data.image_second_url ?? "", originalUrl: data.image_second_url ?? "" },
+        third: { url: data.image_third_url ?? "", originalUrl: data.image_third_url ?? "" },
+      });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed to load", description: e?.message ?? "Unknown error" });
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
   const saveDetails = async () => {
@@ -717,16 +816,18 @@ export default function ContentCreation() {
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select
-              value={detailsSortCategory || undefined}
+              value={detailsSortCategory || "all"}
               onValueChange={(v) => {
-                setDetailsSortCategory(v);
-                toast({ title: "Uncer Maintenance", description: "Sort by Category is under maintenance." });
+                const next = v === "all" ? "" : v;
+                setDetailsSortCategory(next);
+                void fetchDetailsItem(next, detailsSortTypeContent);
               }}
             >
               <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder="Sort by Category" />
               </SelectTrigger>
               <SelectContent className="z-50">
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c} value={c}>
                     {c}
@@ -736,16 +837,18 @@ export default function ContentCreation() {
             </Select>
 
             <Select
-              value={detailsSortTypeContent || undefined}
+              value={detailsSortTypeContent || "all"}
               onValueChange={(v) => {
-                setDetailsSortTypeContent(v);
-                toast({ title: "Uncer Maintenance", description: "Sort by Type Content is under maintenance." });
+                const next = v === "all" ? "" : v;
+                setDetailsSortTypeContent(next);
+                void fetchDetailsItem(detailsSortCategory, next);
               }}
             >
               <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder="Sort by Type Content" />
               </SelectTrigger>
               <SelectContent className="z-50">
+                <SelectItem value="all">All Types</SelectItem>
                 {contentTypes.map((t) => (
                   <SelectItem key={t} value={t}>
                     {t}
@@ -792,10 +895,6 @@ export default function ContentCreation() {
           <section className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => openManage("category")}>Manage Category</Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => openManage("content")}>Manage Type</Button>
-              </div>
             </div>
 
             <Card>
