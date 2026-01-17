@@ -124,6 +124,7 @@ export default function AssistMediaLibrary() {
   const [lockedCategories, setLockedCategories] = React.useState<Set<string>>(() => new Set());
   const [lockedContentTypes, setLockedContentTypes] = React.useState<Set<string>>(() => new Set());
 
+  const [manageDialogOpen, setManageDialogOpen] = React.useState(false);
   const [manageTab, setManageTab] = React.useState<"category" | "content">("category");
 
   const [newCategory, setNewCategory] = React.useState("");
@@ -772,8 +773,11 @@ export default function AssistMediaLibrary() {
               <TableRow>
                 <TableHead>Business</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-right">Gambar</TableHead>
-                <TableHead className="text-right">Video</TableHead>
+                {mediaTypes.map((t) => (
+                  <TableHead key={t.key} className="text-right">
+                    {t.name}
+                  </TableHead>
+                ))}
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -783,9 +787,13 @@ export default function AssistMediaLibrary() {
                 <TableRow key={row.id}>
                   <TableCell className="font-medium">{row.businessName}</TableCell>
                   <TableCell className="font-medium">{row.category}</TableCell>
-                  <TableCell className="text-right">{row.imagesGallery}</TableCell>
-                  <TableCell className="text-right">{row.videoContent}</TableCell>
+                  {mediaTypes.map((t) => (
+                    <TableCell key={`${row.id}-${t.key}`} className="text-right">
+                      {row.typeCounts?.[t.key] ?? 0}
+                    </TableCell>
+                  ))}
                   <TableCell className="text-right">
+
                     <Button
                       type="button"
                       variant="outline"
@@ -939,7 +947,7 @@ export default function AssistMediaLibrary() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {contentTypes.map((t) => {
+                  {visibleMediaTypeNames.map((t) => {
                     const key = lockKey(t);
                     const isPermanent = PERMANENT_CONTENT_TYPES.has(key);
                     const isEditing = editingContentType === t;
@@ -1010,7 +1018,7 @@ export default function AssistMediaLibrary() {
                     );
                   })}
 
-                  {contentTypes.length === 0 ? (
+                  {visibleMediaTypeNames.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
                         No types yet.
@@ -1018,6 +1026,7 @@ export default function AssistMediaLibrary() {
                     </TableRow>
                   ) : null}
                 </TableBody>
+
               </Table>
             </TabsContent>
           </Tabs>
