@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { ArrowLeft, Copy, Eye, ImageUp, Pencil, Trash2 } from "lucide-react";
 
+import { FileThumbnail, UniversalFilePreview } from "@/components/media/UniversalFilePreview";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -411,7 +412,7 @@ export default function MediaDetailsView({
                     ) : isVideo ? (
                       <video src={item.url} className="h-full w-full object-cover" controls />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">No preview</div>
+                      <FileThumbnail name={item.name || "file"} mimeType={item.type} />
                     )}
 
                     {/* overlay actions */}
@@ -470,48 +471,10 @@ export default function MediaDetailsView({
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground break-all">{previewItem.name}</p>
               <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
-                {(() => {
-                  const ext = extFromName(previewItem.name);
-                  const type = (previewItem.type ?? "").toLowerCase();
-
-                  if (type.startsWith("image/")) {
-                    return <img src={previewItem.url} alt={previewItem.name || "Preview"} className="h-full w-full object-contain" />;
-                  }
-
-                  if (type.startsWith("video/")) {
-                    return <video src={previewItem.url} className="h-full w-full" controls />;
-                  }
-
-                  if (isPdfLike(type, ext)) {
-                    return <iframe title="PDF preview" src={previewItem.url} className="h-full w-full" />;
-                  }
-
-                  if (isTextLike(type, ext)) {
-                    return (
-                      <div className="h-full w-full overflow-auto p-4">
-                        {previewLoading ? (
-                          <p className="text-sm text-muted-foreground">Loading...</p>
-                        ) : previewText ? (
-                          <pre className="text-xs text-foreground whitespace-pre-wrap break-words">{previewText}</pre>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No preview</p>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  if (isOfficeExt(ext)) {
-                    const viewer = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(previewItem.url)}`;
-                    return <iframe title="Document preview" src={viewer} className="h-full w-full" />;
-                  }
-
-                  return (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4">
-                      <p className="text-sm text-muted-foreground">Preview not available.</p>
-                      <Button type="button" variant="outline" onClick={() => window.open(previewItem.url, "_blank", "noopener,noreferrer")}>Open file</Button>
-                    </div>
-                  );
-                })()}
+                <UniversalFilePreview
+                  source={{ kind: "remote", name: previewItem.name, mimeType: previewItem.type, url: previewItem.url }}
+                  className="h-full w-full"
+                />
               </div>
             </div>
           ) : null}

@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { Eye, X } from "lucide-react";
 
+import { FileThumbnail, UniversalFilePreview } from "@/components/media/UniversalFilePreview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -45,8 +46,6 @@ export default function MultiImageUpload({
   const latestItemsRef = React.useRef<UploadItem[]>(items);
 
   const [previewItem, setPreviewItem] = React.useState<UploadItem | null>(null);
-  const [previewText, setPreviewText] = React.useState<string>("");
-  const [previewLoading, setPreviewLoading] = React.useState(false);
 
   React.useEffect(() => {
     latestItemsRef.current = items;
@@ -90,51 +89,11 @@ export default function MultiImageUpload({
     };
   }, []);
 
-  React.useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      if (!previewItem) {
-        setPreviewText("");
-        setPreviewLoading(false);
-        return;
-      }
-
-      const type = (previewItem.file.type ?? "").toLowerCase();
-      const isTxt = type.startsWith("text/") || previewItem.file.name.toLowerCase().endsWith(".txt");
-      if (!isTxt) {
-        setPreviewText("");
-        setPreviewLoading(false);
-        return;
-      }
-
-      try {
-        setPreviewLoading(true);
-        const txt = await previewItem.file.text();
-        if (!cancelled) setPreviewText(txt.slice(0, 20000));
-      } finally {
-        if (!cancelled) setPreviewLoading(false);
-      }
-    };
-
-    void run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [previewItem]);
-
   return (
     <div className="space-y-3">
       <div className="space-y-2">
         <Label>{label}*</Label>
-        <Input
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          multiple={multiple}
-          onChange={(e) => addFiles(e.target.files)}
-        />
+        <Input ref={inputRef} type="file" accept={accept} multiple={multiple} onChange={(e) => addFiles(e.target.files)} />
         <p className="text-xs text-muted-foreground">You can upload multiple files. A preview will appear when available.</p>
       </div>
 
@@ -142,9 +101,6 @@ export default function MultiImageUpload({
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item, idx) => {
             const displayName = computedNameForIndex(idx);
-            const type = (item.file.type ?? "").toLowerCase();
-            const isImage = type.startsWith("image/");
-            const isVideo = type.startsWith("video/");
 
             return (
               <Card key={item.id} className="relative overflow-hidden">
@@ -175,22 +131,7 @@ export default function MultiImageUpload({
                 </div>
 
                 <div className="aspect-video w-full bg-muted">
-                  {isImage ? (
-                    <img
-                      src={item.previewUrl}
-                      alt={displayName ? `Preview ${displayName}` : "Preview"}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : isVideo ? (
-                    <video className="h-full w-full object-cover" controls preload="metadata">
-                      <source src={item.previewUrl} type={item.file.type} />
-                    </video>
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center p-4">
-                      <p className="text-sm text-muted-foreground text-center break-words">{item.file.name}</p>
-                    </div>
-                  )}
+                  <FileThumbnail name={item.file.name} mimeType={item.file.type} url={item.previewUrl} />
                 </div>
 
                 <div className="space-y-1 p-3">
@@ -214,49 +155,10 @@ export default function MultiImageUpload({
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground break-all">{previewItem.file.name}</p>
               <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
-                {(() => {
-                  const type = (previewItem.file.type ?? "").toLowerCase();
-                  const ext = (previewItem.file.name.split(".").pop() ?? "").toLowerCase();
-
-                  if (type.startsWith("image/")) {
-                    return <img src={previewItem.previewUrl} alt="Preview" className="h-full w-full object-contain" />;
-                  }
-
-                  if (type.startsWith("video/")) {
-                    return <video src={previewItem.previewUrl} className="h-full w-full" controls />;
-                  }
-
-                  if (type === "application/pdf" || ext === "pdf") {
-                    return <iframe title="PDF preview" src={previewItem.previewUrl} className="h-full w-full" />;
-                  }
-
-                  if (type.startsWith("text/") || ext === "txt") {
-                    return (
-                      <div className="h-full w-full overflow-auto p-4">
-                        {previewLoading ? (
-                          <p className="text-sm text-muted-foreground">Loading...</p>
-                        ) : previewText ? (
-                          <pre className="text-xs text-foreground whitespace-pre-wrap break-words">{previewText}</pre>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No preview</p>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4">
-                      <p className="text-sm text-muted-foreground">Preview not available in browser.</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => window.open(previewItem.previewUrl, "_blank", "noopener,noreferrer")}
-                      >
-                        Open file
-                      </Button>
-                    </div>
-                  );
-                })()}
+                <UniversalFilePreview
+                  source={{ kind: "local", file: previewItem.file, url: previewItem.previewUrl }}
+                  className="h-full w-full"
+                />
               </div>
             </div>
           ) : null}
