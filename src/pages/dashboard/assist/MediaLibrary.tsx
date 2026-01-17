@@ -56,13 +56,18 @@ type BusinessOption = {
   userId: string;
 };
 
+type MediaTypeOption = {
+  id: string;
+  name: string;
+  key: string; // normalized key for lookups (lowercase/trim)
+};
+
 type MediaRow = {
   id: string;
   businessId: string;
   businessName: string;
   category: string;
-  imagesGallery: number;
-  videoContent: number;
+  typeCounts: Record<string, number>; // by MediaTypeOption.key
 };
 
 const IMPORT_TYPES: ImportType[] = ["Gambar", "Video"];
@@ -73,16 +78,14 @@ const FALLBACK_ROWS: MediaRow[] = [
     businessId: "demo",
     businessName: "Demo Business",
     category: "All",
-    imagesGallery: 8,
-    videoContent: 2,
+    typeCounts: { gambar: 8, video: 2 },
   },
   {
     id: "demo-2",
     businessId: "demo",
     businessName: "Demo Business",
     category: "All",
-    imagesGallery: 14,
-    videoContent: 4,
+    typeCounts: { gambar: 14, video: 4 },
   },
 ];
 
@@ -116,11 +119,11 @@ export default function AssistMediaLibrary() {
 
   // Category + Media Type management (media_categories + media_types)
   const [categories, setCategories] = React.useState<string[]>([]);
-  const [contentTypes, setContentTypes] = React.useState<string[]>([]);
+  const [mediaTypes, setMediaTypes] = React.useState<MediaTypeOption[]>([]);
+  const visibleMediaTypeNames = React.useMemo(() => uniqueNonEmpty(mediaTypes.map((t) => t.name)), [mediaTypes]);
   const [lockedCategories, setLockedCategories] = React.useState<Set<string>>(() => new Set());
   const [lockedContentTypes, setLockedContentTypes] = React.useState<Set<string>>(() => new Set());
 
-  const [manageDialogOpen, setManageDialogOpen] = React.useState(false);
   const [manageTab, setManageTab] = React.useState<"category" | "content">("category");
 
   const [newCategory, setNewCategory] = React.useState("");
@@ -229,15 +232,26 @@ export default function AssistMediaLibrary() {
   const refreshContentTypes = React.useCallback(async () => {
     const { data, error } = await supabase
       .from("media_types")
-      .select("name, is_locked")
+      .select("id, name, is_locked")
       .order("name", { ascending: true });
     if (error) throw error;
 
-    const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
+    const rows = (data ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
 
-    // Always keep the default types visible in the UI, even if they haven't been seeded yet.
-    // This prevents the main table header from becoming only the last-added type (e.g. "234").
-    setContentTypes(uniqueNonEmpty([...(IMPORT_TYPES as unknown as string[]), ...rows.map((r) => r.name)]));
+    // Build a unique list of types by normalized key and ensure defaults (gambar/video) are always present.
+    const byKey = new Map<string, MediaTypeOption>();
+
+    for (const t of IMPORT_TYPES) {
+      const key = lockKey(t);
+      byKey.set(key, { id: `__default_${key}`, name: t, key });
+    }
+
+    for (const r of rows) {
+      const key = lockKey(r.name);
+      byKey.set(key, { id: r.id, name: r.name, key });
+    }
+
+    setMediaTypes(Array.from(byKey.values()));
 
     const locked = new Set(rows.filter((r) => Boolean(r.is_locked)).map((r) => lockKey(r.name)));
     for (const k of PERMANENT_CONTENT_TYPES) locked.add(k);
@@ -276,10 +290,22 @@ export default function AssistMediaLibrary() {
       setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
 
       const typeRows = (typeData ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
-      setContentTypes(uniqueNonEmpty([...(IMPORT_TYPES as unknown as string[]), ...typeRows.map((t) => t.name)]));
+
+      const byKey = new Map<string, MediaTypeOption>();
+      for (const t of IMPORT_TYPES) {
+        const key = lockKey(t);
+        byKey.set(key, { id: `__default_${key}`, name: t, key });
+      }
+      for (const r of typeRows) {
+        const key = lockKey(r.name);
+        byKey.set(key, { id: r.id, name: r.name, key });
+      }
+      setMediaTypes(Array.from(byKey.values()));
+
       const locked = new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name)));
       for (const k of PERMANENT_CONTENT_TYPES) locked.add(k);
       setLockedContentTypes(locked);
+
     };
 
     void load();
@@ -393,7 +419,9 @@ export default function AssistMediaLibrary() {
   const addContentType = async () => {
     const name = newContentType.trim();
     if (!name) return;
-    if (contentTypes.some((c) => c.toLowerCase() === name.toLowerCase())) {
+
+    const key = lockKey(name);
+    if (mediaTypes.some((t) => t.key === key)) {
       toast({ title: "Type already exists", description: `Type Content \"${name}\" is already registered.` });
       return;
     }
@@ -423,7 +451,9 @@ export default function AssistMediaLibrary() {
     const to = editingContentTypeDraft.trim();
     if (!from || !to) return;
 
-    if (contentTypes.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
+    const fromKey = lockKey(from);
+    const toKey = lockKey(to);
+    if (mediaTypes.some((t) => t.key !== fromKey && t.key === toKey)) {
       toast({ title: "Type name conflict", description: `Type Content \"${to}\" already exists.` });
       return;
     }
@@ -569,30 +599,58 @@ export default function AssistMediaLibrary() {
           return;
         }
 
+        // Build helpers from current mediaTypes
+        const knownTypeKeys = mediaTypes.map((t) => t.key);
+        const typeIdToKey = new Map<string, string>();
+        for (const t of mediaTypes) {
+          if (!t.id.startsWith("__default_")) typeIdToKey.set(t.id, t.key);
+        }
+
+        const gambarKey = mediaTypes.find((t) => t.key === "gambar")?.key;
+        const videoKey = mediaTypes.find((t) => t.key === "video")?.key;
+
         const { data: galleryData, error } = await supabase
           .from("user_gallery")
-          .select("user_id, type")
+          .select("user_id, type, media_type_id")
           .in("user_id", userIds);
 
         if (error) throw error;
 
-        const countsByUser: Record<string, { images: number; videos: number }> = {};
-        for (const item of (galleryData ?? []) as Array<{ user_id: string; type: string }>) {
+        const countsByUser: Record<string, Record<string, number>> = {};
+
+        const ensureUserInit = (userId: string) => {
+          if (!countsByUser[userId]) {
+            const init: Record<string, number> = {};
+            for (const k of knownTypeKeys) init[k] = 0;
+            countsByUser[userId] = init;
+          }
+          return countsByUser[userId];
+        };
+
+        for (const item of (galleryData ?? []) as Array<{ user_id: string; type: string; media_type_id: string | null }>) {
+          const userId = item.user_id;
+          const userCounts = ensureUserInit(userId);
+
+          const mappedKey = item.media_type_id ? typeIdToKey.get(item.media_type_id) : undefined;
+          if (mappedKey) {
+            userCounts[mappedKey] = (userCounts[mappedKey] ?? 0) + 1;
+            continue;
+          }
+
+          // Fallback mapping by MIME type for legacy rows that don't have media_type_id.
           const mime = (item.type ?? "").toLowerCase();
-          if (!countsByUser[item.user_id]) countsByUser[item.user_id] = { images: 0, videos: 0 };
-          if (mime.startsWith("image/")) countsByUser[item.user_id].images += 1;
-          else if (mime.startsWith("video/")) countsByUser[item.user_id].videos += 1;
+          if (mime.startsWith("image/") && gambarKey) userCounts[gambarKey] = (userCounts[gambarKey] ?? 0) + 1;
+          else if (mime.startsWith("video/") && videoKey) userCounts[videoKey] = (userCounts[videoKey] ?? 0) + 1;
         }
 
         const nextRows: MediaRow[] = businesses.map((b) => {
-          const c = countsByUser[b.userId] ?? { images: 0, videos: 0 };
+          const typeCounts = countsByUser[b.userId] ?? Object.fromEntries(knownTypeKeys.map((k) => [k, 0]));
           return {
             id: `${b.id}-all`,
             businessId: b.id,
             businessName: b.name,
             category: "All",
-            imagesGallery: c.images,
-            videoContent: c.videos,
+            typeCounts,
           };
         });
 
@@ -609,22 +667,26 @@ export default function AssistMediaLibrary() {
     return () => {
       cancelled = true;
     };
-  }, [businesses]);
+  }, [businesses, mediaTypes]);
 
   const rows: MediaRow[] = React.useMemo(() => {
     if (mediaRows.length > 0) return mediaRows;
+
+    const typeKeys = mediaTypes.map((t) => t.key);
+    const emptyTypeCounts = Object.fromEntries(typeKeys.map((k) => [k, 0] as const));
+
     if (businesses.length > 0 && mediaRowsLoading) {
       return businesses.map((b) => ({
         id: `${b.id}-all`,
         businessId: b.id,
         businessName: b.name,
         category: "All",
-        imagesGallery: 0,
-        videoContent: 0,
+        typeCounts: emptyTypeCounts,
       }));
     }
+
     return FALLBACK_ROWS;
-  }, [mediaRows, businesses, mediaRowsLoading]);
+  }, [mediaRows, businesses, mediaRowsLoading, mediaTypes]);
 
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
