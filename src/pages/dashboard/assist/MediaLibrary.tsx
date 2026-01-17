@@ -45,6 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import MediaItemForm from "@/pages/dashboard/assist/media-library/MediaItemForm";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -114,6 +115,8 @@ export default function AssistMediaLibrary() {
   const { toast } = useToast();
 
   const [lastImportType, setLastImportType] = React.useState<ImportType | null>(null);
+  const [createOpen, setCreateOpen] = React.useState(false);
+
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
 
@@ -737,6 +740,20 @@ export default function AssistMediaLibrary() {
     });
   };
 
+  if (createOpen) {
+    return (
+      <MediaItemForm
+        businesses={businesses.length ? businesses.map((b) => ({ id: b.id, name: b.name })) : [{ id: "demo", name: "Demo Business" }]}
+        categories={categories.length ? categories : ["All"]}
+        mediaTypes={visibleMediaTypeNames.length ? visibleMediaTypeNames : ["Gambar", "Video"]}
+        onCancel={() => setCreateOpen(false)}
+        onSave={() => {
+          toast({ title: "Saved", description: "Media form submitted (UI only)." });
+          setCreateOpen(false);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -747,7 +764,9 @@ export default function AssistMediaLibrary() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button">Add</Button>
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            Add
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
