@@ -164,6 +164,22 @@ export default function ContentCreation() {
   const [detailsLoading, setDetailsLoading] = React.useState(false);
   const [detailsSaving, setDetailsSaving] = React.useState(false);
 
+  type DetailsItem = {
+    id: string;
+    title: string;
+    description: string | null;
+    platform: string | null;
+    scheduled_at: string | null;
+    updated_at: string;
+    image_primary_url: string | null;
+    image_second_url: string | null;
+    image_third_url: string | null;
+    categoryName: string;
+    typeName: string;
+  };
+
+  const [detailsItems, setDetailsItems] = React.useState<DetailsItem[]>([]);
+
   const [detailsForm, setDetailsForm] = React.useState({
     title: "",
     description: "",
@@ -336,9 +352,107 @@ export default function ContentCreation() {
     });
   };
 
+  const applyDetailsItemToUI = React.useCallback(
+    (item: DetailsItem | null) => {
+      if (!item) {
+        setDetailsItemId(null);
+        setDetailsForm((p) => ({
+          ...p,
+          title: "",
+          description: "",
+          platform: "",
+          scheduledAt: "",
+        }));
+        setImages({
+          primary: { url: "", originalUrl: "" },
+          second: { url: "", originalUrl: "" },
+          third: { url: "", originalUrl: "" },
+        });
+        return;
+      }
+
+      setDetailsItemId(item.id);
+      setDetailsForm({
+        title: item.title ?? "",
+        description: item.description ?? "",
+        category: item.categoryName ?? "",
+        contentType: item.typeName ?? "",
+        platform: item.platform ?? "",
+        scheduledAt: item.scheduled_at ? toDatetimeLocalInput(item.scheduled_at) : "",
+      });
+      setImages({
+        primary: { url: item.image_primary_url ?? "", originalUrl: item.image_primary_url ?? "" },
+        second: { url: item.image_second_url ?? "", originalUrl: item.image_second_url ?? "" },
+        third: { url: item.image_third_url ?? "", originalUrl: item.image_third_url ?? "" },
+      });
+    },
+    [setDetailsForm],
+  );
+
+  const fetchDetailsItems = React.useCallback(
+    async (categoryName: string, typeName: string) => {
+      if (!activeRow) return;
+
+      setDetailsLoading(true);
+      try {
+        const [categoryId, contentTypeId] = await Promise.all([
+          categoryName ? lookupCategoryId(categoryName) : Promise.resolve(null),
+          typeName ? lookupContentTypeId(typeName) : Promise.resolve(null),
+        ]);
+
+        let q = supabase
+          .from("content_items")
+          .select(
+            "id, title, description, platform, scheduled_at, updated_at, image_primary_url, image_second_url, image_third_url, content_categories(name), content_types(name)",
+          )
+          .eq("business_id", activeRow.businessId)
+          .is("deleted_at", null)
+          .order("updated_at", { ascending: false })
+          .limit(250);
+
+        if (categoryId) q = q.eq("category_id", categoryId);
+        if (contentTypeId) q = q.eq("content_type_id", contentTypeId);
+
+        const { data, error } = await q;
+        if (error) throw error;
+
+        const list: DetailsItem[] = ((data ?? []) as any[]).map((d) => ({
+          id: d.id,
+          title: d.title ?? "",
+          description: d.description ?? null,
+          platform: d.platform ?? null,
+          scheduled_at: d.scheduled_at ?? null,
+          updated_at: d.updated_at,
+          image_primary_url: d.image_primary_url ?? null,
+          image_second_url: d.image_second_url ?? null,
+          image_third_url: d.image_third_url ?? null,
+          categoryName: (d.content_categories?.name as string | undefined) ?? "",
+          typeName: (d.content_types?.name as string | undefined) ?? "",
+        }));
+
+        setDetailsItems(list);
+
+        // Keep currently selected item if still present; otherwise pick newest.
+        const stillThere = detailsItemId ? list.find((x) => x.id === detailsItemId) : null;
+        const nextSelected = stillThere ?? list[0] ?? null;
+        applyDetailsItemToUI(nextSelected);
+
+        if (!nextSelected) {
+          toast({ title: "No content found", description: "No items match the selected filters." });
+        }
+      } catch (e: any) {
+        toast({ variant: "destructive", title: "Failed to load", description: e?.message ?? "Unknown error" });
+      } finally {
+        setDetailsLoading(false);
+      }
+    },
+    [activeRow, applyDetailsItemToUI, detailsItemId, toast],
+  );
+
   const openDetails = (row: ContentRow) => {
     setActiveRow(row);
     setDetailsItemId(null);
+    setDetailsItems([]);
     setDetailsLoading(true);
 
     // Reset optimistic UI first
@@ -350,8 +464,11 @@ export default function ContentCreation() {
       platform: "",
       scheduledAt: "",
     });
-    setDetailsSortCategory("");
+
+    // Default to the row category; show all types by default.
+    setDetailsSortCategory(row.category ?? "");
     setDetailsSortTypeContent("");
+
     setImages({
       primary: { url: "", originalUrl: "" },
       second: { url: "", originalUrl: "" },
@@ -359,56 +476,15 @@ export default function ContentCreation() {
     });
     setDetailsOpen(true);
 
-    // Load latest content item for this business (if any)
-    void (async () => {
-      const { data, error } = await supabase
-        .from("content_items")
-        .select(
-          "id, title, description, platform, scheduled_at, image_primary_url, image_second_url, image_third_url, content_categories(name), content_types(name)",
-        )
-        .eq("business_id", row.businessId)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        setDetailsLoading(false);
-        toast({ variant: "destructive", title: "Failed to load", description: error.message });
-        return;
-      }
-
-      if (!data) {
-        setDetailsLoading(false);
-        return;
-      }
-
-      const catName = (data as any).content_categories?.name as string | undefined;
-      const typeName = (data as any).content_types?.name as string | undefined;
-
-      setDetailsItemId(data.id);
-      setDetailsForm({
-        title: data.title ?? "",
-        description: data.description ?? "",
-        category: catName ?? "",
-        contentType: typeName ?? "",
-        platform: data.platform ?? "",
-        scheduledAt: data.scheduled_at ? toDatetimeLocalInput(data.scheduled_at) : "",
-      });
-      setDetailsSortCategory(catName ?? "");
-      setDetailsSortTypeContent(typeName ?? "");
-      setImages({
-        primary: { url: data.image_primary_url ?? "", originalUrl: data.image_primary_url ?? "" },
-        second: { url: data.image_second_url ?? "", originalUrl: data.image_second_url ?? "" },
-        third: { url: data.image_third_url ?? "", originalUrl: data.image_third_url ?? "" },
-      });
-      setDetailsLoading(false);
-    })();
+    // Load all items for this business + selected category (and optional type)
+    void fetchDetailsItems(row.category ?? "", "");
   };
 
   const closeDetails = () => {
     setDetailsOpen(false);
     setActiveRow(null);
     setDetailsItemId(null);
+    setDetailsItems([]);
     setDetailsLoading(false);
     setDetailsSaving(false);
   };
@@ -491,72 +567,10 @@ export default function ContentCreation() {
     return (data?.id as string | undefined) ?? null;
   };
 
-  const fetchDetailsItem = async (categoryName: string, typeName: string) => {
-    if (!activeRow) return;
+  // Note: View Details displays a list of items; filters refine that list.
+  // The selected item is the most recent item in the filtered list.
+  // (fetchDetailsItems is defined above openDetails)
 
-    setDetailsLoading(true);
-    try {
-      const [categoryId, contentTypeId] = await Promise.all([
-        categoryName ? lookupCategoryId(categoryName) : Promise.resolve(null),
-        typeName ? lookupContentTypeId(typeName) : Promise.resolve(null),
-      ]);
-
-      let q = supabase
-        .from("content_items")
-        .select(
-          "id, title, description, platform, scheduled_at, image_primary_url, image_second_url, image_third_url, content_categories(name), content_types(name)",
-        )
-        .eq("business_id", activeRow.businessId)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-
-      if (categoryId) q = q.eq("category_id", categoryId);
-      if (contentTypeId) q = q.eq("content_type_id", contentTypeId);
-
-      const { data, error } = await q.maybeSingle();
-      if (error) throw error;
-
-      if (!data) {
-        setDetailsItemId(null);
-        setDetailsForm((p) => ({
-          ...p,
-          title: "",
-          description: "",
-          platform: "",
-          scheduledAt: "",
-        }));
-        setImages({
-          primary: { url: "", originalUrl: "" },
-          second: { url: "", originalUrl: "" },
-          third: { url: "", originalUrl: "" },
-        });
-        toast({ title: "No content found", description: "No items match the selected filters." });
-        return;
-      }
-
-      const cat = (data as any).content_categories?.name as string | undefined;
-      const type = (data as any).content_types?.name as string | undefined;
-
-      setDetailsItemId(data.id);
-      setDetailsForm({
-        title: data.title ?? "",
-        description: data.description ?? "",
-        category: cat ?? categoryName,
-        contentType: type ?? typeName,
-        platform: data.platform ?? "",
-        scheduledAt: data.scheduled_at ? toDatetimeLocalInput(data.scheduled_at) : "",
-      });
-      setImages({
-        primary: { url: data.image_primary_url ?? "", originalUrl: data.image_primary_url ?? "" },
-        second: { url: data.image_second_url ?? "", originalUrl: data.image_second_url ?? "" },
-        third: { url: data.image_third_url ?? "", originalUrl: data.image_third_url ?? "" },
-      });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Failed to load", description: e?.message ?? "Unknown error" });
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
 
   const saveDetails = async () => {
     if (!activeRow) return;
@@ -627,6 +641,7 @@ export default function ContentCreation() {
       await refreshCategories();
       await refreshContentTypes();
       await fetchContentRows();
+      await fetchDetailsItems(detailsSortCategory, detailsSortTypeContent);
     } catch (e: any) {
       toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
     } finally {
@@ -1057,7 +1072,7 @@ export default function ContentCreation() {
               onValueChange={(v) => {
                 const next = v === "all" ? "" : v;
                 setDetailsSortCategory(next);
-                void fetchDetailsItem(next, detailsSortTypeContent);
+                void fetchDetailsItems(next, detailsSortTypeContent);
               }}
             >
               <SelectTrigger className="w-full sm:w-[220px]">
@@ -1078,7 +1093,7 @@ export default function ContentCreation() {
               onValueChange={(v) => {
                 const next = v === "all" ? "" : v;
                 setDetailsSortTypeContent(next);
-                void fetchDetailsItem(detailsSortCategory, next);
+                void fetchDetailsItems(detailsSortCategory, next);
               }}
             >
               <SelectTrigger className="w-full sm:w-[220px]">
@@ -1131,9 +1146,51 @@ export default function ContentCreation() {
 
               {/* Content Details (≈80%) */}
               <section className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {detailsItems.length} item{detailsItems.length === 1 ? "" : "s"}
+                  </p>
+                </div>
 
                 {detailsLoading ? <p className="text-sm text-muted-foreground">Loading content...</p> : null}
+
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead className="text-right">Updated</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detailsItems.map((item) => (
+                        <TableRow
+                          key={item.id}
+                          className={item.id === detailsItemId ? "bg-muted/50" : ""}
+                          onClick={() => applyDetailsItemToUI(item)}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          <TableCell className="font-medium">{item.typeName || "-"}</TableCell>
+                          <TableCell>{item.title || "(Untitled)"}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {new Date(item.updated_at).toLocaleDateString("id-ID")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+
+                      {detailsItems.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="py-6 text-center text-muted-foreground">
+                            No content items for this filter.
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                </div>
 
                 <div className="space-y-2">
                   <Label>Title</Label>
