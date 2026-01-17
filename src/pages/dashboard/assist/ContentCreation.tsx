@@ -36,13 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-type ImportType =
-  | "Social Media Posts"
-  | "Content Media Posts"
-  | "GMB Posts"
-  | "Email Marketing"
-  | "Ads Marketing";
+import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
 
 type SortDirection = "asc" | "desc";
 
@@ -63,13 +57,13 @@ type ContentRow = {
   adsMarketing: number;
 };
 
-const IMPORT_TYPES: ImportType[] = [
+const DEFAULT_CONTENT_TYPES = [
   "Social Media Posts",
   "Content Media Posts",
   "GMB Posts",
   "Email Marketing",
   "Ads Marketing",
-];
+] as const;
 
 const FALLBACK_ROWS: ContentRow[] = [
   {
@@ -111,14 +105,32 @@ function safeName(name: string | null | undefined) {
   return (name ?? "(Tanpa Nama)").trim() || "(Tanpa Nama)";
 }
 
+function uniqueNonEmpty(values: string[]) {
+  const set = new Set<string>();
+  for (const v of values) {
+    const cleaned = (v ?? "").trim();
+    if (!cleaned) continue;
+    set.add(cleaned);
+  }
+  return Array.from(set);
+}
+
+type ImageSlotKey = "primary" | "second" | "third";
+
+type ImageSlotState = {
+  url: string;
+  originalUrl: string;
+};
+
 export default function ContentCreation() {
   const { toast } = useToast();
 
-  const [lastImportType, setLastImportType] = React.useState<ImportType | null>(null);
+  const [lastImportType, setLastImportType] = React.useState<string | null>(null);
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
 
+  // View Details (full page, not overlay)
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [activeRow, setActiveRow] = React.useState<ContentRow | null>(null);
 
@@ -129,6 +141,29 @@ export default function ContentCreation() {
     dateSuggest: "",
     category: "",
   });
+
+  const [images, setImages] = React.useState<Record<ImageSlotKey, ImageSlotState>>({
+    primary: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+    second: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+    third: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+  });
+
+  // Category + Content Type management (UI only for now)
+  const [contentTypes, setContentTypes] = React.useState<string[]>(Array.from(DEFAULT_CONTENT_TYPES));
+  const [categories, setCategories] = React.useState<string[]>(
+    uniqueNonEmpty(["General", ...FALLBACK_ROWS.map((r) => r.category)]),
+  );
+
+  const [categoryDialogOpen, setCategoryDialogOpen] = React.useState(false);
+  const [contentTypeDialogOpen, setContentTypeDialogOpen] = React.useState(false);
+
+  const [newCategory, setNewCategory] = React.useState("");
+  const [renameCategoryFrom, setRenameCategoryFrom] = React.useState<string>("");
+  const [renameCategoryTo, setRenameCategoryTo] = React.useState("");
+
+  const [newContentType, setNewContentType] = React.useState("");
+  const [renameContentTypeFrom, setRenameContentTypeFrom] = React.useState<string>("");
+  const [renameContentTypeTo, setRenameContentTypeTo] = React.useState("");
 
   React.useEffect(() => {
     let cancelled = false;
@@ -182,23 +217,313 @@ export default function ContentCreation() {
   }, [businesses]);
 
   const displayedRows = React.useMemo(() => {
-    const filtered =
-      selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
+    const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
 
     const dir = sortDirection === "asc" ? 1 : -1;
 
-    return [...filtered].sort((a, b) =>
-      a.businessName.localeCompare(b.businessName, "id", { sensitivity: "base" }) * dir,
+    return [...filtered].sort(
+      (a, b) => a.businessName.localeCompare(b.businessName, "id", { sensitivity: "base" }) * dir,
     );
   }, [rows, selectedBusinessId, sortDirection]);
 
-  const onImport = (type: ImportType) => {
+  const onImport = (type: string) => {
     setLastImportType(type);
     toast({
       title: "Import dipilih",
       description: `Anda memilih import: ${type}`,
     });
   };
+
+  const openDetails = (row: ContentRow) => {
+    setActiveRow(row);
+    setDetailsForm({
+      title: "",
+      description: "",
+      comments: "",
+      dateSuggest: new Date().toISOString().slice(0, 10),
+      category: row.category,
+    });
+    setImages({
+      primary: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+      second: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+      third: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+    });
+    setDetailsOpen(true);
+  };
+
+  const closeDetails = () => {
+    setDetailsOpen(false);
+    setActiveRow(null);
+  };
+
+  const saveDetails = () => {
+    toast({
+      title: "Tersimpan",
+      description: "Perubahan disimpan (sementara masih placeholder).",
+    });
+    closeDetails();
+  };
+
+  const addCategory = () => {
+    const name = newCategory.trim();
+    if (!name) return;
+    if (categories.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      toast({
+        title: "Kategori sudah ada",
+        description: `Kategori \"${name}\" sudah terdaftar.`,
+      });
+      return;
+    }
+    setCategories((p) => [...p, name]);
+    setNewCategory("");
+  };
+
+  const renameCategory = () => {
+    const from = renameCategoryFrom.trim();
+    const to = renameCategoryTo.trim();
+    if (!from || !to) return;
+
+    if (categories.some((c) => c.toLowerCase() === to.toLowerCase())) {
+      toast({
+        title: "Nama kategori bentrok",
+        description: `Kategori \"${to}\" sudah ada.`,
+      });
+      return;
+    }
+
+    setCategories((p) => p.map((c) => (c === from ? to : c)));
+
+    // jika form detail sedang memakai category yang di-rename
+    setDetailsForm((p) => (p.category === from ? { ...p, category: to } : p));
+
+    setRenameCategoryFrom("");
+    setRenameCategoryTo("");
+  };
+
+  const addContentType = () => {
+    const name = newContentType.trim();
+    if (!name) return;
+    if (contentTypes.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      toast({
+        title: "Jenis konten sudah ada",
+        description: `Jenis konten \"${name}\" sudah terdaftar.`,
+      });
+      return;
+    }
+    setContentTypes((p) => [...p, name]);
+    setNewContentType("");
+  };
+
+  const renameContentType = () => {
+    const from = renameContentTypeFrom.trim();
+    const to = renameContentTypeTo.trim();
+    if (!from || !to) return;
+
+    if (contentTypes.some((c) => c.toLowerCase() === to.toLowerCase())) {
+      toast({
+        title: "Nama jenis konten bentrok",
+        description: `Jenis konten \"${to}\" sudah ada.`,
+      });
+      return;
+    }
+
+    setContentTypes((p) => p.map((c) => (c === from ? to : c)));
+    setRenameContentTypeFrom("");
+    setRenameContentTypeTo("");
+  };
+
+  if (detailsOpen && activeRow) {
+    return (
+      <div className="space-y-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-foreground">View Details</h1>
+            <p className="text-muted-foreground">{activeRow.businessName} • {activeRow.category}</p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button type="button" variant="outline" onClick={closeDetails}>
+              Back
+            </Button>
+            <Button type="button" onClick={saveDetails}>
+              Save
+            </Button>
+          </div>
+        </header>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="space-y-3">
+            <h2 className="text-base font-semibold text-foreground">Images</h2>
+            <div className="space-y-3">
+              <ImageFieldCard
+                label="Primary"
+                value={images.primary.url}
+                originalValue={images.primary.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
+              />
+              <ImageFieldCard
+                label="Second"
+                value={images.second.url}
+                originalValue={images.second.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, second: next }))}
+              />
+              <ImageFieldCard
+                label="Third"
+                value={images.third.url}
+                originalValue={images.third.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+              />
+            </div>
+          </section>
+
+          <section className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={detailsForm.title}
+                    onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
+                    placeholder="Judul konten..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    value={detailsForm.description}
+                    onChange={(e) => setDetailsForm((p) => ({ ...p, description: e.target.value }))}
+                    placeholder="Deskripsi..."
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Comments</Label>
+                  <Textarea
+                    value={detailsForm.comments}
+                    onChange={(e) => setDetailsForm((p) => ({ ...p, comments: e.target.value }))}
+                    placeholder="Catatan / komentar..."
+                    rows={3}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Manage</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Date Suggest</Label>
+                    <Input
+                      type="date"
+                      value={detailsForm.dateSuggest}
+                      onChange={(e) => setDetailsForm((p) => ({ ...p, dateSuggest: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select
+                      value={detailsForm.category || ""}
+                      onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih kategori" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50">
+                        {categories.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="secondary" onClick={() => setCategoryDialogOpen(true)}>
+                        Manage Category
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        </div>
+
+        {/* Manage Category dialog */}
+        <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Manage Category</DialogTitle>
+              <DialogDescription>Tambah atau ubah nama category (sementara hanya UI).</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Add new category</h3>
+                <div className="flex gap-2">
+                  <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nama category..." />
+                  <Button type="button" onClick={addCategory}>
+                    Add
+                  </Button>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Rename category</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Select value={renameCategoryFrom} onValueChange={setRenameCategoryFrom}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih category" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      {categories.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={renameCategoryTo}
+                    onChange={(e) => setRenameCategoryTo(e.target.value)}
+                    placeholder="Nama baru..."
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={renameCategory}>
+                  Rename
+                </Button>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold text-foreground">Current categories</h3>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((c) => (
+                    <span key={c} className="rounded-md border px-2 py-1 text-sm text-foreground">
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCategoryDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -218,11 +543,18 @@ export default function ContentCreation() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="z-50 w-64">
-              {IMPORT_TYPES.map((t) => (
+              {contentTypes.map((t) => (
                 <DropdownMenuItem key={t} onClick={() => onImport(t)}>
                   {t}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuItem
+                onClick={() => {
+                  setContentTypeDialogOpen(true);
+                }}
+              >
+                Manage content types…
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -259,6 +591,10 @@ export default function ContentCreation() {
             >
               Sort Nama: {sortDirection === "asc" ? "A–Z" : "Z–A"}
             </Button>
+
+            <Button type="button" variant="secondary" onClick={() => setCategoryDialogOpen(true)}>
+              Manage Category
+            </Button>
           </div>
         </CardHeader>
 
@@ -288,22 +624,7 @@ export default function ContentCreation() {
                   <TableCell className="text-right">{row.emailMarketing}</TableCell>
                   <TableCell className="text-right">{row.adsMarketing}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setActiveRow(row);
-                        setDetailsForm({
-                          title: "",
-                          description: "",
-                          comments: "",
-                          dateSuggest: new Date().toISOString().slice(0, 10),
-                          category: row.category,
-                        });
-                        setDetailsOpen(true);
-                      }}
-                    >
+                    <Button type="button" variant="outline" size="sm" onClick={() => openDetails(row)}>
                       View Details
                     </Button>
                   </TableCell>
@@ -322,130 +643,127 @@ export default function ContentCreation() {
         </CardContent>
       </Card>
 
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-4xl">
+      {/* Manage Category dialog (list page) */}
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>View Details</DialogTitle>
-            <DialogDescription>
-              {activeRow ? `${activeRow.businessName} • ${activeRow.category}` : "Detail konten"}
-            </DialogDescription>
+            <DialogTitle>Manage Category</DialogTitle>
+            <DialogDescription>Tambah atau ubah nama category (sementara hanya UI).</DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-[70vh] overflow-y-auto pr-1">
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Images */}
-              <section className="space-y-3">
-                <h2 className="text-base font-semibold text-foreground">Images</h2>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="overflow-hidden rounded-md border">
-                    <img
-                      src="/placeholder.svg"
-                      alt="Preview image 1"
-                      loading="lazy"
-                      className="h-32 w-full object-cover"
-                    />
-                  </div>
-                  <div className="overflow-hidden rounded-md border">
-                    <img
-                      src="/placeholder.svg"
-                      alt="Preview image 2"
-                      loading="lazy"
-                      className="h-32 w-full object-cover"
-                    />
-                  </div>
-                  <div className="overflow-hidden rounded-md border">
-                    <img
-                      src="/placeholder.svg"
-                      alt="Preview image 3"
-                      loading="lazy"
-                      className="h-32 w-full object-cover"
-                    />
-                  </div>
-                  <div className="overflow-hidden rounded-md border">
-                    <img
-                      src="/placeholder.svg"
-                      alt="Preview image 4"
-                      loading="lazy"
-                      className="h-32 w-full object-cover"
-                    />
-                  </div>
-                </div>
-              </section>
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">Add new category</h3>
+              <div className="flex gap-2">
+                <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nama category..." />
+                <Button type="button" onClick={addCategory}>
+                  Add
+                </Button>
+              </div>
+            </section>
 
-              {/* Details + Manage */}
-              <section className="space-y-6">
-                <div className="space-y-4">
-                  <h2 className="text-base font-semibold text-foreground">Details</h2>
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">Rename category</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Select value={renameCategoryFrom} onValueChange={setRenameCategoryFrom}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih category" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    {categories.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input value={renameCategoryTo} onChange={(e) => setRenameCategoryTo(e.target.value)} placeholder="Nama baru..." />
+              </div>
+              <Button type="button" variant="secondary" onClick={renameCategory}>
+                Rename
+              </Button>
+            </section>
 
-                  <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input
-                      value={detailsForm.title}
-                      onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
-                      placeholder="Judul konten..."
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea
-                      value={detailsForm.description}
-                      onChange={(e) => setDetailsForm((p) => ({ ...p, description: e.target.value }))}
-                      placeholder="Deskripsi..."
-                      rows={4}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Comments</Label>
-                    <Textarea
-                      value={detailsForm.comments}
-                      onChange={(e) => setDetailsForm((p) => ({ ...p, comments: e.target.value }))}
-                      placeholder="Catatan / komentar..."
-                      rows={3}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h2 className="text-base font-semibold text-foreground">Manage</h2>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Date Suggest</Label>
-                      <Input
-                        type="date"
-                        value={detailsForm.dateSuggest}
-                        onChange={(e) => setDetailsForm((p) => ({ ...p, dateSuggest: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Category</Label>
-                      <Input
-                        value={detailsForm.category}
-                        onChange={(e) => setDetailsForm((p) => ({ ...p, category: e.target.value }))}
-                        placeholder="Kategori..."
-                      />
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Current categories</h3>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((c) => (
+                  <span key={c} className="rounded-md border px-2 py-1 text-sm text-foreground">
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </section>
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              onClick={() => {
-                toast({
-                  title: "Tersimpan",
-                  description: "Perubahan disimpan (sementara masih placeholder).",
-                });
-                setDetailsOpen(false);
-              }}
-            >
-              Save
+            <Button type="button" variant="outline" onClick={() => setCategoryDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Content Types dialog */}
+      <Dialog open={contentTypeDialogOpen} onOpenChange={setContentTypeDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Manage Content Types</DialogTitle>
+            <DialogDescription>Tambah atau ubah nama jenis content untuk menu Import (sementara hanya UI).</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">Add new type</h3>
+              <div className="flex gap-2">
+                <Input value={newContentType} onChange={(e) => setNewContentType(e.target.value)} placeholder="Nama jenis content..." />
+                <Button type="button" onClick={addContentType}>
+                  Add
+                </Button>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">Rename type</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Select value={renameContentTypeFrom} onValueChange={setRenameContentTypeFrom}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih jenis content" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    {contentTypes.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={renameContentTypeTo}
+                  onChange={(e) => setRenameContentTypeTo(e.target.value)}
+                  placeholder="Nama baru..."
+                />
+              </div>
+              <Button type="button" variant="secondary" onClick={renameContentType}>
+                Rename
+              </Button>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Current types</h3>
+              <div className="flex flex-wrap gap-2">
+                {contentTypes.map((t) => (
+                  <span key={t} className="rounded-md border px-2 py-1 text-sm text-foreground">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setContentTypeDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
