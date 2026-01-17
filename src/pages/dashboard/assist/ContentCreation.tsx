@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import AddContentItemPage, { type BusinessOption, type LookupOption } from "./content-creation/AddContentItemPage";
 import ManageLookupsDialog, { type LookupTab } from "./content-creation/ManageLookupsDialog";
-
+import ViewContentItemDialog from "./content-creation/ViewContentItemDialog";
 type SortDirection = "asc" | "desc";
 
 type ContentItemRow = {
@@ -34,6 +34,9 @@ export default function ContentCreation() {
   const [manageOpen, setManageOpen] = React.useState(false);
   const [manageTab, setManageTab] = React.useState<LookupTab>("category");
 
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [selectedItem, setSelectedItem] = React.useState<ContentItemRow | null>(null);
+
   const [lastImportType, setLastImportType] = React.useState<string | null>(null);
 
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
@@ -45,7 +48,6 @@ export default function ContentCreation() {
 
   const [items, setItems] = React.useState<ContentItemRow[]>([]);
   const [loadingItems, setLoadingItems] = React.useState(false);
-
   const loadBusinesses = React.useCallback(async () => {
     const { data, error } = await supabase
       .from("businesses")
@@ -135,6 +137,11 @@ export default function ContentCreation() {
     setManageOpen(true);
   };
 
+  const openDetails = (row: ContentItemRow) => {
+    setSelectedItem(row);
+    setDetailsOpen(true);
+  };
+
   if (view === "add") {
     return (
       <>
@@ -222,9 +229,15 @@ export default function ContentCreation() {
               Sort: {sortDirection === "asc" ? "A–Z" : "Z–A"}
             </Button>
 
-            <Button type="button" variant="secondary" onClick={() => openManage("category")}>
-              Manage
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="secondary">Manage</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="z-50 w-56 bg-background border border-border">
+                <DropdownMenuItem onClick={() => openManage("category")}>Manage Categories</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openManage("content")}>Manage Content Types</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
 
@@ -237,6 +250,7 @@ export default function ContentCreation() {
                 <TableHead>Content Type</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-right">Created</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -250,12 +264,17 @@ export default function ContentCreation() {
                   <TableCell className="text-right text-muted-foreground">
                     {new Date(row.createdAt).toLocaleDateString()}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button type="button" size="sm" variant="outline" onClick={() => openDetails(row)}>
+                      View Details
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
 
               {!loadingItems && displayedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                     No content items yet.
                   </TableCell>
                 </TableRow>
@@ -263,7 +282,7 @@ export default function ContentCreation() {
 
               {loadingItems ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
@@ -283,6 +302,8 @@ export default function ContentCreation() {
           await loadItems();
         }}
       />
+
+      <ViewContentItemDialog open={detailsOpen} onOpenChange={setDetailsOpen} item={selectedItem} />
     </div>
   );
 }
