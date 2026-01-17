@@ -9,6 +9,9 @@ import {
   BarChart3,
   Settings,
   User,
+  PenLine,
+  Images,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +22,9 @@ import { AssistSidebar, type AssistNavItem } from '@/components/assist/AssistSid
 // Import components
 import ClientList from './assist/ClientList';
 import TaskManager from './assist/TaskManager';
+import ContentCreation from './assist/ContentCreation';
+import AssistMediaLibrary from './assist/MediaLibrary';
+import AssistCalendar from './assist/Calendar';
 import AIGenerator from './assist/AIGenerator';
 import AssistMessages from './assist/Messages';
 import Reports from './assist/Reports';
@@ -30,6 +36,9 @@ const mainMenuItems: AssistNavItem[] = [
   { title: 'Profile', url: '/dashboard/assist/profile', icon: User },
   { title: 'Client List', url: '/dashboard/assist/clients', icon: Users },
   { title: 'Task Manager', url: '/dashboard/assist/tasks', icon: CheckSquare },
+  { title: 'Content Creation', url: '/dashboard/assist/content-creation', icon: PenLine },
+  { title: 'Media Library', url: '/dashboard/assist/media-library', icon: Images },
+  { title: 'Calendar', url: '/dashboard/assist/calendar', icon: CalendarDays },
   { title: 'AI Generator', url: '/dashboard/assist/ai-generator', icon: Sparkles },
   { title: 'Messages', url: '/dashboard/assist/messages', icon: MessageCircle },
   { title: 'Reports', url: '/dashboard/assist/reports', icon: BarChart3 },
@@ -145,6 +154,9 @@ export default function AssistDashboard() {
               <Route path="profile" element={<AssistProfile />} />
               <Route path="clients" element={<ClientList />} />
               <Route path="tasks" element={<TaskManager />} />
+              <Route path="content-creation" element={<ContentCreation />} />
+              <Route path="media-library" element={<AssistMediaLibrary />} />
+              <Route path="calendar" element={<AssistCalendar />} />
               <Route path="ai-generator" element={<AIGenerator />} />
               <Route path="messages" element={<AssistMessages />} />
               <Route path="reports" element={<Reports />} />
