@@ -128,6 +128,10 @@ function safeName(name: string | null | undefined) {
   return (name ?? "(No name)").trim() || "(No name)";
 }
 
+function lockKey(name: string) {
+  return (name ?? "").trim().toLowerCase();
+}
+
 function formatBusinessId(businessNumber: number | null | undefined) {
   if (!businessNumber) return "";
   return `B${businessNumber.toString().padStart(5, "0")}`;
@@ -265,8 +269,8 @@ export default function ContentCreation() {
       if (typeNames.length) setContentTypes((prev) => uniqueNonEmpty([...prev, ...typeNames]));
 
       // Hydrate lock state from DB so it survives refresh
-      setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => safeName(c.name))));
-      setLockedContentTypes(new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => safeName(t.name))));
+      setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
+      setLockedContentTypes(new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name))));
     };
 
     void loadBusinesses();
@@ -624,7 +628,7 @@ export default function ContentCreation() {
 
     // Always keep "General" available in the UI
     setCategories(uniqueNonEmpty(["General", ...names]));
-    setLockedCategories(new Set(rows.filter((c) => Boolean(c.is_locked)).map((c) => safeName(c.name))));
+    setLockedCategories(new Set(rows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
   }, []);
 
   const refreshContentTypes = React.useCallback(async () => {
@@ -638,7 +642,7 @@ export default function ContentCreation() {
     const names = rows.map((t) => (t as any).name as string);
 
     setContentTypes(uniqueNonEmpty([...(DEFAULT_CONTENT_TYPES as unknown as string[]), ...names]));
-    setLockedContentTypes(new Set(rows.filter((t) => Boolean(t.is_locked)).map((t) => safeName(t.name))));
+    setLockedContentTypes(new Set(rows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name))));
   }, []);
 
   const lookupCategoryIdInsensitive = async (name: string) => {
@@ -738,7 +742,7 @@ export default function ContentCreation() {
 
       setLockedCategories((prev) => {
         const next = new Set(prev);
-        next.delete(name);
+        next.delete(lockKey(name));
         return next;
       });
       setDetailsForm((p) => (p.category === name ? { ...p, category: "" } : p));
@@ -757,12 +761,12 @@ export default function ContentCreation() {
   };
 
   const toggleCategoryLock = async (name: string) => {
-    // "General" exists only in UI (not persisted)
-    if (name.trim().toLowerCase() === "general") {
+    const generalKey = lockKey(name);
+    if (generalKey === "general") {
       setLockedCategories((prev) => {
         const next = new Set(prev);
-        if (next.has(name)) next.delete(name);
-        else next.add(name);
+        if (next.has(generalKey)) next.delete(generalKey);
+        else next.add(generalKey);
         return next;
       });
       return;
@@ -858,7 +862,7 @@ export default function ContentCreation() {
 
       setLockedContentTypes((prev) => {
         const next = new Set(prev);
-        next.delete(name);
+        next.delete(lockKey(name));
         return next;
       });
       setDetailsForm((p) => (p.contentType === name ? { ...p, contentType: "", platform: "" } : p));
@@ -1211,7 +1215,7 @@ export default function ContentCreation() {
                   <TableBody>
                     {categories.map((c) => {
                       const isEditing = editingCategory === c;
-                      const isLocked = lockedCategories.has(c);
+                      const isLocked = lockedCategories.has(lockKey(c));
 
                       return (
                         <TableRow key={c}>
@@ -1304,7 +1308,7 @@ export default function ContentCreation() {
                   <TableBody>
                     {contentTypes.map((t) => {
                       const isEditing = editingContentType === t;
-                      const isLocked = lockedContentTypes.has(t);
+                      const isLocked = lockedContentTypes.has(lockKey(t));
 
                       return (
                         <TableRow key={t}>
@@ -1543,7 +1547,7 @@ export default function ContentCreation() {
                 <TableBody>
                   {categories.map((c) => {
                     const isEditing = editingCategory === c;
-                    const isLocked = lockedCategories.has(c);
+                    const isLocked = lockedCategories.has(lockKey(c));
 
                     return (
                       <TableRow key={c}>
@@ -1636,7 +1640,7 @@ export default function ContentCreation() {
                 <TableBody>
                   {contentTypes.map((t) => {
                     const isEditing = editingContentType === t;
-                    const isLocked = lockedContentTypes.has(t);
+                    const isLocked = lockedContentTypes.has(lockKey(t));
 
                     return (
                       <TableRow key={t}>
