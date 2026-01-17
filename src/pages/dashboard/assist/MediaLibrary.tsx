@@ -50,8 +50,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 type ImportType = "Images Gallery" | "Video Content";
 
-type SortDirection = "asc" | "desc";
-
 type BusinessOption = {
   id: string;
   name: string;
@@ -65,6 +63,7 @@ type MediaRow = {
   imagesGallery: number;
   videoContent: number;
 };
+
 
 const IMPORT_TYPES: ImportType[] = ["Images Gallery", "Video Content"];
 
@@ -120,7 +119,6 @@ export default function AssistMediaLibrary() {
   const [lastImportType, setLastImportType] = React.useState<ImportType | null>(null);
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
-  const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
 
   // Category + Type Content management (same tables as Content Management)
   const [categories, setCategories] = React.useState<string[]>([]);
@@ -562,10 +560,12 @@ export default function AssistMediaLibrary() {
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
 
-    const dir = sortDirection === "asc" ? 1 : -1;
-
-    return [...filtered].sort((a, b) => a.businessName.localeCompare(b.businessName, "en", { sensitivity: "base" }) * dir);
-  }, [rows, selectedBusinessId, sortDirection]);
+    return [...filtered].sort((a, b) => {
+      const byBusiness = a.businessName.localeCompare(b.businessName, "en", { sensitivity: "base" });
+      if (byBusiness !== 0) return byBusiness;
+      return a.category.localeCompare(b.category, "en", { sensitivity: "base" });
+    });
+  }, [rows, selectedBusinessId]);
 
   const onImport = (type: ImportType) => {
     setLastImportType(type);
@@ -628,20 +628,10 @@ export default function AssistMediaLibrary() {
               </SelectContent>
             </Select>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
-            >
-              Sort Name: {sortDirection === "asc" ? "A–Z" : "Z–A"}
+            <Button type="button" variant="secondary" onClick={() => openManage("category")}>
+              Manage
             </Button>
 
-            <Button type="button" variant="secondary" onClick={() => openManage("category")}>
-              Manage Category
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => openManage("content")}>
-              Manage Type Content
-            </Button>
           </div>
         </CardHeader>
 
