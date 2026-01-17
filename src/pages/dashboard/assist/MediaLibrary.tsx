@@ -598,6 +598,7 @@ export default function AssistMediaLibrary() {
 
   const [mediaRows, setMediaRows] = React.useState<MediaRow[]>([]);
   const [mediaRowsLoading, setMediaRowsLoading] = React.useState(false);
+  const [refreshKey, setRefreshKey] = React.useState(0);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -705,7 +706,7 @@ export default function AssistMediaLibrary() {
     return () => {
       cancelled = true;
     };
-  }, [businesses, mediaTypes, categoryOptions]);
+  }, [businesses, mediaTypes, categoryOptions, refreshKey]);
 
   const rows: MediaRow[] = React.useMemo(() => {
     if (mediaRows.length > 0) return mediaRows;
@@ -758,9 +759,64 @@ export default function AssistMediaLibrary() {
         categories={categories.length ? categories : ["All"]}
         mediaTypes={visibleMediaTypeNames.length ? visibleMediaTypeNames : ["Gambar", "Video"]}
         onCancel={() => setCreateOpen(false)}
-        onSave={() => {
-          toast({ title: "Saved", description: "Media form submitted (UI only)." });
-          setCreateOpen(false);
+        onSave={async (payload) => {
+          try {
+            const biz = businesses.find((b) => b.id === payload.businessId);
+            if (!biz?.userId) throw new Error("Business user not found.");
+
+            const categoryId = await resolveCategoryId(payload.category);
+            const mediaTypeId = await resolveContentTypeId(payload.mediaType);
+
+            const safeBase = (value: string) =>
+              value
+                .trim()
+                .replace(/\s+/g, "-")
+                .replace(/[^a-zA-Z0-9_-]/g, "")
+                .slice(0, 80);
+
+            const uploads = await Promise.all(
+              payload.files.map(async (file, idx) => {
+                const baseName = payload.generatedNames[idx] || payload.imageName;
+                const cleaned = safeBase(baseName) || `media-${idx + 1}`;
+
+                const dot = file.name.lastIndexOf(".");
+                const ext = dot >= 0 ? file.name.slice(dot) : "";
+
+                const path = `${biz.userId}/${payload.businessId}/${categoryId}/${mediaTypeId}/${cleaned}${ext}`;
+
+                const { error: uploadError } = await supabase.storage.from("user-files").upload(path, file, {
+                  upsert: true,
+                  contentType: file.type,
+                });
+                if (uploadError) throw uploadError;
+
+                const { data: publicData } = supabase.storage.from("user-files").getPublicUrl(path);
+
+                return {
+                  user_id: biz.userId,
+                  media_category_id: categoryId,
+                  media_type_id: mediaTypeId,
+                  name: `${cleaned}${ext}`,
+                  size: file.size,
+                  type: file.type,
+                  url: publicData.publicUrl,
+                };
+              })
+            );
+
+            const { error: insertError } = await supabase.from("user_gallery").insert(uploads);
+            if (insertError) throw insertError;
+
+            toast({ title: "Saved", description: `Uploaded ${uploads.length} file(s).` });
+            setCreateOpen(false);
+            setRefreshKey((k) => k + 1);
+          } catch (e: any) {
+            toast({
+              variant: "destructive",
+              title: "Save failed",
+              description: e?.message ?? "Unknown error",
+            });
+          }
         }}
       />
     );
