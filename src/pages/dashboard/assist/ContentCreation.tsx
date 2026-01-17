@@ -1676,6 +1676,13 @@ export default function ContentCreation() {
                   </TableRow>
                 ))}
 
+                {rowsLoading && displayedRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={contentTypes.length + 3} className="py-10 text-center text-muted-foreground">
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : null}
 
                 {!rowsLoading && displayedRows.length === 0 ? (
                   <TableRow>
