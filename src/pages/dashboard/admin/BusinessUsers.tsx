@@ -12,9 +12,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type BusinessStatus = "active" | "suspended" | "pending";
+type BusinessStatus =
+  | "active"
+  | "pending"
+  | "inactive"
+  | "trial"
+  | "expired"
+  | "cancelled";
 
 type BusinessPackage =
   | "starter"
@@ -37,12 +49,16 @@ type BusinessAccountRow = {
 
 const statusLabel: Record<BusinessStatus, string> = {
   active: "Active",
-  suspended: "Suspended",
   pending: "Pending",
+  inactive: "Inactive",
+  trial: "Trial",
+  expired: "Expired",
+  cancelled: "Cancelled",
 };
 
 export default function AdminBusinessUsers() {
   const [packageFilter, setPackageFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const rows = useMemo<BusinessAccountRow[]>(
     () => [
@@ -70,7 +86,7 @@ export default function AdminBusinessUsers() {
         contactName: "Mia Chen",
         email: "mia@oceanlaundry.com",
         phone: "+1 555-0199",
-        status: "suspended",
+        status: "inactive",
         package: "dominate",
       },
       {
@@ -79,7 +95,7 @@ export default function AdminBusinessUsers() {
         contactName: "Noah Williams",
         email: "noah@evergreenfit.com",
         phone: "+1 555-0144",
-        status: "active",
+        status: "trial",
         package: "pro",
       },
       {
@@ -88,17 +104,22 @@ export default function AdminBusinessUsers() {
         contactName: "Siti Rahma",
         email: "siti@kopipagi.id",
         phone: "+62 811-1234-5678",
-        status: "active",
+        status: "expired",
         package: "custom",
       },
     ],
-    [],
+    []
   );
 
   const filteredRows = useMemo(() => {
-    if (packageFilter === "all") return rows;
-    return rows.filter((row) => row.package.toLowerCase() === packageFilter.toLowerCase());
-  }, [packageFilter, rows]);
+    return rows.filter((row) => {
+      const matchesPackage =
+        packageFilter === "all" || row.package.toLowerCase() === packageFilter.toLowerCase();
+      const matchesStatus =
+        statusFilter === "all" || row.status.toLowerCase() === statusFilter.toLowerCase();
+      return matchesPackage && matchesStatus;
+    });
+  }, [packageFilter, rows, statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -117,27 +138,50 @@ export default function AdminBusinessUsers() {
       </header>
 
       <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-base">Business Accounts</CardTitle>
-              <p className="text-xs text-muted-foreground">Filter businesses by package.</p>
-            </div>
+          <CardHeader className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-base">Business Accounts</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Filters on this page are based on <span className="font-medium">packages</span> and{" "}
+                  <span className="font-medium">status</span>.
+                </p>
+              </div>
 
-            <Tabs value={packageFilter} onValueChange={setPackageFilter}>
-              <TabsList className="flex flex-wrap justify-start">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="starter">Starter</TabsTrigger>
-                <TabsTrigger value="growth">Growth</TabsTrigger>
-                <TabsTrigger value="pro">Pro</TabsTrigger>
-                <TabsTrigger value="optimize">Optimize</TabsTrigger>
-                <TabsTrigger value="scale">Scale</TabsTrigger>
-                <TabsTrigger value="dominate">Dominate</TabsTrigger>
-                <TabsTrigger value="custom">Custom</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select value={packageFilter} onValueChange={setPackageFilter}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Package" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Packages</SelectItem>
+                    <SelectItem value="starter">Starter</SelectItem>
+                    <SelectItem value="growth">Growth</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="optimize">Optimize</SelectItem>
+                    <SelectItem value="scale">Scale</SelectItem>
+                    <SelectItem value="dominate">Dominate</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="trial">Trial</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
 
         <CardContent>
           <Table>
