@@ -90,13 +90,15 @@ export default function MultiImageUpload({
           multiple={multiple}
           onChange={(e) => addFiles(e.target.files)}
         />
-        <p className="text-xs text-muted-foreground">You can upload multiple images. Preview will appear below.</p>
+        <p className="text-xs text-muted-foreground">You can upload multiple files. A preview will appear when available.</p>
       </div>
 
       {items.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item, idx) => {
             const displayName = computedNameForIndex(idx);
+            const isImage = item.file.type.startsWith("image/");
+            const isVideo = item.file.type.startsWith("video/");
 
             return (
               <Card key={item.id} className="relative overflow-hidden">
@@ -114,16 +116,28 @@ export default function MultiImageUpload({
                 </div>
 
                 <div className="aspect-video w-full bg-muted">
-                  <img
-                    src={item.previewUrl}
-                    alt={displayName ? `Preview ${displayName}` : "Preview"}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
+                  {isImage ? (
+                    <img
+                      src={item.previewUrl}
+                      alt={displayName ? `Preview ${displayName}` : "Preview"}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : isVideo ? (
+                    <video className="h-full w-full object-cover" controls preload="metadata">
+                      <source src={item.previewUrl} type={item.file.type} />
+                    </video>
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center p-4">
+                      <p className="text-sm text-muted-foreground text-center break-words">
+                        {item.file.name}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1 p-3">
-                  <p className="text-sm font-medium text-foreground">{displayName || "(set Image name)"}</p>
+                  <p className="text-sm font-medium text-foreground">{displayName || "(set Media Title)"}</p>
                   <p className="text-xs text-muted-foreground break-all">{item.file.name}</p>
                 </div>
               </Card>

@@ -53,6 +53,34 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
 
   const [uploads, setUploads] = React.useState<UploadItem[]>([]);
 
+  const uploadAccept = React.useMemo(() => {
+    const t = mediaType.trim().toLowerCase();
+
+    // Files / documents
+    if (t === "files" || t.includes("file") || t.includes("doc") || t.includes("document")) {
+      return [
+        ".pdf",
+        ".txt",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        "application/pdf",
+        "text/plain",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ].join(",");
+    }
+
+    // Video
+    if (t.includes("video")) return "video/*";
+
+    // Default: images
+    return "image/*";
+  }, [mediaType]);
+
   const generatedNames = React.useMemo(() => {
     const base = imageName.trim();
     if (!base) return uploads.map(() => "");
@@ -64,7 +92,7 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
     if (!businessId) missing.push("Business Name");
     if (!category) missing.push("Category");
     if (!mediaType) missing.push("Type Content");
-    if (!imageName.trim()) missing.push("Image name");
+    if (!imageName.trim()) missing.push("Media Title");
     if (uploads.length === 0) missing.push("File Upload");
 
     if (missing.length > 0) {
@@ -172,7 +200,7 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label>Image name*</Label>
+              <Label>Media Title*</Label>
               <Input value={imageName} onChange={(e) => setImageName(e.target.value)} placeholder="e.g. test" />
               {uploads.length > 0 && imageName.trim() ? (
                 <p className="text-xs text-muted-foreground">
@@ -182,7 +210,7 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
             </div>
           </div>
 
-          <MultiImageUpload baseName={imageName} items={uploads} onChange={setUploads} />
+          <MultiImageUpload baseName={imageName} accept={uploadAccept} items={uploads} onChange={setUploads} />
         </CardContent>
 
         <Separator />
@@ -198,4 +226,5 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
       </Card>
     </div>
   );
+
 }
