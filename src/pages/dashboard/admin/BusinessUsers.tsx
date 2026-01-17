@@ -119,18 +119,21 @@ export default function AdminBusinessUsers() {
       <Card>
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base">Business Accounts</CardTitle>
+            <div className="space-y-1">
+              <CardTitle className="text-base">Business Accounts</CardTitle>
+              <p className="text-xs text-muted-foreground">Filter businesses by package.</p>
+            </div>
 
             <Tabs value={packageFilter} onValueChange={setPackageFilter}>
               <TabsList className="flex flex-wrap justify-start">
                 <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="starter">STARTER</TabsTrigger>
-                <TabsTrigger value="growth">GROWTH</TabsTrigger>
-                <TabsTrigger value="pro">PRO</TabsTrigger>
-                <TabsTrigger value="optimize">OPTIMIZE</TabsTrigger>
-                <TabsTrigger value="scale">SCALE</TabsTrigger>
-                <TabsTrigger value="dominate">DOMINATE</TabsTrigger>
-                <TabsTrigger value="custom">CUSTOM</TabsTrigger>
+                <TabsTrigger value="starter">Starter</TabsTrigger>
+                <TabsTrigger value="growth">Growth</TabsTrigger>
+                <TabsTrigger value="pro">Pro</TabsTrigger>
+                <TabsTrigger value="optimize">Optimize</TabsTrigger>
+                <TabsTrigger value="scale">Scale</TabsTrigger>
+                <TabsTrigger value="dominate">Dominate</TabsTrigger>
+                <TabsTrigger value="custom">Custom</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
