@@ -26,6 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Table,
   TableBody,
   TableCell,
@@ -50,11 +56,7 @@ type ContentRow = {
   businessId: string;
   businessName: string;
   category: string;
-  socialMediaPosts: number;
-  contentMediaPosts: number;
-  gmbPosts: number;
-  emailMarketing: number;
-  adsMarketing: number;
+  counts: Record<string, number>;
 };
 
 const DEFAULT_CONTENT_TYPES = [
@@ -71,33 +73,39 @@ const FALLBACK_ROWS: ContentRow[] = [
     businessId: "demo",
     businessName: "Demo Business",
     category: "Promo",
-    socialMediaPosts: 12,
-    contentMediaPosts: 6,
-    gmbPosts: 4,
-    emailMarketing: 3,
-    adsMarketing: 2,
+    counts: {
+      "Social Media Posts": 12,
+      "Content Media Posts": 6,
+      "GMB Posts": 4,
+      "Email Marketing": 3,
+      "Ads Marketing": 2,
+    },
   },
   {
     id: "demo-2",
     businessId: "demo",
     businessName: "Demo Business",
     category: "Edukasi",
-    socialMediaPosts: 18,
-    contentMediaPosts: 10,
-    gmbPosts: 5,
-    emailMarketing: 6,
-    adsMarketing: 1,
+    counts: {
+      "Social Media Posts": 18,
+      "Content Media Posts": 10,
+      "GMB Posts": 5,
+      "Email Marketing": 6,
+      "Ads Marketing": 1,
+    },
   },
   {
     id: "demo-3",
     businessId: "demo",
     businessName: "Demo Business",
     category: "Testimoni",
-    socialMediaPosts: 7,
-    contentMediaPosts: 3,
-    gmbPosts: 2,
-    emailMarketing: 1,
-    adsMarketing: 0,
+    counts: {
+      "Social Media Posts": 7,
+      "Content Media Posts": 3,
+      "GMB Posts": 2,
+      "Email Marketing": 1,
+      "Ads Marketing": 0,
+    },
   },
 ];
 
@@ -148,22 +156,22 @@ export default function ContentCreation() {
     third: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
   });
 
-  // Category + Content Type management (UI only for now)
+  // Category + Content column management (UI only for now)
   const [contentTypes, setContentTypes] = React.useState<string[]>(Array.from(DEFAULT_CONTENT_TYPES));
   const [categories, setCategories] = React.useState<string[]>(
     uniqueNonEmpty(["General", ...FALLBACK_ROWS.map((r) => r.category)]),
   );
 
-  const [categoryDialogOpen, setCategoryDialogOpen] = React.useState(false);
-  const [contentTypeDialogOpen, setContentTypeDialogOpen] = React.useState(false);
+  const [manageDialogOpen, setManageDialogOpen] = React.useState(false);
+  const [manageTab, setManageTab] = React.useState<"category" | "content">("category");
 
   const [newCategory, setNewCategory] = React.useState("");
-  const [renameCategoryFrom, setRenameCategoryFrom] = React.useState<string>("");
-  const [renameCategoryTo, setRenameCategoryTo] = React.useState("");
+  const [editingCategory, setEditingCategory] = React.useState<string | null>(null);
+  const [editingCategoryDraft, setEditingCategoryDraft] = React.useState("");
 
   const [newContentType, setNewContentType] = React.useState("");
-  const [renameContentTypeFrom, setRenameContentTypeFrom] = React.useState<string>("");
-  const [renameContentTypeTo, setRenameContentTypeTo] = React.useState("");
+  const [editingContentType, setEditingContentType] = React.useState<string | null>(null);
+  const [editingContentTypeDraft, setEditingContentTypeDraft] = React.useState("");
 
   React.useEffect(() => {
     let cancelled = false;
@@ -198,6 +206,8 @@ export default function ContentCreation() {
   }, []);
 
   const rows: ContentRow[] = React.useMemo(() => {
+    const emptyCounts = Object.fromEntries(contentTypes.map((t) => [t, 0] as const));
+
     // Placeholder sampai data real dibuat: buat 1 baris per bisnis
     if (businesses.length > 0) {
       return businesses.map((b) => ({
@@ -205,16 +215,12 @@ export default function ContentCreation() {
         businessId: b.id,
         businessName: b.name,
         category: "General",
-        socialMediaPosts: 0,
-        contentMediaPosts: 0,
-        gmbPosts: 0,
-        emailMarketing: 0,
-        adsMarketing: 0,
+        counts: { ...emptyCounts },
       }));
     }
 
     return FALLBACK_ROWS;
-  }, [businesses]);
+  }, [businesses, contentTypes]);
 
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
@@ -264,72 +270,92 @@ export default function ContentCreation() {
     closeDetails();
   };
 
+  const openManage = (tab: "category" | "content") => {
+    setManageTab(tab);
+    setManageDialogOpen(true);
+  };
+
   const addCategory = () => {
     const name = newCategory.trim();
     if (!name) return;
     if (categories.some((c) => c.toLowerCase() === name.toLowerCase())) {
-      toast({
-        title: "Kategori sudah ada",
-        description: `Kategori \"${name}\" sudah terdaftar.`,
-      });
+      toast({ title: "Kategori sudah ada", description: `Kategori \"${name}\" sudah terdaftar.` });
       return;
     }
     setCategories((p) => [...p, name]);
     setNewCategory("");
   };
 
-  const renameCategory = () => {
-    const from = renameCategoryFrom.trim();
-    const to = renameCategoryTo.trim();
+  const startEditCategory = (name: string) => {
+    setEditingCategory(name);
+    setEditingCategoryDraft(name);
+  };
+
+  const cancelEditCategory = () => {
+    setEditingCategory(null);
+    setEditingCategoryDraft("");
+  };
+
+  const saveEditCategory = () => {
+    const from = (editingCategory ?? "").trim();
+    const to = editingCategoryDraft.trim();
     if (!from || !to) return;
 
-    if (categories.some((c) => c.toLowerCase() === to.toLowerCase())) {
-      toast({
-        title: "Nama kategori bentrok",
-        description: `Kategori \"${to}\" sudah ada.`,
-      });
+    if (categories.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
+      toast({ title: "Nama kategori bentrok", description: `Kategori \"${to}\" sudah ada.` });
       return;
     }
 
     setCategories((p) => p.map((c) => (c === from ? to : c)));
-
-    // jika form detail sedang memakai category yang di-rename
     setDetailsForm((p) => (p.category === from ? { ...p, category: to } : p));
 
-    setRenameCategoryFrom("");
-    setRenameCategoryTo("");
+    cancelEditCategory();
+  };
+
+  const deleteCategory = (name: string) => {
+    setCategories((p) => p.filter((c) => c !== name));
+    setDetailsForm((p) => (p.category === name ? { ...p, category: "" } : p));
+    if (editingCategory === name) cancelEditCategory();
   };
 
   const addContentType = () => {
     const name = newContentType.trim();
     if (!name) return;
     if (contentTypes.some((c) => c.toLowerCase() === name.toLowerCase())) {
-      toast({
-        title: "Jenis konten sudah ada",
-        description: `Jenis konten \"${name}\" sudah terdaftar.`,
-      });
+      toast({ title: "Kolom sudah ada", description: `Content \"${name}\" sudah terdaftar.` });
       return;
     }
     setContentTypes((p) => [...p, name]);
     setNewContentType("");
   };
 
-  const renameContentType = () => {
-    const from = renameContentTypeFrom.trim();
-    const to = renameContentTypeTo.trim();
+  const startEditContentType = (name: string) => {
+    setEditingContentType(name);
+    setEditingContentTypeDraft(name);
+  };
+
+  const cancelEditContentType = () => {
+    setEditingContentType(null);
+    setEditingContentTypeDraft("");
+  };
+
+  const saveEditContentType = () => {
+    const from = (editingContentType ?? "").trim();
+    const to = editingContentTypeDraft.trim();
     if (!from || !to) return;
 
-    if (contentTypes.some((c) => c.toLowerCase() === to.toLowerCase())) {
-      toast({
-        title: "Nama jenis konten bentrok",
-        description: `Jenis konten \"${to}\" sudah ada.`,
-      });
+    if (contentTypes.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
+      toast({ title: "Nama kolom bentrok", description: `Content \"${to}\" sudah ada.` });
       return;
     }
 
     setContentTypes((p) => p.map((c) => (c === from ? to : c)));
-    setRenameContentTypeFrom("");
-    setRenameContentTypeTo("");
+    cancelEditContentType();
+  };
+
+  const deleteContentType = (name: string) => {
+    setContentTypes((p) => p.filter((t) => t !== name));
+    if (editingContentType === name) cancelEditContentType();
   };
 
   if (detailsOpen && activeRow) {
@@ -446,8 +472,8 @@ export default function ContentCreation() {
                       </SelectContent>
                     </Select>
                     <div className="flex gap-2">
-                      <Button type="button" variant="secondary" onClick={() => setCategoryDialogOpen(true)}>
-                        Manage Category
+                      <Button type="button" variant="secondary" onClick={() => openManage("category")}>
+                        Manage
                       </Button>
                     </div>
                   </div>
@@ -457,65 +483,159 @@ export default function ContentCreation() {
           </section>
         </div>
 
-        {/* Manage Category dialog */}
-        <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
-          <DialogContent className="max-w-xl">
+        {/* Manage dialog (Category / Content) */}
+        <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Manage Category</DialogTitle>
-              <DialogDescription>Tambah atau ubah nama category (sementara hanya UI).</DialogDescription>
+              <DialogTitle>Manage</DialogTitle>
+              <DialogDescription>
+                Category: tambah / edit / delete kategori. Content: tambah / edit / delete kolom konten (Business, Category,
+                dan Action tidak bisa diubah).
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6">
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Add new category</h3>
-                <div className="flex gap-2">
+            <Tabs value={manageTab} onValueChange={(v) => setManageTab(v as "category" | "content")}>
+              <TabsList>
+                <TabsTrigger value="category">Category</TabsTrigger>
+                <TabsTrigger value="content">Content</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="category" className="space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nama category..." />
                   <Button type="button" onClick={addCategory}>
                     Add
                   </Button>
                 </div>
-              </section>
 
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Rename category</h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Select value={renameCategoryFrom} onValueChange={setRenameCategoryFrom}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih category" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50">
-                      {categories.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map((c) => {
+                      const isEditing = editingCategory === c;
+                      return (
+                        <TableRow key={c}>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input value={editingCategoryDraft} onChange={(e) => setEditingCategoryDraft(e.target.value)} />
+                            ) : (
+                              <span className="font-medium">{c}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Button type="button" size="sm" onClick={saveEditCategory}>
+                                    Save
+                                  </Button>
+                                  <Button type="button" size="sm" variant="outline" onClick={cancelEditCategory}>
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button type="button" size="sm" variant="secondary" onClick={() => startEditCategory(c)}>
+                                  Edit
+                                </Button>
+                              )}
+                              <Button type="button" size="sm" variant="outline" onClick={() => deleteCategory(c)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                    {categories.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
+                          Belum ada kategori.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+
+              <TabsContent value="content" className="space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Input
-                    value={renameCategoryTo}
-                    onChange={(e) => setRenameCategoryTo(e.target.value)}
-                    placeholder="Nama baru..."
+                    value={newContentType}
+                    onChange={(e) => setNewContentType(e.target.value)}
+                    placeholder="Nama kolom content..."
                   />
+                  <Button type="button" onClick={addContentType}>
+                    Add
+                  </Button>
                 </div>
-                <Button type="button" variant="secondary" onClick={renameCategory}>
-                  Rename
-                </Button>
-              </section>
 
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold text-foreground">Current categories</h3>
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((c) => (
-                    <span key={c} className="rounded-md border px-2 py-1 text-sm text-foreground">
-                      {c}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Content Column</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contentTypes.map((t) => {
+                      const isEditing = editingContentType === t;
+                      return (
+                        <TableRow key={t}>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={editingContentTypeDraft}
+                                onChange={(e) => setEditingContentTypeDraft(e.target.value)}
+                              />
+                            ) : (
+                              <span className="font-medium">{t}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Button type="button" size="sm" onClick={saveEditContentType}>
+                                    Save
+                                  </Button>
+                                  <Button type="button" size="sm" variant="outline" onClick={cancelEditContentType}>
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button type="button" size="sm" variant="secondary" onClick={() => startEditContentType(t)}>
+                                  Edit
+                                </Button>
+                              )}
+                              <Button type="button" size="sm" variant="outline" onClick={() => deleteContentType(t)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                    {contentTypes.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
+                          Belum ada kolom content.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCategoryDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setManageDialogOpen(false)}>
                 Close
               </Button>
             </DialogFooter>
@@ -548,12 +668,8 @@ export default function ContentCreation() {
                   {t}
                 </DropdownMenuItem>
               ))}
-              <DropdownMenuItem
-                onClick={() => {
-                  setContentTypeDialogOpen(true);
-                }}
-              >
-                Manage content types…
+              <DropdownMenuItem onClick={() => openManage("content")}>
+                Manage…
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -592,177 +708,210 @@ export default function ContentCreation() {
               Sort Nama: {sortDirection === "asc" ? "A–Z" : "Z–A"}
             </Button>
 
-            <Button type="button" variant="secondary" onClick={() => setCategoryDialogOpen(true)}>
-              Manage Category
+            <Button type="button" variant="secondary" onClick={() => openManage("category")}>
+              Manage
             </Button>
           </div>
         </CardHeader>
 
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Business</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Social Media Posts</TableHead>
-                <TableHead className="text-right">Content Media Posts</TableHead>
-                <TableHead className="text-right">GMB Posts</TableHead>
-                <TableHead className="text-right">Email Marketing</TableHead>
-                <TableHead className="text-right">Ads Marketing</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {displayedRows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-medium">{row.businessName}</TableCell>
-                  <TableCell className="font-medium">{row.category}</TableCell>
-                  <TableCell className="text-right">{row.socialMediaPosts}</TableCell>
-                  <TableCell className="text-right">{row.contentMediaPosts}</TableCell>
-                  <TableCell className="text-right">{row.gmbPosts}</TableCell>
-                  <TableCell className="text-right">{row.emailMarketing}</TableCell>
-                  <TableCell className="text-right">{row.adsMarketing}</TableCell>
-                  <TableCell className="text-right">
-                    <Button type="button" variant="outline" size="sm" onClick={() => openDetails(row)}>
-                      View Details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {displayedRows.length === 0 ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                    Tidak ada data untuk bisnis yang dipilih.
-                  </TableCell>
+                  <TableHead>Business</TableHead>
+                  <TableHead>Category</TableHead>
+                  {contentTypes.map((t) => (
+                    <TableHead key={t} className="text-right">
+                      {t}
+                    </TableHead>
+                  ))}
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
 
-      {/* Manage Category dialog (list page) */}
-      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
-        <DialogContent className="max-w-xl">
+              <TableBody>
+                {displayedRows.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">{row.businessName}</TableCell>
+                    <TableCell className="font-medium">{row.category}</TableCell>
+                    {contentTypes.map((t) => (
+                      <TableCell key={t} className="text-right">
+                        {row.counts?.[t] ?? 0}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right">
+                      <Button type="button" variant="outline" size="sm" onClick={() => openDetails(row)}>
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {displayedRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={contentTypes.length + 3} className="py-10 text-center text-muted-foreground">
+                      Tidak ada data untuk bisnis yang dipilih.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+      {/* Manage dialog (Category / Content) */}
+      <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Manage Category</DialogTitle>
-            <DialogDescription>Tambah atau ubah nama category (sementara hanya UI).</DialogDescription>
+            <DialogTitle>Manage</DialogTitle>
+            <DialogDescription>
+              Category: tambah / edit / delete kategori. Content: tambah / edit / delete kolom konten (Business, Category, dan
+              Action tidak bisa diubah).
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
-            <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Add new category</h3>
-              <div className="flex gap-2">
+          <Tabs value={manageTab} onValueChange={(v) => setManageTab(v as "category" | "content")}>
+            <TabsList>
+              <TabsTrigger value="category">Category</TabsTrigger>
+              <TabsTrigger value="content">Content</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="category" className="space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nama category..." />
                 <Button type="button" onClick={addCategory}>
                   Add
                 </Button>
               </div>
-            </section>
 
-            <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Rename category</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Select value={renameCategoryFrom} onValueChange={setRenameCategoryFrom}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih category" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {categories.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input value={renameCategoryTo} onChange={(e) => setRenameCategoryTo(e.target.value)} placeholder="Nama baru..." />
-              </div>
-              <Button type="button" variant="secondary" onClick={renameCategory}>
-                Rename
-              </Button>
-            </section>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((c) => {
+                    const isEditing = editingCategory === c;
+                    return (
+                      <TableRow key={c}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input value={editingCategoryDraft} onChange={(e) => setEditingCategoryDraft(e.target.value)} />
+                          ) : (
+                            <span className="font-medium">{c}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {isEditing ? (
+                              <>
+                                <Button type="button" size="sm" onClick={saveEditCategory}>
+                                  Save
+                                </Button>
+                                <Button type="button" size="sm" variant="outline" onClick={cancelEditCategory}>
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <Button type="button" size="sm" variant="secondary" onClick={() => startEditCategory(c)}>
+                                Edit
+                              </Button>
+                            )}
+                            <Button type="button" size="sm" variant="outline" onClick={() => deleteCategory(c)}>
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
 
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">Current categories</h3>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((c) => (
-                  <span key={c} className="rounded-md border px-2 py-1 text-sm text-foreground">
-                    {c}
-                  </span>
-                ))}
-              </div>
-            </section>
-          </div>
+                  {categories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
+                        Belum ada kategori.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </TabsContent>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setCategoryDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manage Content Types dialog */}
-      <Dialog open={contentTypeDialogOpen} onOpenChange={setContentTypeDialogOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Manage Content Types</DialogTitle>
-            <DialogDescription>Tambah atau ubah nama jenis content untuk menu Import (sementara hanya UI).</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Add new type</h3>
-              <div className="flex gap-2">
-                <Input value={newContentType} onChange={(e) => setNewContentType(e.target.value)} placeholder="Nama jenis content..." />
+            <TabsContent value="content" className="space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  value={newContentType}
+                  onChange={(e) => setNewContentType(e.target.value)}
+                  placeholder="Nama kolom content..."
+                />
                 <Button type="button" onClick={addContentType}>
                   Add
                 </Button>
               </div>
-            </section>
 
-            <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Rename type</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Select value={renameContentTypeFrom} onValueChange={setRenameContentTypeFrom}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih jenis content" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {contentTypes.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={renameContentTypeTo}
-                  onChange={(e) => setRenameContentTypeTo(e.target.value)}
-                  placeholder="Nama baru..."
-                />
-              </div>
-              <Button type="button" variant="secondary" onClick={renameContentType}>
-                Rename
-              </Button>
-            </section>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Content Column</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contentTypes.map((t) => {
+                    const isEditing = editingContentType === t;
+                    return (
+                      <TableRow key={t}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingContentTypeDraft}
+                              onChange={(e) => setEditingContentTypeDraft(e.target.value)}
+                            />
+                          ) : (
+                            <span className="font-medium">{t}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {isEditing ? (
+                              <>
+                                <Button type="button" size="sm" onClick={saveEditContentType}>
+                                  Save
+                                </Button>
+                                <Button type="button" size="sm" variant="outline" onClick={cancelEditContentType}>
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <Button type="button" size="sm" variant="secondary" onClick={() => startEditContentType(t)}>
+                                Edit
+                              </Button>
+                            )}
+                            <Button type="button" size="sm" variant="outline" onClick={() => deleteContentType(t)}>
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
 
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">Current types</h3>
-              <div className="flex flex-wrap gap-2">
-                {contentTypes.map((t) => (
-                  <span key={t} className="rounded-md border px-2 py-1 text-sm text-foreground">
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </section>
-          </div>
+                  {contentTypes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
+                        Belum ada kolom content.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setContentTypeDialogOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setManageDialogOpen(false)}>
               Close
             </Button>
           </DialogFooter>
