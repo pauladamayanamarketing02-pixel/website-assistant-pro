@@ -31,6 +31,7 @@ import { AdminSidebar, type AdminNavItem } from "@/components/admin/AdminSidebar
 import AdminOverview from "./admin/Overview";
 import AdminPlaceholder from "./admin/Placeholder";
 import AdminWebsiteBlog from "./admin/WebsiteBlog";
+import AdminBusinessUsers from "./admin/BusinessUsers";
 
 function LoadingScreen() {
   return (
@@ -148,7 +149,7 @@ export default function AdminDashboard() {
           <main className="p-6 bg-background overflow-auto">
             <Routes>
               <Route index element={<AdminOverview />} />
-              <Route path="business-users" element={<AdminPlaceholder title="Bussines User" />} />
+              <Route path="business-users" element={<AdminBusinessUsers />} />
               <Route path="assistants" element={<AdminPlaceholder title="Assistant" />} />
               <Route path="tasks" element={<AdminPlaceholder title="Tasks" />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
