@@ -203,11 +203,14 @@ export default function ContentCreation() {
   });
 
   // Category + Content column management
-  const [contentTypes, setContentTypes] = React.useState<string[]>(Array.from(DEFAULT_CONTENT_TYPES));
+  const [contentTypes, setContentTypes] = React.useState<string[]>([]);
   const [categories, setCategories] = React.useState<string[]>([]);
 
   const [lockedCategories, setLockedCategories] = React.useState<Set<string>>(() => new Set());
   const [lockedContentTypes, setLockedContentTypes] = React.useState<Set<string>>(() => new Set());
+
+  // Prevent table flicker: only fetch table rows after we know the content_types columns
+  const [typesReady, setTypesReady] = React.useState(false);
 
   const [manageDialogOpen, setManageDialogOpen] = React.useState(false);
   const [manageTab, setManageTab] = React.useState<"category" | "content">("category");
@@ -289,14 +292,15 @@ export default function ContentCreation() {
 
   // Keep Content Management table always in sync with DB + current columns
   React.useEffect(() => {
+    if (!typesReady) return;
     void fetchContentRows();
-  }, [fetchContentRows]);
+  }, [fetchContentRows, typesReady]);
 
   React.useEffect(() => {
     let cancelled = false;
 
     const loadBusinesses = async () => {
-      const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData }] = await Promise.all([
+      const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData, error: typeError }] = await Promise.all([
         supabase
           .from("businesses")
           .select("id, business_name, business_number")
@@ -308,7 +312,7 @@ export default function ContentCreation() {
       if (cancelled) return;
 
       if (bizError) {
-        // Jangan blok UI — fallback ke data demo
+        // Jangan blok UI — fallback ke list kosong
         setBusinesses([]);
       } else {
         const list: BusinessOption[] = (bizData ?? []).map((b) => ({
@@ -325,12 +329,16 @@ export default function ContentCreation() {
       const catNames = catRows.map((c) => (c as any).name as string);
       const typeNames = typeRows.map((t) => (t as any).name as string);
 
-      if (catNames.length) setCategories(uniqueNonEmpty(catNames));
-      if (typeNames.length) setContentTypes((prev) => uniqueNonEmpty([...prev, ...typeNames]));
+      setCategories(uniqueNonEmpty(catNames));
+      setContentTypes(uniqueNonEmpty(typeNames));
 
       // Hydrate lock state from DB so it survives refresh
       setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
       setLockedContentTypes(new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name))));
+
+      // even if content_types query fails, we stop blocking the table forever
+      if (typeError) setContentTypes([]);
+      setTypesReady(true);
     };
 
     void loadBusinesses();
@@ -338,7 +346,7 @@ export default function ContentCreation() {
     return () => {
       cancelled = true;
     };
-  }, [fetchContentRows]);
+  }, []);
 
   const rows: ContentRow[] = React.useMemo(() => contentRows, [contentRows]);
 
@@ -755,7 +763,8 @@ export default function ContentCreation() {
     const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
     const names = rows.map((t) => (t as any).name as string);
 
-    setContentTypes(uniqueNonEmpty([...(DEFAULT_CONTENT_TYPES as unknown as string[]), ...names]));
+    // Only show content types coming from DB
+    setContentTypes(uniqueNonEmpty(names));
     setLockedContentTypes(new Set(rows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name))));
   }, []);
 
