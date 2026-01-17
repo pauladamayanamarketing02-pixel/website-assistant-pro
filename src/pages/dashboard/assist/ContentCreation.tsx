@@ -54,7 +54,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
 import ContentItemForm from "@/pages/dashboard/assist/content-creation/ContentItemForm";
 
 type SortDirection = "asc" | "desc";
@@ -280,18 +279,18 @@ export default function ContentCreation() {
   const openDetails = (row: ContentRow) => {
     setActiveRow(row);
     setDetailsForm({
-      title: "Uncer Maintenance",
-      description: "Uncer Maintenance",
-      comments: "Uncer Maintenance",
-      dateSuggest: new Date().toISOString().slice(0, 10),
-      category: row.category,
+      title: "",
+      description: "",
+      comments: "",
+      dateSuggest: "",
+      category: "",
     });
-    setDetailsSortCategory(row.category);
+    setDetailsSortCategory("");
     setDetailsSortTypeContent("");
     setImages({
-      primary: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
-      second: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
-      third: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+      primary: { url: "", originalUrl: "" },
+      second: { url: "", originalUrl: "" },
+      third: { url: "", originalUrl: "" },
     });
     setDetailsOpen(true);
   };
@@ -560,24 +559,7 @@ export default function ContentCreation() {
           <section className="space-y-3">
             <h2 className="text-base font-semibold text-foreground">Images</h2>
             <div className="space-y-3">
-              <ImageFieldCard
-                label="Primary"
-                value={images.primary.url}
-                originalValue={images.primary.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
-              />
-              <ImageFieldCard
-                label="Second"
-                value={images.second.url}
-                originalValue={images.second.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, second: next }))}
-              />
-              <ImageFieldCard
-                label="Third"
-                value={images.third.url}
-                originalValue={images.third.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
-              />
+              <div className="rounded-md border bg-muted/30 h-[280px]" aria-label="Images (empty)" />
             </div>
           </section>
 
@@ -589,17 +571,17 @@ export default function ContentCreation() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Title</Label>
-                  <Input value={detailsForm.title} placeholder="Uncer Maintenance" disabled />
+                  <Input value={detailsForm.title} placeholder="" disabled />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea value={detailsForm.description} placeholder="Uncer Maintenance" rows={4} disabled />
+                  <Textarea value={detailsForm.description} placeholder="" rows={4} disabled />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Comments</Label>
-                  <Textarea value={detailsForm.comments} placeholder="Uncer Maintenance" rows={3} disabled />
+                  <Textarea value={detailsForm.comments} placeholder="" rows={3} disabled />
                 </div>
               </CardContent>
             </Card>
@@ -617,18 +599,7 @@ export default function ContentCreation() {
 
                   <div className="space-y-2">
                     <Label>Category</Label>
-                    <Select value={detailsForm.category || ""} onValueChange={() => {}} disabled>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Uncer Maintenance" />
-                      </SelectTrigger>
-                      <SelectContent className="z-50">
-                        {categories.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input value={detailsForm.category} placeholder="" disabled />
                     <div className="flex gap-2">
                       <Button type="button" variant="secondary" onClick={() => openManage("category")}>
                         Manage
