@@ -80,7 +80,7 @@ export default function ContentItemInlineEditor({
           {onDelete && (
             <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
               <Trash2 className="mr-2 h-4 w-4" />
-              Hapus
+              Delete
             </Button>
           )}
         </div>
