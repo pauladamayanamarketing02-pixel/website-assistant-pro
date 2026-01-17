@@ -859,49 +859,44 @@ export default function ContentCreation() {
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Images */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Images</h2>
-            </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="grid gap-6 lg:grid-cols-[1fr_4fr]">
+              {/* Images (≈20%) */}
+              <section className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground">Images</h2>
 
-            <ImageFieldCard
-              label="Primary Image"
-              value={images.primary.url}
-              originalValue={images.primary.originalUrl}
-              onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
-            />
+                <ImageFieldCard
+                  label="Primary Image"
+                  value={images.primary.url}
+                  originalValue={images.primary.originalUrl}
+                  onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
+                  variant="compact"
+                />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ImageFieldCard
-                label="Secondary Image"
-                value={images.second.url}
-                originalValue={images.second.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, second: next }))}
-                variant="compact"
-              />
-              <ImageFieldCard
-                label="Third Image"
-                value={images.third.url}
-                originalValue={images.third.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
-                variant="compact"
-              />
-            </div>
-          </section>
+                <div className="grid gap-4">
+                  <ImageFieldCard
+                    label="Secondary Image"
+                    value={images.second.url}
+                    originalValue={images.second.originalUrl}
+                    onChange={(next) => setImages((p) => ({ ...p, second: next }))}
+                    variant="compact"
+                  />
+                  <ImageFieldCard
+                    label="Third Image"
+                    value={images.third.url}
+                    originalValue={images.third.originalUrl}
+                    onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+                    variant="compact"
+                  />
+                </div>
+              </section>
 
-          {/* Content Details */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
-            </div>
+              {/* Content Details (≈80%) */}
+              <section className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
 
-            <Card>
-              <CardContent className="space-y-4 pt-6">
-                {detailsLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading content...</p>
-                ) : null}
+                {detailsLoading ? <p className="text-sm text-muted-foreground">Loading content...</p> : null}
 
                 <div className="space-y-2">
                   <Label>Title</Label>
@@ -992,10 +987,10 @@ export default function ContentCreation() {
                     {detailsSaving ? "Saving..." : "Save"}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </section>
-        </div>
+              </section>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Manage dialog (Category / Content) */}
         <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
