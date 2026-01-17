@@ -237,8 +237,8 @@ export default function ContentCreation() {
           .from("businesses")
           .select("id, business_name, business_number")
           .order("business_name", { ascending: true, nullsFirst: false }),
-        supabase.from("content_categories").select("name").order("name", { ascending: true }),
-        supabase.from("content_types").select("name").order("name", { ascending: true }),
+        supabase.from("content_categories").select("name, is_locked").order("name", { ascending: true }),
+        supabase.from("content_types").select("name, is_locked").order("name", { ascending: true }),
       ]);
 
       if (cancelled) return;
@@ -255,11 +255,18 @@ export default function ContentCreation() {
         setBusinesses(list);
       }
 
-      const catNames = (catData ?? []).map((c) => (c as any).name as string);
-      const typeNames = (typeData ?? []).map((t) => (t as any).name as string);
+      const catRows = (catData ?? []) as Array<{ name: string; is_locked?: boolean }>;
+      const typeRows = (typeData ?? []) as Array<{ name: string; is_locked?: boolean }>;
+
+      const catNames = catRows.map((c) => (c as any).name as string);
+      const typeNames = typeRows.map((t) => (t as any).name as string);
 
       if (catNames.length) setCategories((prev) => uniqueNonEmpty([...prev, ...catNames]));
       if (typeNames.length) setContentTypes((prev) => uniqueNonEmpty([...prev, ...typeNames]));
+
+      // Hydrate lock state from DB so it survives refresh
+      setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => safeName(c.name))));
+      setLockedContentTypes(new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => safeName(t.name))));
     };
 
     void loadBusinesses();
@@ -606,18 +613,32 @@ export default function ContentCreation() {
   };
 
   const refreshCategories = React.useCallback(async () => {
-    const { data, error } = await supabase.from("content_categories").select("name").order("name", { ascending: true });
+    const { data, error } = await supabase
+      .from("content_categories")
+      .select("name, is_locked")
+      .order("name", { ascending: true });
     if (error) throw error;
-    const names = (data ?? []).map((c) => (c as any).name as string);
+
+    const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
+    const names = rows.map((c) => (c as any).name as string);
+
     // Always keep "General" available in the UI
     setCategories(uniqueNonEmpty(["General", ...names]));
+    setLockedCategories(new Set(rows.filter((c) => Boolean(c.is_locked)).map((c) => safeName(c.name))));
   }, []);
 
   const refreshContentTypes = React.useCallback(async () => {
-    const { data, error } = await supabase.from("content_types").select("name").order("name", { ascending: true });
+    const { data, error } = await supabase
+      .from("content_types")
+      .select("name, is_locked")
+      .order("name", { ascending: true });
     if (error) throw error;
-    const names = (data ?? []).map((t) => (t as any).name as string);
+
+    const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
+    const names = rows.map((t) => (t as any).name as string);
+
     setContentTypes(uniqueNonEmpty([...(DEFAULT_CONTENT_TYPES as unknown as string[]), ...names]));
+    setLockedContentTypes(new Set(rows.filter((t) => Boolean(t.is_locked)).map((t) => safeName(t.name))));
   }, []);
 
   const lookupCategoryIdInsensitive = async (name: string) => {
@@ -735,13 +756,40 @@ export default function ContentCreation() {
     }
   };
 
-  const toggleCategoryLock = (name: string) => {
-    setLockedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
+  const toggleCategoryLock = async (name: string) => {
+    // "General" exists only in UI (not persisted)
+    if (name.trim().toLowerCase() === "general") {
+      setLockedCategories((prev) => {
+        const next = new Set(prev);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        return next;
+      });
+      return;
+    }
+
+    try {
+      const cleaned = name.trim();
+      const { data, error } = await supabase
+        .from("content_categories")
+        .select("id, is_locked")
+        .ilike("name", cleaned)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data?.id) throw new Error("Category not found in database.");
+
+      const nextLocked = !Boolean((data as any).is_locked);
+      const { error: updateError } = await supabase
+        .from("content_categories")
+        .update({ is_locked: nextLocked })
+        .eq("id", (data as any).id);
+      if (updateError) throw updateError;
+
+      await refreshCategories();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed", description: e?.message ?? "Failed to toggle lock." });
+    }
   };
 
   const addContentType = async () => {
@@ -828,13 +876,29 @@ export default function ContentCreation() {
     }
   };
 
-  const toggleContentTypeLock = (name: string) => {
-    setLockedContentTypes((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
+  const toggleContentTypeLock = async (name: string) => {
+    try {
+      const cleaned = name.trim();
+      const { data, error } = await supabase
+        .from("content_types")
+        .select("id, is_locked")
+        .ilike("name", cleaned)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data?.id) throw new Error("Type Content not found in database.");
+
+      const nextLocked = !Boolean((data as any).is_locked);
+      const { error: updateError } = await supabase
+        .from("content_types")
+        .update({ is_locked: nextLocked })
+        .eq("id", (data as any).id);
+      if (updateError) throw updateError;
+
+      await refreshContentTypes();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed", description: e?.message ?? "Failed to toggle lock." });
+    }
   };
 
   const getConfirmCopy = React.useCallback(() => {
