@@ -19,9 +19,16 @@ type Props = {
   value: string;
   originalValue: string;
   onChange: (next: { url: string; originalUrl: string }) => void;
+  variant?: "default" | "compact";
 };
 
-export default function ImageFieldCard({ label, value, originalValue, onChange }: Props) {
+export default function ImageFieldCard({
+  label,
+  value,
+  originalValue,
+  onChange,
+  variant = "default",
+}: Props) {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -79,7 +86,7 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-base">{label}</CardTitle>
+        <CardTitle className={variant === "compact" ? "text-sm" : "text-base"}>{label}</CardTitle>
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" size="sm" onClick={preview}>
             Preview
@@ -99,13 +106,13 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className={variant === "compact" ? "space-y-2" : "space-y-3"}>
         <div className="overflow-hidden rounded-md border">
           <img
             src={value || "/placeholder.svg"}
             alt={`${label} image preview`}
             loading="lazy"
-            className="h-48 w-full object-cover"
+            className={variant === "compact" ? "h-24 w-full object-cover" : "h-48 w-full object-cover"}
           />
         </div>
 
