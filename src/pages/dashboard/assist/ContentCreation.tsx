@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { ArrowLeft, Lock, Unlock } from "lucide-react";
+import { ArrowLeft, Lock, Unlock, Pencil } from "lucide-react";
 
 import {
   AlertDialog,
@@ -51,9 +51,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
+import { RichTextEditor } from "@/components/dashboard/RichTextEditor";
+import PlatformDropdown from "@/pages/dashboard/assist/content-creation/PlatformDropdown";
 import ContentItemForm from "@/pages/dashboard/assist/content-creation/ContentItemForm";
 
 type SortDirection = "asc" | "desc";
@@ -141,6 +143,20 @@ function uniqueNonEmpty(values: string[]) {
   return Array.from(set);
 }
 
+function toDatetimeLocalInput(isoString: string) {
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const min = pad(d.getMinutes());
+
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
 type ImageSlotKey = "primary" | "second" | "third";
 
 type ImageSlotState = {
@@ -162,13 +178,17 @@ export default function ContentCreation() {
   // View Details (full page, not overlay)
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [activeRow, setActiveRow] = React.useState<ContentRow | null>(null);
+  const [detailsItemId, setDetailsItemId] = React.useState<string | null>(null);
+  const [detailsLoading, setDetailsLoading] = React.useState(false);
+  const [detailsSaving, setDetailsSaving] = React.useState(false);
 
   const [detailsForm, setDetailsForm] = React.useState({
     title: "",
     description: "",
-    comments: "",
-    dateSuggest: "",
     category: "",
+    contentType: "",
+    platform: "",
+    scheduledAt: "", // datetime-local string
   });
 
   const [detailsSortCategory, setDetailsSortCategory] = React.useState<string>("");
@@ -212,26 +232,34 @@ export default function ContentCreation() {
     let cancelled = false;
 
     const loadBusinesses = async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("id, business_name, business_number")
-        .order("business_name", { ascending: true, nullsFirst: false });
+      const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData }] = await Promise.all([
+        supabase
+          .from("businesses")
+          .select("id, business_name, business_number")
+          .order("business_name", { ascending: true, nullsFirst: false }),
+        supabase.from("content_categories").select("name").order("name", { ascending: true }),
+        supabase.from("content_types").select("name").order("name", { ascending: true }),
+      ]);
 
       if (cancelled) return;
 
-      if (error) {
+      if (bizError) {
         // Jangan blok UI — fallback ke data demo
         setBusinesses([]);
-        return;
+      } else {
+        const list: BusinessOption[] = (bizData ?? []).map((b) => ({
+          id: b.id,
+          name: safeName(b.business_name),
+          publicId: formatBusinessId((b as any).business_number as number | null),
+        }));
+        setBusinesses(list);
       }
 
-      const list: BusinessOption[] = (data ?? []).map((b) => ({
-        id: b.id,
-        name: safeName(b.business_name),
-        publicId: formatBusinessId((b as any).business_number as number | null),
-      }));
+      const catNames = (catData ?? []).map((c) => (c as any).name as string);
+      const typeNames = (typeData ?? []).map((t) => (t as any).name as string);
 
-      setBusinesses(list);
+      if (catNames.length) setCategories((prev) => uniqueNonEmpty([...prev, ...catNames]));
+      if (typeNames.length) setContentTypes((prev) => uniqueNonEmpty([...prev, ...typeNames]));
     };
 
     void loadBusinesses();
@@ -278,12 +306,17 @@ export default function ContentCreation() {
 
   const openDetails = (row: ContentRow) => {
     setActiveRow(row);
+    setDetailsItemId(null);
+    setDetailsLoading(true);
+
+    // Reset optimistic UI first
     setDetailsForm({
       title: "",
       description: "",
-      comments: "",
-      dateSuggest: "",
       category: "",
+      contentType: "",
+      platform: "",
+      scheduledAt: "",
     });
     setDetailsSortCategory("");
     setDetailsSortTypeContent("");
@@ -293,11 +326,179 @@ export default function ContentCreation() {
       third: { url: "", originalUrl: "" },
     });
     setDetailsOpen(true);
+
+    // Load latest content item for this business (if any)
+    void (async () => {
+      const { data, error } = await supabase
+        .from("content_items")
+        .select(
+          "id, title, description, platform, scheduled_at, image_primary_url, image_second_url, image_third_url, content_categories(name), content_types(name)",
+        )
+        .eq("business_id", row.businessId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        setDetailsLoading(false);
+        toast({ variant: "destructive", title: "Failed to load", description: error.message });
+        return;
+      }
+
+      if (!data) {
+        setDetailsLoading(false);
+        return;
+      }
+
+      const catName = (data as any).content_categories?.name as string | undefined;
+      const typeName = (data as any).content_types?.name as string | undefined;
+
+      setDetailsItemId(data.id);
+      setDetailsForm({
+        title: data.title ?? "",
+        description: data.description ?? "",
+        category: catName ?? "",
+        contentType: typeName ?? "",
+        platform: data.platform ?? "",
+        scheduledAt: data.scheduled_at ? toDatetimeLocalInput(data.scheduled_at) : "",
+      });
+      setImages({
+        primary: { url: data.image_primary_url ?? "", originalUrl: data.image_primary_url ?? "" },
+        second: { url: data.image_second_url ?? "", originalUrl: data.image_second_url ?? "" },
+        third: { url: data.image_third_url ?? "", originalUrl: data.image_third_url ?? "" },
+      });
+      setDetailsLoading(false);
+    })();
   };
 
   const closeDetails = () => {
     setDetailsOpen(false);
     setActiveRow(null);
+    setDetailsItemId(null);
+    setDetailsLoading(false);
+    setDetailsSaving(false);
+  };
+
+  const resolveCategoryId = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) throw new Error("Category is required.");
+
+    const { data: existing, error: selectError } = await supabase
+      .from("content_categories")
+      .select("id")
+      .ilike("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (selectError) throw selectError;
+    if (existing?.id) return existing.id as string;
+
+    const { data: created, error: insertError } = await supabase
+      .from("content_categories")
+      .insert({ name: cleaned })
+      .select("id")
+      .single();
+
+    if (insertError) throw insertError;
+    return created.id as string;
+  };
+
+  const resolveContentTypeId = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) throw new Error("Type Content is required.");
+
+    const { data: existing, error: selectError } = await supabase
+      .from("content_types")
+      .select("id")
+      .ilike("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (selectError) throw selectError;
+    if (existing?.id) return existing.id as string;
+
+    const { data: created, error: insertError } = await supabase
+      .from("content_types")
+      .insert({ name: cleaned })
+      .select("id")
+      .single();
+
+    if (insertError) throw insertError;
+    return created.id as string;
+  };
+
+  const saveDetails = async () => {
+    if (!activeRow) return;
+
+    const title = detailsForm.title.trim();
+    const description = detailsForm.description.trim();
+
+    if (!title) {
+      toast({ variant: "destructive", title: "Missing title", description: "Title is required." });
+      return;
+    }
+    if (!description) {
+      toast({ variant: "destructive", title: "Missing description", description: "Description is required." });
+      return;
+    }
+    if (!detailsForm.category.trim()) {
+      toast({ variant: "destructive", title: "Missing category", description: "Category is required." });
+      return;
+    }
+    if (!detailsForm.contentType.trim()) {
+      toast({ variant: "destructive", title: "Missing type", description: "Type Content is required." });
+      return;
+    }
+
+    setDetailsSaving(true);
+    try {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+      const userId = userRes.user?.id;
+      if (!userId) throw new Error("Not authenticated");
+
+      const [categoryId, contentTypeId] = await Promise.all([
+        resolveCategoryId(detailsForm.category),
+        resolveContentTypeId(detailsForm.contentType),
+      ]);
+
+      const scheduledAtIso = detailsForm.scheduledAt ? new Date(detailsForm.scheduledAt).toISOString() : null;
+
+      const payload = {
+        business_id: activeRow.businessId,
+        category_id: categoryId,
+        content_type_id: contentTypeId,
+        title,
+        description,
+        platform: detailsForm.platform.trim() || null,
+        scheduled_at: scheduledAtIso,
+        image_primary_url: images.primary.url || null,
+        image_second_url: images.second.url || null,
+        image_third_url: images.third.url || null,
+      };
+
+      if (detailsItemId) {
+        const { error } = await supabase.from("content_items").update(payload).eq("id", detailsItemId);
+        if (error) throw error;
+      } else {
+        const { data: created, error } = await supabase
+          .from("content_items")
+          .insert({ ...payload, created_by: userId })
+          .select("id")
+          .single();
+        if (error) throw error;
+        setDetailsItemId(created.id);
+      }
+
+      toast({ title: "Saved", description: "Content item saved successfully." });
+      // Keep dropdown lists in sync (UI-only)
+      setCategories((prev) => uniqueNonEmpty([...prev, detailsForm.category.trim()]));
+      setContentTypes((prev) => uniqueNonEmpty([...prev, detailsForm.contentType.trim()]));
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    } finally {
+      setDetailsSaving(false);
+    }
   };
 
   const openManage = (tab: "category" | "content") => {
@@ -555,7 +756,147 @@ export default function ContentCreation() {
           </div>
         </header>
 
-        {/* View Details content removed */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Images */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Images</h2>
+            </div>
+
+            <ImageFieldCard
+              label="Primary Image"
+              value={images.primary.url}
+              originalValue={images.primary.originalUrl}
+              onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
+            />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ImageFieldCard
+                label="Secondary Image"
+                value={images.second.url}
+                originalValue={images.second.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, second: next }))}
+                variant="compact"
+              />
+              <ImageFieldCard
+                label="Third Image"
+                value={images.third.url}
+                originalValue={images.third.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+                variant="compact"
+              />
+            </div>
+          </section>
+
+          {/* Content Details */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => openManage("category")}>Manage Category</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => openManage("content")}>Manage Type</Button>
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                {detailsLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading content...</p>
+                ) : null}
+
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={detailsForm.title}
+                    onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
+                    placeholder="Title"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <RichTextEditor
+                    value={detailsForm.description}
+                    onChange={(v) => setDetailsForm((p) => ({ ...p, description: v }))}
+                    onSave={() => void 0}
+                    title="Description"
+                    description=""
+                    icon={Pencil}
+                    showTopBar={false}
+                    showSaveControls={false}
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select
+                      value={detailsForm.category || undefined}
+                      onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose Category" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50">
+                        {categories.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Type Content</Label>
+                    <Select
+                      value={detailsForm.contentType || undefined}
+                      onValueChange={(v) => {
+                        setDetailsForm((p) => ({
+                          ...p,
+                          contentType: v,
+                          platform: "", // reset when changing type
+                        }));
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose Type Content" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50">
+                        {contentTypes.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <PlatformDropdown
+                  contentType={detailsForm.contentType}
+                  value={detailsForm.platform}
+                  onChange={(next) => setDetailsForm((p) => ({ ...p, platform: next }))}
+                />
+
+                <div className="space-y-2">
+                  <Label>Scheduled</Label>
+                  <Input
+                    type="datetime-local"
+                    value={detailsForm.scheduledAt}
+                    onChange={(e) => setDetailsForm((p) => ({ ...p, scheduledAt: e.target.value }))}
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button type="button" onClick={() => void saveDetails()} disabled={detailsSaving || detailsLoading}>
+                    {detailsSaving ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        </div>
 
         {/* Manage dialog (Category / Content) */}
         <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
