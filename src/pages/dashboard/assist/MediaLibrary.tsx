@@ -119,6 +119,7 @@ export default function AssistMediaLibrary() {
 
   // Category + Media Type management (media_categories + media_types)
   const [categories, setCategories] = React.useState<string[]>([]);
+  const [categoryOptions, setCategoryOptions] = React.useState<Array<{ id: string; name: string; key: string }>>([]);
   const [mediaTypes, setMediaTypes] = React.useState<MediaTypeOption[]>([]);
   const visibleMediaTypeNames = React.useMemo(() => uniqueNonEmpty(mediaTypes.map((t) => t.name)), [mediaTypes]);
   const [lockedCategories, setLockedCategories] = React.useState<Set<string>>(() => new Set());
@@ -222,11 +223,15 @@ export default function AssistMediaLibrary() {
   };
 
   const refreshCategories = React.useCallback(async () => {
-    const { data, error } = await supabase.from("media_categories").select("name, is_locked").order("name", { ascending: true });
+    const { data, error } = await supabase
+      .from("media_categories")
+      .select("id, name, is_locked")
+      .order("name", { ascending: true });
     if (error) throw error;
 
-    const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
+    const rows = (data ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
     setCategories(uniqueNonEmpty(rows.map((r) => r.name)));
+    setCategoryOptions(rows.map((r) => ({ id: r.id, name: r.name, key: lockKey(r.name) })));
     setLockedCategories(new Set(rows.filter((r) => Boolean(r.is_locked)).map((r) => lockKey(r.name))));
   }, []);
 
@@ -268,7 +273,7 @@ export default function AssistMediaLibrary() {
           .from("businesses")
           .select("id, business_name, user_id")
           .order("business_name", { ascending: true, nullsFirst: false }),
-        supabase.from("media_categories").select("name, is_locked").order("name", { ascending: true }),
+        supabase.from("media_categories").select("id, name, is_locked").order("name", { ascending: true }),
         supabase.from("media_types").select("id, name, is_locked").order("name", { ascending: true }),
       ]);
 
@@ -286,8 +291,9 @@ export default function AssistMediaLibrary() {
         );
       }
 
-      const catRows = (catData ?? []) as Array<{ name: string; is_locked?: boolean }>;
+      const catRows = (catData ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
       setCategories(uniqueNonEmpty(catRows.map((c) => c.name)));
+      setCategoryOptions(catRows.map((c) => ({ id: c.id, name: c.name, key: lockKey(c.name) })));
       setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
 
       const typeRows = (typeData ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
@@ -607,52 +613,73 @@ export default function AssistMediaLibrary() {
           if (!t.id.startsWith("__default_")) typeIdToKey.set(t.id, t.key);
         }
 
+        // Categories: create rows for "All" plus each configured category.
+        const categoryIdToName = new Map<string, string>();
+        for (const c of categoryOptions) categoryIdToName.set(c.id, c.name);
+        const categoryNames = categoryOptions.map((c) => c.name);
+        const categoriesForRows = ["All", ...categoryNames];
+
         const gambarKey = mediaTypes.find((t) => t.key === "gambar")?.key;
         const videoKey = mediaTypes.find((t) => t.key === "video")?.key;
 
         const { data: galleryData, error } = await supabase
           .from("user_gallery")
-          .select("user_id, type, media_type_id")
+          .select("user_id, type, media_type_id, media_category_id")
           .in("user_id", userIds);
 
         if (error) throw error;
 
-        const countsByUser: Record<string, Record<string, number>> = {};
+        const ensureTypeInit = () => Object.fromEntries(knownTypeKeys.map((k) => [k, 0] as const)) as Record<string, number>;
 
-        const ensureUserInit = (userId: string) => {
-          if (!countsByUser[userId]) {
-            const init: Record<string, number> = {};
-            for (const k of knownTypeKeys) init[k] = 0;
-            countsByUser[userId] = init;
-          }
-          return countsByUser[userId];
+        // user -> categoryName -> typeKey -> count
+        const countsByUserCategory: Record<string, Record<string, Record<string, number>>> = {};
+        const ensureUserCategoryInit = (userId: string, categoryName: string) => {
+          if (!countsByUserCategory[userId]) countsByUserCategory[userId] = {};
+          if (!countsByUserCategory[userId][categoryName]) countsByUserCategory[userId][categoryName] = ensureTypeInit();
+          return countsByUserCategory[userId][categoryName];
         };
 
-        for (const item of (galleryData ?? []) as Array<{ user_id: string; type: string; media_type_id: string | null }>) {
+        for (const item of (galleryData ?? []) as Array<{
+          user_id: string;
+          type: string;
+          media_type_id: string | null;
+          media_category_id: string | null;
+        }>) {
           const userId = item.user_id;
-          const userCounts = ensureUserInit(userId);
+          const categoryName = item.media_category_id ? categoryIdToName.get(item.media_category_id) ?? "All" : "All";
+
+          // Always increment "All"
+          const allCounts = ensureUserCategoryInit(userId, "All");
+          const catCounts = ensureUserCategoryInit(userId, categoryName);
+
+          const applyIncrement = (key: string) => {
+            allCounts[key] = (allCounts[key] ?? 0) + 1;
+            catCounts[key] = (catCounts[key] ?? 0) + 1;
+          };
 
           const mappedKey = item.media_type_id ? typeIdToKey.get(item.media_type_id) : undefined;
           if (mappedKey) {
-            userCounts[mappedKey] = (userCounts[mappedKey] ?? 0) + 1;
+            applyIncrement(mappedKey);
             continue;
           }
 
           // Fallback mapping by MIME type for legacy rows that don't have media_type_id.
           const mime = (item.type ?? "").toLowerCase();
-          if (mime.startsWith("image/") && gambarKey) userCounts[gambarKey] = (userCounts[gambarKey] ?? 0) + 1;
-          else if (mime.startsWith("video/") && videoKey) userCounts[videoKey] = (userCounts[videoKey] ?? 0) + 1;
+          if (mime.startsWith("image/") && gambarKey) applyIncrement(gambarKey);
+          else if (mime.startsWith("video/") && videoKey) applyIncrement(videoKey);
         }
 
-        const nextRows: MediaRow[] = businesses.map((b) => {
-          const typeCounts = countsByUser[b.userId] ?? Object.fromEntries(knownTypeKeys.map((k) => [k, 0]));
-          return {
-            id: `${b.id}-all`,
-            businessId: b.id,
-            businessName: b.name,
-            category: "All",
-            typeCounts,
-          };
+        const nextRows: MediaRow[] = businesses.flatMap((b) => {
+          return categoriesForRows.map((catName) => {
+            const typeCounts = countsByUserCategory[b.userId]?.[catName] ?? ensureTypeInit();
+            return {
+              id: `${b.id}-${lockKey(catName) || "all"}`,
+              businessId: b.id,
+              businessName: b.name,
+              category: catName,
+              typeCounts,
+            };
+          });
         });
 
         if (!cancelled) setMediaRows(nextRows);
@@ -668,7 +695,7 @@ export default function AssistMediaLibrary() {
     return () => {
       cancelled = true;
     };
-  }, [businesses, mediaTypes]);
+  }, [businesses, mediaTypes, categoryOptions]);
 
   const rows: MediaRow[] = React.useMemo(() => {
     if (mediaRows.length > 0) return mediaRows;
@@ -677,13 +704,16 @@ export default function AssistMediaLibrary() {
     const emptyTypeCounts = Object.fromEntries(typeKeys.map((k) => [k, 0] as const));
 
     if (businesses.length > 0 && mediaRowsLoading) {
-      return businesses.map((b) => ({
-        id: `${b.id}-all`,
-        businessId: b.id,
-        businessName: b.name,
-        category: "All",
-        typeCounts: emptyTypeCounts,
-      }));
+      const catNames = ["All", ...categories];
+      return businesses.flatMap((b) =>
+        catNames.map((cat) => ({
+          id: `${b.id}-${lockKey(cat) || "all"}`,
+          businessId: b.id,
+          businessName: b.name,
+          category: cat,
+          typeCounts: emptyTypeCounts,
+        }))
+      );
     }
 
     return FALLBACK_ROWS;
@@ -813,7 +843,7 @@ export default function AssistMediaLibrary() {
 
               {displayedRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={3 + mediaTypes.length} className="py-10 text-center text-muted-foreground">
                     No data for the selected business.
                   </TableCell>
                 </TableRow>
