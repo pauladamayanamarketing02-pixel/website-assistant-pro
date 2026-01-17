@@ -734,14 +734,6 @@ export default function ContentCreation() {
               </SelectContent>
             </Select>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
-            >
-              Sort Name: {sortDirection === "asc" ? "A–Z" : "Z–A"}
-            </Button>
-
             <Button type="button" variant="secondary" onClick={() => openManage("category")}>
               Manage
             </Button>
