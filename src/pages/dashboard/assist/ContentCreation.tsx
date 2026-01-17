@@ -555,62 +555,7 @@ export default function ContentCreation() {
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section className="space-y-3">
-            <h2 className="text-base font-semibold text-foreground">Images</h2>
-            <div className="space-y-3">
-              <div className="rounded-md border bg-muted/30 h-[280px]" aria-label="Images (empty)" />
-            </div>
-          </section>
-
-          <section className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Title</Label>
-                  <Input value={detailsForm.title} placeholder="" disabled />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea value={detailsForm.description} placeholder="" rows={4} disabled />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Comments</Label>
-                  <Textarea value={detailsForm.comments} placeholder="" rows={3} disabled />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Manage</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Date Suggest</Label>
-                    <Input type="date" value={detailsForm.dateSuggest} disabled />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Category</Label>
-                    <Input value={detailsForm.category} placeholder="" disabled />
-                    <div className="flex gap-2">
-                      <Button type="button" variant="secondary" onClick={() => openManage("category")}>
-                        Manage
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        </div>
+        {/* View Details content removed */}
 
         {/* Manage dialog (Category / Content) */}
         <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
