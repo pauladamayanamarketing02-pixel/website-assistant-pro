@@ -280,9 +280,9 @@ export default function ContentCreation() {
   const openDetails = (row: ContentRow) => {
     setActiveRow(row);
     setDetailsForm({
-      title: "Coming soon",
-      description: "Coming soon",
-      comments: "Coming soon",
+      title: "Uncer Maintenance",
+      description: "Uncer Maintenance",
+      comments: "Uncer Maintenance",
       dateSuggest: new Date().toISOString().slice(0, 10),
       category: row.category,
     });
@@ -511,9 +511,7 @@ export default function ContentCreation() {
 
             <div className="space-y-1">
               <h1 className="text-3xl font-bold text-foreground">View Details</h1>
-              <p className="text-muted-foreground">
-                {activeRow.businessName} • {activeRow.category}
-              </p>
+              <p className="text-muted-foreground">{activeRow.businessName}</p>
             </div>
           </div>
 
@@ -522,7 +520,7 @@ export default function ContentCreation() {
               value={detailsSortCategory || undefined}
               onValueChange={(v) => {
                 setDetailsSortCategory(v);
-                toast({ title: "Coming soon", description: "Sort by Category will be available soon." });
+                toast({ title: "Uncer Maintenance", description: "Sort by Category is under maintenance." });
               }}
             >
               <SelectTrigger className="w-full sm:w-[220px]">
@@ -541,7 +539,7 @@ export default function ContentCreation() {
               value={detailsSortTypeContent || undefined}
               onValueChange={(v) => {
                 setDetailsSortTypeContent(v);
-                toast({ title: "Coming soon", description: "Sort by Type Content will be available soon." });
+                toast({ title: "Uncer Maintenance", description: "Sort by Type Content is under maintenance." });
               }}
             >
               <SelectTrigger className="w-full sm:w-[220px]">
@@ -591,17 +589,17 @@ export default function ContentCreation() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Title</Label>
-                  <Input value={detailsForm.title} placeholder="Coming soon" disabled />
+                  <Input value={detailsForm.title} placeholder="Uncer Maintenance" disabled />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea value={detailsForm.description} placeholder="Coming soon" rows={4} disabled />
+                  <Textarea value={detailsForm.description} placeholder="Uncer Maintenance" rows={4} disabled />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Comments</Label>
-                  <Textarea value={detailsForm.comments} placeholder="Coming soon" rows={3} disabled />
+                  <Textarea value={detailsForm.comments} placeholder="Uncer Maintenance" rows={3} disabled />
                 </div>
               </CardContent>
             </Card>
@@ -621,7 +619,7 @@ export default function ContentCreation() {
                     <Label>Category</Label>
                     <Select value={detailsForm.category || ""} onValueChange={() => {}} disabled>
                       <SelectTrigger>
-                        <SelectValue placeholder="Coming soon" />
+                        <SelectValue placeholder="Uncer Maintenance" />
                       </SelectTrigger>
                       <SelectContent className="z-50">
                         {categories.map((c) => (
