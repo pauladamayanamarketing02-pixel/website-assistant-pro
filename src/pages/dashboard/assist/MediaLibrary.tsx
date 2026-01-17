@@ -105,7 +105,7 @@ function lockKey(name: string) {
   return (name ?? "").trim().toLowerCase();
 }
 
-const PERMANENT_CONTENT_TYPES = new Set(["gambar", "video"]);
+const PERMANENT_CONTENT_TYPES = new Set(["images gallery", "video content"]);
 
 function uniqueNonEmpty(values: string[]) {
   const set = new Set<string>();
@@ -263,19 +263,12 @@ export default function AssistMediaLibrary() {
 
     const rows = (data ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
 
-    // Build a unique list of types by normalized key and ensure defaults (gambar/video) are always present.
+    // Only show types that exist in the database.
     const byKey = new Map<string, MediaTypeOption>();
-
-    for (const t of IMPORT_TYPES) {
-      const key = lockKey(t);
-      byKey.set(key, { id: `__default_${key}`, name: t, key });
-    }
-
     for (const r of rows) {
       const key = lockKey(r.name);
       byKey.set(key, { id: r.id, name: r.name, key });
     }
-
     setMediaTypes(Array.from(byKey.values()));
 
     const locked = new Set(rows.filter((r) => Boolean(r.is_locked)).map((r) => lockKey(r.name)));
@@ -319,10 +312,6 @@ export default function AssistMediaLibrary() {
       const typeRows = (typeData ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
 
       const byKey = new Map<string, MediaTypeOption>();
-      for (const t of IMPORT_TYPES) {
-        const key = lockKey(t);
-        byKey.set(key, { id: `__default_${key}`, name: t, key });
-      }
       for (const r of typeRows) {
         const key = lockKey(r.name);
         byKey.set(key, { id: r.id, name: r.name, key });
@@ -640,8 +629,8 @@ export default function AssistMediaLibrary() {
         const categoryNames = categoryOptions.map((c) => c.name);
         const categoriesForRows = ["All", ...categoryNames];
 
-        const gambarKey = mediaTypes.find((t) => t.key === "gambar")?.key;
-        const videoKey = mediaTypes.find((t) => t.key === "video")?.key;
+        const imagesKey = mediaTypes.find((t) => t.key === lockKey("Images Gallery"))?.key;
+        const videoKey = mediaTypes.find((t) => t.key === lockKey("Video Content"))?.key;
 
         const { data: galleryData, error } = await supabase
           .from("user_gallery")
@@ -686,7 +675,7 @@ export default function AssistMediaLibrary() {
 
           // Fallback mapping by MIME type for legacy rows that don't have media_type_id.
           const mime = (item.type ?? "").toLowerCase();
-          if (mime.startsWith("image/") && gambarKey) applyIncrement(gambarKey);
+          if (mime.startsWith("image/") && imagesKey) applyIncrement(imagesKey);
           else if (mime.startsWith("video/") && videoKey) applyIncrement(videoKey);
         }
 
