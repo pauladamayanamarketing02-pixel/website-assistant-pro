@@ -1,5 +1,7 @@
 import * as React from "react";
 
+import { Eye, Copy, Link2, Upload, RotateCcw } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 
 type Props = {
@@ -21,6 +24,37 @@ type Props = {
   onChange: (next: { url: string; originalUrl: string }) => void;
   variant?: "default" | "compact";
 };
+
+function IconActionButton({
+  label,
+  onClick,
+  icon,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  icon: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export default function ImageFieldCard({
   label,
@@ -85,25 +119,29 @@ export default function ImageFieldCard({
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader className="flex-row items-center justify-between gap-3">
         <CardTitle className={variant === "compact" ? "text-sm" : "text-base"}>{label}</CardTitle>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={preview}>
-            Preview
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={copyUrl}>
-            Copy URL
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setUrlDialogOpen(true)}>
-            Change Image
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={openFilePicker}>
-            Add From Computer
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={reset}>
-            Reset to Original
-          </Button>
-        </div>
+        <TooltipProvider delayDuration={150}>
+          <div className="flex flex-wrap justify-end gap-2">
+            <IconActionButton label="Preview" onClick={preview} icon={<Eye className="h-4 w-4" />} disabled={!value} />
+            <IconActionButton label="Copy URL" onClick={() => void copyUrl()} icon={<Copy className="h-4 w-4" />} disabled={!value} />
+            <IconActionButton
+              label="Change Image"
+              onClick={() => setUrlDialogOpen(true)}
+              icon={<Link2 className="h-4 w-4" />}
+            />
+            <IconActionButton
+              label="Add From Computer"
+              onClick={openFilePicker}
+              icon={<Upload className="h-4 w-4" />}
+            />
+            <IconActionButton
+              label="Reset to Original"
+              onClick={reset}
+              icon={<RotateCcw className="h-4 w-4" />}
+            />
+          </div>
+        </TooltipProvider>
       </CardHeader>
 
       <CardContent className={variant === "compact" ? "space-y-2" : "space-y-3"}>
