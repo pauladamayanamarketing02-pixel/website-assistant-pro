@@ -3,11 +3,21 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -107,6 +118,17 @@ export default function ContentCreation() {
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
+
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [activeRow, setActiveRow] = React.useState<ContentRow | null>(null);
+
+  const [detailsForm, setDetailsForm] = React.useState({
+    title: "",
+    description: "",
+    comments: "",
+    dateSuggest: "",
+    category: "",
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -270,12 +292,17 @@ export default function ContentCreation() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        toast({
-                          title: "View Details",
-                          description: `Bisnis: ${row.businessName} • Kategori: ${row.category} (sementara placeholder).`,
-                        })
-                      }
+                      onClick={() => {
+                        setActiveRow(row);
+                        setDetailsForm({
+                          title: "",
+                          description: "",
+                          comments: "",
+                          dateSuggest: new Date().toISOString().slice(0, 10),
+                          category: row.category,
+                        });
+                        setDetailsOpen(true);
+                      }}
                     >
                       View Details
                     </Button>
@@ -294,6 +321,135 @@ export default function ContentCreation() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>View Details</DialogTitle>
+            <DialogDescription>
+              {activeRow ? `${activeRow.businessName} • ${activeRow.category}` : "Detail konten"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[70vh] overflow-y-auto pr-1">
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Images */}
+              <section className="space-y-3">
+                <h2 className="text-base font-semibold text-foreground">Images</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="overflow-hidden rounded-md border">
+                    <img
+                      src="/placeholder.svg"
+                      alt="Preview image 1"
+                      loading="lazy"
+                      className="h-32 w-full object-cover"
+                    />
+                  </div>
+                  <div className="overflow-hidden rounded-md border">
+                    <img
+                      src="/placeholder.svg"
+                      alt="Preview image 2"
+                      loading="lazy"
+                      className="h-32 w-full object-cover"
+                    />
+                  </div>
+                  <div className="overflow-hidden rounded-md border">
+                    <img
+                      src="/placeholder.svg"
+                      alt="Preview image 3"
+                      loading="lazy"
+                      className="h-32 w-full object-cover"
+                    />
+                  </div>
+                  <div className="overflow-hidden rounded-md border">
+                    <img
+                      src="/placeholder.svg"
+                      alt="Preview image 4"
+                      loading="lazy"
+                      className="h-32 w-full object-cover"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Details + Manage */}
+              <section className="space-y-6">
+                <div className="space-y-4">
+                  <h2 className="text-base font-semibold text-foreground">Details</h2>
+
+                  <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input
+                      value={detailsForm.title}
+                      onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
+                      placeholder="Judul konten..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      value={detailsForm.description}
+                      onChange={(e) => setDetailsForm((p) => ({ ...p, description: e.target.value }))}
+                      placeholder="Deskripsi..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Comments</Label>
+                    <Textarea
+                      value={detailsForm.comments}
+                      onChange={(e) => setDetailsForm((p) => ({ ...p, comments: e.target.value }))}
+                      placeholder="Catatan / komentar..."
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h2 className="text-base font-semibold text-foreground">Manage</h2>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Date Suggest</Label>
+                      <Input
+                        type="date"
+                        value={detailsForm.dateSuggest}
+                        onChange={(e) => setDetailsForm((p) => ({ ...p, dateSuggest: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Category</Label>
+                      <Input
+                        value={detailsForm.category}
+                        onChange={(e) => setDetailsForm((p) => ({ ...p, category: e.target.value }))}
+                        placeholder="Kategori..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => {
+                toast({
+                  title: "Tersimpan",
+                  description: "Perubahan disimpan (sementara masih placeholder).",
+                });
+                setDetailsOpen(false);
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
