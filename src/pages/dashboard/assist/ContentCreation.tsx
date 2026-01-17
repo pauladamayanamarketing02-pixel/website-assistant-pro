@@ -133,15 +133,6 @@ export default function ContentCreation() {
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
 
-  type ContentSortField = "category" | "contentTypes";
-  const [sortField, setSortField] = React.useState<ContentSortField>("contentTypes");
-  const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
-
-  // UI now only exposes sorting for Type Content (column order)
-  React.useEffect(() => {
-    if (sortField !== "contentTypes") setSortField("contentTypes");
-  }, [sortField]);
-
   const [contentRows, setContentRows] = React.useState<ContentRow[]>([]);
   const contentRowsRef = React.useRef<ContentRow[]>([]);
   const [rowsLoading, setRowsLoading] = React.useState(false);
@@ -347,28 +338,22 @@ export default function ContentCreation() {
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
 
-    // Row sort: keep a stable order for readability
-    const dir = sortDirection === "asc" ? 1 : -1;
-
+    // Stable order for readability
     return [...filtered].sort((a, b) => {
-      const aKey = sortField === "category" ? a.category : a.businessName;
-      const bKey = sortField === "category" ? b.category : b.businessName;
-      return aKey.localeCompare(bKey, "id", { sensitivity: "base" }) * dir;
+      const byBusiness = a.businessName.localeCompare(b.businessName, "en", { sensitivity: "base" });
+      if (byBusiness !== 0) return byBusiness;
+      return a.category.localeCompare(b.category, "en", { sensitivity: "base" });
     });
-  }, [rows, selectedBusinessId, sortDirection, sortField]);
+  }, [rows, selectedBusinessId]);
 
-  // Column sort (Type Content) follows DB order (created_at) and can be reversed
-  const displayedContentTypes = React.useMemo(() => {
-    if (sortField !== "contentTypes") return contentTypes;
-    if (sortDirection === "asc") return contentTypes;
-    return [...contentTypes].reverse();
-  }, [contentTypes, sortDirection, sortField]);
+  // Column order follows database order (created_at)
+  const displayedContentTypes = React.useMemo(() => contentTypes, [contentTypes]);
 
   const onImport = (type: string) => {
     setLastImportType(type);
     toast({
-      title: "On Progress",
-      description: `Import "${type}" sedang diproses.`,
+      title: "In Progress",
+      description: `Import \"${type}\" is in progress.`,
     });
   };
 
@@ -1207,7 +1192,7 @@ export default function ContentCreation() {
             ) : (
               <div className="space-y-6">
                 {detailsItems.map((item) => {
-                  const scheduledLabel = item.scheduledAt ? new Date(item.scheduledAt).toLocaleString("id-ID") : "-";
+                  const scheduledLabel = item.scheduledAt ? new Date(item.scheduledAt).toLocaleString("en-US") : "-";
                   const primary = item.images.primary || "/placeholder.svg";
                   const second = item.images.second || "/placeholder.svg";
                   const third = item.images.third || "/placeholder.svg";
@@ -1338,7 +1323,7 @@ export default function ContentCreation() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
               <AlertDialogDescription>
-                Content ini akan dihapus permanen dari database. Lanjutkan?
+                This content will be permanently deleted from the database. Continue?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1626,23 +1611,6 @@ export default function ContentCreation() {
                     {b.name}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={`${sortField}:${sortDirection}`}
-              onValueChange={(v) => {
-                const [field, dir] = v.split(":");
-                setSortField(field as ContentSortField);
-                setSortDirection(dir as SortDirection);
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[220px]">
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent className="z-50">
-                <SelectItem value="contentTypes:asc">Sort: Type Content (Database)</SelectItem>
-                <SelectItem value="contentTypes:desc">Sort: Type Content (Database - Reverse)</SelectItem>
               </SelectContent>
             </Select>
 
