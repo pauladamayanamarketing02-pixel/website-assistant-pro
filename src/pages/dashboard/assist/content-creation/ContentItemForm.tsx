@@ -116,7 +116,7 @@ export default function ContentItemForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Details</CardTitle>
+          <CardTitle>Content Details</CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -125,7 +125,7 @@ export default function ContentItemForm({
               <Label>Business Name</Label>
               <Select value={businessId} onValueChange={setBusinessId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose Business" />
+                  <SelectValue placeholder="Choose Business Name" />
                 </SelectTrigger>
                 <SelectContent className="z-50">
                   {businesses.map((b) => (
@@ -146,7 +146,7 @@ export default function ContentItemForm({
               <Label>Category</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder="Choose Category" />
                 </SelectTrigger>
                 <SelectContent className="z-50">
                   {categories.map((c) => (
@@ -162,7 +162,7 @@ export default function ContentItemForm({
               <Label>Type Content</Label>
               <Select value={contentType} onValueChange={setContentType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a type" />
+                  <SelectValue placeholder="Choose Type Content" />
                 </SelectTrigger>
                 <SelectContent className="z-50">
                   {contentTypes.map((t) => (
