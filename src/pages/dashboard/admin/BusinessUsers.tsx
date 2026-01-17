@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type BusinessStatus = "active" | "suspended" | "pending";
+
+type BusinessPackage =
+  | "starter"
+  | "growth"
+  | "pro"
+  | "optimize"
+  | "scale"
+  | "dominate"
+  | "custom";
 
 type BusinessAccountRow = {
   businessId: string;
@@ -22,6 +32,7 @@ type BusinessAccountRow = {
   email: string;
   phone: string;
   status: BusinessStatus;
+  package: BusinessPackage;
 };
 
 const statusLabel: Record<BusinessStatus, string> = {
@@ -31,6 +42,8 @@ const statusLabel: Record<BusinessStatus, string> = {
 };
 
 export default function AdminBusinessUsers() {
+  const [packageFilter, setPackageFilter] = useState<string>("all");
+
   const rows = useMemo<BusinessAccountRow[]>(
     () => [
       {
@@ -40,6 +53,7 @@ export default function AdminBusinessUsers() {
         email: "ava@sunrisecoffee.com",
         phone: "+1 555-0101",
         status: "active",
+        package: "starter",
       },
       {
         businessId: "BIZ-0002",
@@ -48,6 +62,7 @@ export default function AdminBusinessUsers() {
         email: "rizky@nusacreative.co",
         phone: "+62 812-0000-0000",
         status: "pending",
+        package: "growth",
       },
       {
         businessId: "BIZ-0003",
@@ -56,10 +71,34 @@ export default function AdminBusinessUsers() {
         email: "mia@oceanlaundry.com",
         phone: "+1 555-0199",
         status: "suspended",
+        package: "dominate",
+      },
+      {
+        businessId: "BIZ-0004",
+        businessName: "Evergreen Fitness",
+        contactName: "Noah Williams",
+        email: "noah@evergreenfit.com",
+        phone: "+1 555-0144",
+        status: "active",
+        package: "pro",
+      },
+      {
+        businessId: "BIZ-0005",
+        businessName: "Kopi Pagi",
+        contactName: "Siti Rahma",
+        email: "siti@kopipagi.id",
+        phone: "+62 811-1234-5678",
+        status: "active",
+        package: "custom",
       },
     ],
     [],
   );
+
+  const filteredRows = useMemo(() => {
+    if (packageFilter === "all") return rows;
+    return rows.filter((row) => row.package.toLowerCase() === packageFilter.toLowerCase());
+  }, [packageFilter, rows]);
 
   return (
     <div className="space-y-6">
@@ -78,8 +117,23 @@ export default function AdminBusinessUsers() {
       </header>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Business Accounts</CardTitle>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base">Business Accounts</CardTitle>
+
+            <Tabs value={packageFilter} onValueChange={setPackageFilter}>
+              <TabsList className="flex flex-wrap justify-start">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="starter">STARTER</TabsTrigger>
+                <TabsTrigger value="growth">GROWTH</TabsTrigger>
+                <TabsTrigger value="pro">PRO</TabsTrigger>
+                <TabsTrigger value="optimize">OPTIMIZE</TabsTrigger>
+                <TabsTrigger value="scale">SCALE</TabsTrigger>
+                <TabsTrigger value="dominate">DOMINATE</TabsTrigger>
+                <TabsTrigger value="custom">CUSTOM</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
 
         <CardContent>
@@ -97,14 +151,14 @@ export default function AdminBusinessUsers() {
             </TableHeader>
 
             <TableBody>
-              {rows.length === 0 ? (
+              {filteredRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No businesses found.
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((row) => (
+                filteredRows.map((row) => (
                   <TableRow key={row.businessId}>
                     <TableCell className="font-medium">{row.businessId}</TableCell>
                     <TableCell className="font-medium">{row.businessName}</TableCell>
