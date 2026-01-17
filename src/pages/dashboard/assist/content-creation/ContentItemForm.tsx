@@ -138,7 +138,7 @@ export default function ContentItemForm({
 
           <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground">Add Content</h1>
-            <p className="text-muted-foreground">Create a new content item for a client.</p>
+            <p className="text-muted-foreground">Upload Images for Client</p>
           </div>
         </div>
       </header>
