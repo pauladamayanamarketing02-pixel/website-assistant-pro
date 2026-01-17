@@ -152,6 +152,7 @@ export default function ContentCreation() {
 
   const [contentRows, setContentRows] = React.useState<ContentRow[]>([]);
   const [rowsLoading, setRowsLoading] = React.useState(false);
+  const fetchRowsInFlight = React.useRef(false);
 
   // Create (full page, not overlay)
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -208,7 +209,13 @@ export default function ContentCreation() {
   const [confirmAction, setConfirmAction] = React.useState<ConfirmActionState | null>(null);
 
   const fetchContentRows = React.useCallback(async () => {
-    setRowsLoading(true);
+    if (fetchRowsInFlight.current) return;
+    fetchRowsInFlight.current = true;
+
+    // Only show "loading" state when table is empty to prevent flicker
+    const shouldShowLoading = contentRows.length === 0;
+    if (shouldShowLoading) setRowsLoading(true);
+
     try {
       const { data, error } = await supabase
         .from("content_items")
@@ -251,9 +258,10 @@ export default function ContentCreation() {
       toast({ variant: "destructive", title: "Failed to load table", description: e?.message ?? "Unknown error" });
       setContentRows([]);
     } finally {
+      fetchRowsInFlight.current = false;
       setRowsLoading(false);
     }
-  }, [contentTypes, toast]);
+  }, [contentRows.length, contentTypes, toast]);
 
   // Keep Content Management table always in sync with DB + current columns
   React.useEffect(() => {
@@ -1524,32 +1532,30 @@ export default function ContentCreation() {
               </TableHeader>
 
               <TableBody>
-                {rowsLoading ? (
+                {displayedRows.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">{row.businessName}</TableCell>
+                    <TableCell className="font-medium">{row.category}</TableCell>
+                    {contentTypes.map((t) => (
+                      <TableCell key={t} className="text-right">
+                        {row.counts?.[t] ?? 0}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right">
+                      <Button type="button" variant="outline" size="sm" onClick={() => openDetails(row)}>
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {rowsLoading && displayedRows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={contentTypes.length + 3} className="py-10 text-center text-muted-foreground">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : null}
-
-                {!rowsLoading
-                  ? displayedRows.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="font-medium">{row.businessName}</TableCell>
-                        <TableCell className="font-medium">{row.category}</TableCell>
-                        {contentTypes.map((t) => (
-                          <TableCell key={t} className="text-right">
-                            {row.counts?.[t] ?? 0}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-right">
-                          <Button type="button" variant="outline" size="sm" onClick={() => openDetails(row)}>
-                            View Details
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  : null}
 
                 {!rowsLoading && displayedRows.length === 0 ? (
                   <TableRow>
