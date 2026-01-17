@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { Eye, Copy, Link2, Upload, RotateCcw, Loader2 } from "lucide-react";
 
+import MediaImagePickerDialog from "@/components/media/MediaImagePickerDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,6 +26,7 @@ type Props = {
   onChange: (next: { url: string; originalUrl: string }) => void;
   variant?: "default" | "compact";
   disabled?: boolean;
+  mediaPicker?: { userId: string; businessId: string } | null;
 };
 
 function IconActionButton({
@@ -65,6 +67,7 @@ export default function ImageFieldCard({
   onChange,
   variant = "default",
   disabled = false,
+  mediaPicker = null,
 }: Props) {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -72,6 +75,7 @@ export default function ImageFieldCard({
   const [uploading, setUploading] = React.useState(false);
 
   const [urlDialogOpen, setUrlDialogOpen] = React.useState(false);
+  const [mediaDialogOpen, setMediaDialogOpen] = React.useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
   const [draftUrl, setDraftUrl] = React.useState(value);
 
@@ -193,6 +197,12 @@ export default function ImageFieldCard({
               label="Change Image"
               onClick={() => {
                 if (disabled || uploading) return;
+
+                if (mediaPicker?.userId && mediaPicker?.businessId) {
+                  setMediaDialogOpen(true);
+                  return;
+                }
+
                 setUrlDialogOpen(true);
               }}
               icon={<Link2 className="h-4 w-4" />}
@@ -222,6 +232,19 @@ export default function ImageFieldCard({
           disabled={disabled}
         />
       </CardContent>
+
+      {mediaPicker?.userId && mediaPicker?.businessId ? (
+        <MediaImagePickerDialog
+          open={mediaDialogOpen}
+          onOpenChange={setMediaDialogOpen}
+          userId={mediaPicker.userId}
+          businessId={mediaPicker.businessId}
+          onPick={(url) => {
+            onChange({ url, originalUrl: originalValue });
+            toast({ title: "Image selected", description: `${label} updated from Media Library.` });
+          }}
+        />
+      ) : null}
 
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
         <DialogContent className="max-w-4xl">

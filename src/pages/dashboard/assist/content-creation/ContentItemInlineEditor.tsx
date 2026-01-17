@@ -40,6 +40,7 @@ type Props = {
   onSave?: (values: ContentItemInlineEditValues) => void;
   onCancel?: () => void;
   onDelete?: () => void;
+  mediaPicker?: { userId: string; businessId: string } | null;
 };
 
 export default function ContentItemInlineEditor({
@@ -51,6 +52,7 @@ export default function ContentItemInlineEditor({
   onSave,
   onCancel,
   onDelete,
+  mediaPicker = null,
 }: Props) {
   const [values, setValues] = React.useState<ContentItemInlineEditValues>(initialValues);
   const [images, setImages] = React.useState<{
@@ -97,6 +99,7 @@ export default function ContentItemInlineEditor({
               originalValue={images.primary.originalUrl}
               onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
               disabled={readOnly}
+              mediaPicker={mediaPicker}
             />
             <ImageFieldCard
               variant="compact"
@@ -105,6 +108,7 @@ export default function ContentItemInlineEditor({
               originalValue={images.secondary.originalUrl}
               onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
               disabled={readOnly}
+              mediaPicker={mediaPicker}
             />
             <ImageFieldCard
               variant="compact"
@@ -113,6 +117,7 @@ export default function ContentItemInlineEditor({
               originalValue={images.third.originalUrl}
               onChange={(next) => setImages((p) => ({ ...p, third: next }))}
               disabled={readOnly}
+              mediaPicker={mediaPicker}
             />
           </div>
         </div>
