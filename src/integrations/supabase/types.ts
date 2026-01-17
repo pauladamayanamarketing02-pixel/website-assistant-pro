@@ -143,6 +143,8 @@ export type Database = {
           image_primary_url: string | null
           image_second_url: string | null
           image_third_url: string | null
+          platform: string | null
+          scheduled_at: string | null
           title: string
           updated_at: string
         }
@@ -157,6 +159,8 @@ export type Database = {
           image_primary_url?: string | null
           image_second_url?: string | null
           image_third_url?: string | null
+          platform?: string | null
+          scheduled_at?: string | null
           title: string
           updated_at?: string
         }
@@ -171,6 +175,8 @@ export type Database = {
           image_primary_url?: string | null
           image_second_url?: string | null
           image_third_url?: string | null
+          platform?: string | null
+          scheduled_at?: string | null
           title?: string
           updated_at?: string
         }
