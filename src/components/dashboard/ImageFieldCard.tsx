@@ -23,6 +23,12 @@ type Props = {
   originalValue: string;
   onChange: (next: { url: string; originalUrl: string }) => void;
   variant?: "default" | "compact";
+  /**
+   * Controls which actions are shown.
+   * - "view": Preview + Copy only
+   * - "edit": Preview + Copy + Change/Upload/Reset
+   */
+  actions?: "view" | "edit";
 };
 
 function IconActionButton({
@@ -62,6 +68,7 @@ export default function ImageFieldCard({
   originalValue,
   onChange,
   variant = "default",
+  actions = "edit",
 }: Props) {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -118,6 +125,8 @@ export default function ImageFieldCard({
     toast({ title: "Image updated", description: `${label} updated via URL.` });
   };
 
+  const editable = actions === "edit";
+
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3">
@@ -137,7 +146,11 @@ export default function ImageFieldCard({
               src={value || "/placeholder.svg"}
               alt={`${label} image preview`}
               loading="lazy"
-              className={variant === "compact" ? "h-24 w-full object-cover cursor-zoom-in" : "h-48 w-full object-cover cursor-zoom-in"}
+              className={
+                variant === "compact"
+                  ? "h-24 w-full object-cover cursor-zoom-in"
+                  : "h-48 w-full object-cover cursor-zoom-in"
+              }
             />
           </button>
         </div>
@@ -145,32 +158,44 @@ export default function ImageFieldCard({
         <TooltipProvider delayDuration={150}>
           <div className="flex flex-wrap gap-2">
             <IconActionButton label="Preview" onClick={preview} icon={<Eye className="h-4 w-4" />} disabled={!value} />
-            <IconActionButton label="Copy URL" onClick={() => void copyUrl()} icon={<Copy className="h-4 w-4" />} disabled={!value} />
             <IconActionButton
-              label="Change Image"
-              onClick={() => setUrlDialogOpen(true)}
-              icon={<Link2 className="h-4 w-4" />}
+              label="Copy URL"
+              onClick={() => void copyUrl()}
+              icon={<Copy className="h-4 w-4" />}
+              disabled={!value}
             />
-            <IconActionButton
-              label="Add From Computer"
-              onClick={openFilePicker}
-              icon={<Upload className="h-4 w-4" />}
-            />
-            <IconActionButton
-              label="Reset to Original"
-              onClick={reset}
-              icon={<RotateCcw className="h-4 w-4" />}
-            />
+
+            {editable ? (
+              <>
+                <IconActionButton
+                  label="Change Image"
+                  onClick={() => setUrlDialogOpen(true)}
+                  icon={<Link2 className="h-4 w-4" />}
+                />
+                <IconActionButton
+                  label="Upload From Computer"
+                  onClick={openFilePicker}
+                  icon={<Upload className="h-4 w-4" />}
+                />
+                <IconActionButton
+                  label="Reset to Original"
+                  onClick={reset}
+                  icon={<RotateCcw className="h-4 w-4" />}
+                />
+              </>
+            ) : null}
           </div>
         </TooltipProvider>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={onPickFile}
-        />
+        {editable ? (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onPickFile}
+          />
+        ) : null}
       </CardContent>
 
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
@@ -190,28 +215,30 @@ export default function ImageFieldCard({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={urlDialogOpen} onOpenChange={setUrlDialogOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Change Image URL</DialogTitle>
-            <DialogDescription>Paste a new image URL for {label}.</DialogDescription>
-          </DialogHeader>
+      {editable ? (
+        <Dialog open={urlDialogOpen} onOpenChange={setUrlDialogOpen}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Change Image URL</DialogTitle>
+              <DialogDescription>Paste a new image URL for {label}.</DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-2">
-            <Label>Image URL</Label>
-            <Input value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} placeholder="https://..." />
-          </div>
+            <div className="space-y-2">
+              <Label>Image URL</Label>
+              <Input value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} placeholder="https://..." />
+            </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setUrlDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={saveUrl}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setUrlDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={saveUrl}>
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </Card>
   );
 }

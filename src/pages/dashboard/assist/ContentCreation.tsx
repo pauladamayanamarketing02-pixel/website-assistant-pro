@@ -1195,112 +1195,34 @@ export default function ContentCreation() {
 
                   return (
                     <section key={item.id} className="rounded-lg border p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+                      <div className="space-y-4">
                         <div className="space-y-1">
                           <h2 className="text-lg font-semibold text-foreground">{item.title || "Untitled"}</h2>
                           <p className="text-sm text-muted-foreground">Scheduled: {scheduledLabel}</p>
                         </div>
 
-                        {!isEditing ? (
-                          <div className="flex items-center gap-2">
-                            <Button type="button" variant="outline" size="sm" onClick={() => openEditItem(item)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => {
-                                setDeleteItemId(item.id);
-                              }}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Hapus
-                            </Button>
-                          </div>
-                        ) : null}
+                        <ContentItemInlineEditor
+                          categories={categories}
+                          contentTypes={contentTypes}
+                          mode={isEditing ? "edit" : "view"}
+                          saving={detailsSaving}
+                          initialValues={{
+                            title: item.title ?? "",
+                            description: item.description ?? "",
+                            category: item.category ?? "",
+                            contentType: item.contentType ?? "",
+                            platform: item.platform ?? "",
+                            scheduledAt: item.scheduledAt ? toDatetimeLocalInput(item.scheduledAt) : "",
+                            primaryImageUrl: item.images.primary || "/placeholder.svg",
+                            secondaryImageUrl: item.images.second || "/placeholder.svg",
+                            thirdImageUrl: item.images.third || "/placeholder.svg",
+                          }}
+                          onEdit={() => openEditItem(item)}
+                          onCancel={cancelEditItem}
+                          onDelete={() => setDeleteItemId(item.id)}
+                          onSave={(values) => void saveEditItem(values)}
+                        />
                       </div>
-
-                      {isEditing ? (
-                        <div className="mt-4">
-                          <ContentItemInlineEditor
-                            categories={categories}
-                            contentTypes={contentTypes}
-                            saving={detailsSaving}
-                            initialValues={{
-                              title: item.title ?? "",
-                              description: item.description ?? "",
-                              category: item.category ?? "",
-                              contentType: item.contentType ?? "",
-                              platform: item.platform ?? "",
-                              scheduledAt: item.scheduledAt ? toDatetimeLocalInput(item.scheduledAt) : "",
-                              primaryImageUrl: item.images.primary || "/placeholder.svg",
-                              secondaryImageUrl: item.images.second || "/placeholder.svg",
-                              thirdImageUrl: item.images.third || "/placeholder.svg",
-                            }}
-                            onCancel={cancelEditItem}
-                            onDelete={() => setDeleteItemId(item.id)}
-                            onSave={(values) => void saveEditItem(values)}
-                          />
-                        </div>
-                      ) : (
-                        <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_4fr]">
-                          {/* Images */}
-                          <div className="space-y-3">
-                            <p className="text-sm font-medium text-foreground">Images</p>
-                            <div className="grid gap-3">
-                              <img
-                                src={primary}
-                                alt="Primary image"
-                                loading="lazy"
-                                className="h-36 w-full rounded-md object-cover"
-                              />
-                              <div className="grid grid-cols-2 gap-3">
-                                <img
-                                  src={second}
-                                  alt="Secondary image"
-                                  loading="lazy"
-                                  className="h-24 w-full rounded-md object-cover"
-                                />
-                                <img
-                                  src={third}
-                                  alt="Third image"
-                                  loading="lazy"
-                                  className="h-24 w-full rounded-md object-cover"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Content Details */}
-                          <div className="space-y-3">
-                            <p className="text-sm font-medium text-foreground">Content Details</p>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div>
-                                <p className="text-xs text-muted-foreground">Category</p>
-                                <p className="text-sm text-foreground">{item.category || "-"}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground">Type Content</p>
-                                <p className="text-sm text-foreground">{item.contentType || "-"}</p>
-                              </div>
-                              <div className="sm:col-span-2">
-                                <p className="text-xs text-muted-foreground">Platform</p>
-                                <p className="text-sm text-foreground">{item.platform || "-"}</p>
-                              </div>
-                            </div>
-
-                            <div>
-                              <p className="text-xs text-muted-foreground">Description</p>
-                              <div
-                                className="text-sm text-foreground"
-                                dangerouslySetInnerHTML={{ __html: item.description || "" }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </section>
                   );
                 })}
