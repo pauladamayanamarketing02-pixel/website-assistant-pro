@@ -141,6 +141,7 @@ export type Database = {
           content_type_id: string
           created_at: string
           created_by: string
+          deleted_at: string | null
           description: string | null
           id: string
           image_primary_url: string | null
@@ -157,6 +158,7 @@ export type Database = {
           content_type_id: string
           created_at?: string
           created_by: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           image_primary_url?: string | null
@@ -173,6 +175,7 @@ export type Database = {
           content_type_id?: string
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           image_primary_url?: string | null
