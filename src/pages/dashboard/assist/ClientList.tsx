@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FileThumbnail, UniversalFilePreview } from '@/components/media/UniversalFilePreview';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -739,39 +740,33 @@ export default function ClientList() {
     });
   };
 
+  const downloadGalleryItem = async (item: GalleryItem) => {
+    try {
+      const res = await fetch(item.url);
+      if (!res.ok) throw new Error('Failed to download file');
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = item.name || 'download';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Download Failed',
+        description: e?.message || 'Unable to download file.',
+      });
+    }
+  };
+
+  // Text preview is now handled by UniversalFilePreview
   useEffect(() => {
-    const item = galleryPreviewItem;
-    if (!item) {
-      setGalleryPreviewText('');
-      setGalleryPreviewTextLoading(false);
-      return;
-    }
-
-    const ext = item.name.split('.').pop()?.toLowerCase() || '';
-    const isText = ['txt', 'md', 'csv', 'json', 'log'].includes(ext);
-
-    if (!isText) {
-      setGalleryPreviewText('');
-      setGalleryPreviewTextLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        setGalleryPreviewTextLoading(true);
-        const res = await fetch(item.url, { signal: controller.signal });
-        const text = await res.text();
-        setGalleryPreviewText(text);
-      } catch {
-        setGalleryPreviewText('');
-      } finally {
-        setGalleryPreviewTextLoading(false);
-      }
-    })();
-
-    return () => controller.abort();
+    setGalleryPreviewText('');
+    setGalleryPreviewTextLoading(false);
   }, [galleryPreviewItem]);
 
   const formatSize = (bytes: number | null) => {
@@ -1496,7 +1491,7 @@ export default function ClientList() {
                             ref={fileInputRef}
                             type="file"
                             multiple
-                            accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                            accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
                             onChange={handleUpload}
                             className="hidden"
                           />
@@ -1532,13 +1527,9 @@ export default function ClientList() {
                                 {item.type === 'image' ? (
                                   <img src={item.url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
                                 ) : item.type === 'video' ? (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Video className="h-6 w-6" />
-                                  </div>
+                                  <FileThumbnail name={item.name} mimeType="video/*" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    {getIcon(item.type)}
-                                  </div>
+                                  <FileThumbnail name={item.name} />
                                 )}
 
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -1548,10 +1539,8 @@ export default function ClientList() {
                                   <Button variant="secondary" size="icon" onClick={() => handleCopyUrl(item.url)}>
                                     <Copy className="h-4 w-4" />
                                   </Button>
-                                  <Button variant="secondary" size="icon" asChild>
-                                    <a href={item.url} download target="_blank" rel="noreferrer">
-                                      <Download className="h-4 w-4" />
-                                    </a>
+                                  <Button variant="secondary" size="icon" onClick={() => void downloadGalleryItem(item)} aria-label="Download">
+                                    <Download className="h-4 w-4" />
                                   </Button>
                                   <Button variant="destructive" size="icon" onClick={() => handleDeleteGallery(item)}>
                                     <Trash2 className="h-4 w-4" />
@@ -1589,10 +1578,8 @@ export default function ClientList() {
                                     <Button variant="ghost" size="icon" onClick={() => handleCopyUrl(item.url)}>
                                       <Copy className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" asChild>
-                                      <a href={item.url} download target="_blank" rel="noreferrer">
-                                        <Download className="h-4 w-4" />
-                                      </a>
+                                    <Button variant="ghost" size="icon" onClick={() => void downloadGalleryItem(item)} aria-label="Download">
+                                      <Download className="h-4 w-4" />
                                     </Button>
                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteGallery(item)}>
                                       <Trash2 className="h-4 w-4" />
@@ -1625,19 +1612,17 @@ export default function ClientList() {
                       <DialogTitle className="flex items-center justify-between gap-3 pr-12">
                         <span className="truncate">{galleryPreviewItem?.name}</span>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => galleryPreviewItem && handleCopyUrl(galleryPreviewItem.url)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => galleryPreviewItem && handleCopyUrl(galleryPreviewItem.url)}>
                             <Copy className="h-4 w-4 mr-2" />
                             Copy URL
                           </Button>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={galleryPreviewItem?.url || '#'} download target="_blank" rel="noreferrer">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </a>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => galleryPreviewItem && downloadGalleryItem(galleryPreviewItem)}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
                           </Button>
                         </div>
                       </DialogTitle>
@@ -1648,49 +1633,14 @@ export default function ClientList() {
                         const item = galleryPreviewItem;
                         if (!item) return null;
 
-                        const ext = item.name.split('.').pop()?.toLowerCase() || '';
-                        const isPdf = ext === 'pdf';
-                        const isText = ['txt', 'md', 'csv', 'json', 'log'].includes(ext);
-
-                        if (item.type === 'image') {
-                          return (
-                            <ScrollArea className="h-full">
-                              <div className="p-2">
-                                <img src={item.url} alt={item.name} className="w-full h-auto rounded-lg" />
-                              </div>
-                            </ScrollArea>
-                          );
-                        }
-
-                        if (item.type === 'video') {
-                          return (
-                            <video src={item.url} controls className="w-full h-full rounded-lg bg-muted" />
-                          );
-                        }
-
-                        if (isPdf) {
-                          return (
-                            <iframe title={item.name} src={item.url} className="w-full h-full rounded-lg bg-muted" />
-                          );
-                        }
-
-                        if (isText) {
-                          return (
-                            <ScrollArea className="h-full rounded-lg border">
-                              <pre className="p-4 text-sm whitespace-pre-wrap break-words">
-                                {galleryPreviewTextLoading ? 'Loading...' : (galleryPreviewText || 'Unable to preview this text file.')}
-                              </pre>
-                            </ScrollArea>
-                          );
-                        }
+                        const mimeType = item.type === 'image' ? 'image/*' : item.type === 'video' ? 'video/*' : '';
 
                         return (
-                          <div className="h-full rounded-lg bg-muted flex flex-col items-center justify-center gap-3 p-6 text-center">
-                            <FileIcon className="h-12 w-12 text-muted-foreground" />
-                            <p className="text-muted-foreground">Preview not available for this file type.</p>
-                            <a href={item.url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
-                              Open file in new tab
-                            </a>
+                          <div className="h-full w-full rounded-lg bg-muted overflow-hidden">
+                            <UniversalFilePreview
+                              source={{ kind: 'remote', name: item.name, mimeType, url: item.url }}
+                              className="h-full w-full"
+                            />
                           </div>
                         );
                       })()}
