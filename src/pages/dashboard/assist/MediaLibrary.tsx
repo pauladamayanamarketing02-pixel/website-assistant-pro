@@ -48,11 +48,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-type ImportType = "Images Gallery" | "Video Content";
+type ImportType = "Gambar" | "Video";
 
 type BusinessOption = {
   id: string;
   name: string;
+  userId: string;
 };
 
 type MediaRow = {
@@ -64,15 +65,14 @@ type MediaRow = {
   videoContent: number;
 };
 
-
-const IMPORT_TYPES: ImportType[] = ["Images Gallery", "Video Content"];
+const IMPORT_TYPES: ImportType[] = ["Gambar", "Video"];
 
 const FALLBACK_ROWS: MediaRow[] = [
   {
     id: "demo-1",
     businessId: "demo",
     businessName: "Demo Business",
-    category: "General",
+    category: "All",
     imagesGallery: 8,
     videoContent: 2,
   },
@@ -80,7 +80,7 @@ const FALLBACK_ROWS: MediaRow[] = [
     id: "demo-2",
     businessId: "demo",
     businessName: "Demo Business",
-    category: "Campaign",
+    category: "All",
     imagesGallery: 14,
     videoContent: 4,
   },
@@ -94,10 +94,7 @@ function lockKey(name: string) {
   return (name ?? "").trim().toLowerCase();
 }
 
-const PERMANENT_CONTENT_TYPES = new Set([
-  "images gallery",
-  "video content",
-]);
+const PERMANENT_CONTENT_TYPES = new Set(["gambar", "video"]);
 
 function uniqueNonEmpty(values: string[]) {
   const set = new Set<string>();
@@ -252,9 +249,12 @@ export default function AssistMediaLibrary() {
 
     const load = async () => {
       const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData }] = await Promise.all([
-        supabase.from("businesses").select("id, business_name").order("business_name", { ascending: true, nullsFirst: false }),
+        supabase
+          .from("businesses")
+          .select("id, business_name, user_id")
+          .order("business_name", { ascending: true, nullsFirst: false }),
         supabase.from("media_categories").select("name, is_locked").order("name", { ascending: true }),
-        supabase.from("media_types").select("name, is_locked").order("name", { ascending: true }),
+        supabase.from("media_types").select("id, name, is_locked").order("name", { ascending: true }),
       ]);
 
       if (cancelled) return;
@@ -262,14 +262,20 @@ export default function AssistMediaLibrary() {
       if (bizError) {
         setBusinesses([]);
       } else {
-        setBusinesses((bizData ?? []).map((b) => ({ id: b.id, name: safeName(b.business_name) })));
+        setBusinesses(
+          (bizData ?? []).map((b: any) => ({
+            id: b.id,
+            name: safeName(b.business_name),
+            userId: b.user_id,
+          }))
+        );
       }
 
       const catRows = (catData ?? []) as Array<{ name: string; is_locked?: boolean }>;
       setCategories(uniqueNonEmpty(catRows.map((c) => c.name)));
       setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
 
-      const typeRows = (typeData ?? []) as Array<{ name: string; is_locked?: boolean }>;
+      const typeRows = (typeData ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
       setContentTypes(uniqueNonEmpty([...(IMPORT_TYPES as unknown as string[]), ...typeRows.map((t) => t.name)]));
       const locked = new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name)));
       for (const k of PERMANENT_CONTENT_TYPES) locked.add(k);
@@ -543,22 +549,82 @@ export default function AssistMediaLibrary() {
     }
   };
 
+  const [mediaRows, setMediaRows] = React.useState<MediaRow[]>([]);
+  const [mediaRowsLoading, setMediaRowsLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const loadCounts = async () => {
+      if (businesses.length === 0) {
+        setMediaRows([]);
+        return;
+      }
+
+      setMediaRowsLoading(true);
+      try {
+        const userIds = Array.from(new Set(businesses.map((b) => b.userId).filter(Boolean)));
+        if (userIds.length === 0) {
+          setMediaRows([]);
+          return;
+        }
+
+        const { data: galleryData, error } = await supabase
+          .from("user_gallery")
+          .select("user_id, type")
+          .in("user_id", userIds);
+
+        if (error) throw error;
+
+        const countsByUser: Record<string, { images: number; videos: number }> = {};
+        for (const item of (galleryData ?? []) as Array<{ user_id: string; type: string }>) {
+          const mime = (item.type ?? "").toLowerCase();
+          if (!countsByUser[item.user_id]) countsByUser[item.user_id] = { images: 0, videos: 0 };
+          if (mime.startsWith("image/")) countsByUser[item.user_id].images += 1;
+          else if (mime.startsWith("video/")) countsByUser[item.user_id].videos += 1;
+        }
+
+        const nextRows: MediaRow[] = businesses.map((b) => {
+          const c = countsByUser[b.userId] ?? { images: 0, videos: 0 };
+          return {
+            id: `${b.id}-all`,
+            businessId: b.id,
+            businessName: b.name,
+            category: "All",
+            imagesGallery: c.images,
+            videoContent: c.videos,
+          };
+        });
+
+        if (!cancelled) setMediaRows(nextRows);
+      } catch {
+        if (!cancelled) setMediaRows([]);
+      } finally {
+        if (!cancelled) setMediaRowsLoading(false);
+      }
+    };
+
+    void loadCounts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [businesses]);
+
   const rows: MediaRow[] = React.useMemo(() => {
-    // Placeholder until media schema exists. We show one row per business.
-    if (businesses.length > 0) {
-      const category = categories[0] ?? "General";
+    if (mediaRows.length > 0) return mediaRows;
+    if (businesses.length > 0 && mediaRowsLoading) {
       return businesses.map((b) => ({
-        id: `${b.id}-${category}`,
+        id: `${b.id}-all`,
         businessId: b.id,
         businessName: b.name,
-        category,
+        category: "All",
         imagesGallery: 0,
         videoContent: 0,
       }));
     }
-
     return FALLBACK_ROWS;
-  }, [businesses, categories]);
+  }, [mediaRows, businesses, mediaRowsLoading]);
 
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
@@ -644,8 +710,8 @@ export default function AssistMediaLibrary() {
               <TableRow>
                 <TableHead>Business</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-right">Images Gallery</TableHead>
-                <TableHead className="text-right">Video Content</TableHead>
+                <TableHead className="text-right">Gambar</TableHead>
+                <TableHead className="text-right">Video</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
