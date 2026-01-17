@@ -150,6 +150,9 @@ export default function ContentCreation() {
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
 
+  const [contentRows, setContentRows] = React.useState<ContentRow[]>([]);
+  const [rowsLoading, setRowsLoading] = React.useState(false);
+
   // Create (full page, not overlay)
   const [createOpen, setCreateOpen] = React.useState(false);
 
@@ -204,6 +207,54 @@ export default function ContentCreation() {
 
   const [confirmAction, setConfirmAction] = React.useState<ConfirmActionState | null>(null);
 
+  const fetchContentRows = React.useCallback(async () => {
+    setRowsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("content_items")
+        .select("id, business_id, businesses(business_name), content_categories(name), content_types(name)")
+        .order("updated_at", { ascending: false })
+        .limit(1000);
+
+      if (error) throw error;
+
+      const emptyCounts = Object.fromEntries(contentTypes.map((t) => [t, 0] as const));
+      const map = new Map<string, ContentRow>();
+
+      for (const item of (data ?? []) as any[]) {
+        const businessId = item.business_id as string;
+        const businessName = safeName(item.businesses?.business_name as string | null | undefined);
+        const categoryName = (item.content_categories?.name as string | undefined) ?? "";
+        const typeName = (item.content_types?.name as string | undefined) ?? "";
+
+        if (!businessId || !categoryName || !typeName) continue;
+
+        const key = `${businessId}::${categoryName}`;
+        const existing = map.get(key);
+
+        if (!existing) {
+          map.set(key, {
+            id: key,
+            businessId,
+            businessName,
+            category: categoryName,
+            counts: { ...emptyCounts, [typeName]: 1 },
+          });
+          continue;
+        }
+
+        existing.counts[typeName] = (existing.counts[typeName] ?? 0) + 1;
+      }
+
+      setContentRows(Array.from(map.values()));
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed to load table", description: e?.message ?? "Unknown error" });
+      setContentRows([]);
+    } finally {
+      setRowsLoading(false);
+    }
+  }, [contentTypes, toast]);
+
   React.useEffect(() => {
     let cancelled = false;
 
@@ -237,12 +288,15 @@ export default function ContentCreation() {
       const catNames = catRows.map((c) => (c as any).name as string);
       const typeNames = typeRows.map((t) => (t as any).name as string);
 
-      if (catNames.length) setCategories((prev) => uniqueNonEmpty([...prev, ...catNames]));
+      if (catNames.length) setCategories(uniqueNonEmpty(catNames));
       if (typeNames.length) setContentTypes((prev) => uniqueNonEmpty([...prev, ...typeNames]));
 
       // Hydrate lock state from DB so it survives refresh
       setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
       setLockedContentTypes(new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name))));
+
+      // Load content management table rows
+      void fetchContentRows();
     };
 
     void loadBusinesses();
@@ -250,24 +304,9 @@ export default function ContentCreation() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchContentRows]);
 
-  const rows: ContentRow[] = React.useMemo(() => {
-    const emptyCounts = Object.fromEntries(contentTypes.map((t) => [t, 0] as const));
-
-    // Placeholder sampai data real dibuat: buat 1 baris per bisnis
-    if (businesses.length > 0) {
-      return businesses.map((b) => ({
-        id: `${b.id}-general`,
-        businessId: b.id,
-        businessName: b.name,
-        category: "General",
-        counts: { ...emptyCounts },
-      }));
-    }
-
-    return FALLBACK_ROWS;
-  }, [businesses, contentTypes]);
+  const rows: ContentRow[] = React.useMemo(() => contentRows, [contentRows]);
 
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
@@ -573,9 +612,11 @@ export default function ContentCreation() {
       }
 
       toast({ title: "Saved", description: "Content item saved successfully." });
-      // Keep dropdown lists in sync (UI-only)
-      setCategories((prev) => uniqueNonEmpty([...prev, detailsForm.category.trim()]));
-      setContentTypes((prev) => uniqueNonEmpty([...prev, detailsForm.contentType.trim()]));
+
+      // Keep dropdown lists in sync with DB
+      await refreshCategories();
+      await refreshContentTypes();
+      await fetchContentRows();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
     } finally {
@@ -927,20 +968,52 @@ export default function ContentCreation() {
   if (createOpen) {
     return (
       <ContentItemForm
-        businesses={
-          businesses.length
-            ? businesses
-            : [{ id: "demo", name: "Demo Business", publicId: "B00000" }]
-        }
+        businesses={businesses.length ? businesses : [{ id: "demo", name: "Demo Business", publicId: "B00000" }]}
         categories={categories}
         contentTypes={contentTypes}
         onCancel={() => setCreateOpen(false)}
         onSave={(payload) => {
-          toast({
-            title: "Saved",
-            description: `New content item saved (still placeholder). Business ID: ${payload.businessPublicId}`,
-          });
-          setCreateOpen(false);
+          void (async () => {
+            try {
+              const { data: userRes, error: userErr } = await supabase.auth.getUser();
+              if (userErr) throw userErr;
+              const userId = userRes.user?.id;
+              if (!userId) throw new Error("Not authenticated");
+
+              const [categoryId, contentTypeId] = await Promise.all([
+                resolveCategoryId(payload.category),
+                resolveContentTypeId(payload.contentType),
+              ]);
+
+              const scheduledAtIso = payload.scheduledAt ? new Date(payload.scheduledAt).toISOString() : null;
+              const title = payload.title.trim() || "Untitled";
+
+              const insertPayload = {
+                business_id: payload.businessId,
+                category_id: categoryId,
+                content_type_id: contentTypeId,
+                title,
+                description: payload.description,
+                platform: payload.platform.trim() || null,
+                scheduled_at: scheduledAtIso,
+                image_primary_url: payload.primaryImageUrl || null,
+                image_second_url: payload.secondaryImageUrl || null,
+                image_third_url: payload.thirdImageUrl || null,
+                created_by: userId,
+              };
+
+              const { error } = await supabase.from("content_items").insert(insertPayload);
+              if (error) throw error;
+
+              toast({ title: "Saved", description: "Content item saved to database." });
+              await refreshCategories();
+              await refreshContentTypes();
+              await fetchContentRows();
+              setCreateOpen(false);
+            } catch (e: any) {
+              toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+            }
+          })();
         }}
       />
     );
@@ -1449,24 +1522,34 @@ export default function ContentCreation() {
               </TableHeader>
 
               <TableBody>
-                {displayedRows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.businessName}</TableCell>
-                    <TableCell className="font-medium">{row.category}</TableCell>
-                    {contentTypes.map((t) => (
-                      <TableCell key={t} className="text-right">
-                        {row.counts?.[t] ?? 0}
-                      </TableCell>
-                    ))}
-                    <TableCell className="text-right">
-                      <Button type="button" variant="outline" size="sm" onClick={() => openDetails(row)}>
-                        View Details
-                      </Button>
+                {rowsLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={contentTypes.length + 3} className="py-10 text-center text-muted-foreground">
+                      Loading...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : null}
 
-                {displayedRows.length === 0 ? (
+                {!rowsLoading
+                  ? displayedRows.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="font-medium">{row.businessName}</TableCell>
+                        <TableCell className="font-medium">{row.category}</TableCell>
+                        {contentTypes.map((t) => (
+                          <TableCell key={t} className="text-right">
+                            {row.counts?.[t] ?? 0}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right">
+                          <Button type="button" variant="outline" size="sm" onClick={() => openDetails(row)}>
+                            View Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : null}
+
+                {!rowsLoading && displayedRows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={contentTypes.length + 3} className="py-10 text-center text-muted-foreground">
                       No data for the selected business.
