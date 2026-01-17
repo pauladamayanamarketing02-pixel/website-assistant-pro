@@ -53,9 +53,8 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import ContentItemEditDialog, {
-  type ContentItemEditValues,
-} from "@/pages/dashboard/assist/content-creation/ContentItemEditDialog";
+import type { ContentItemEditValues } from "@/pages/dashboard/assist/content-creation/ContentItemEditDialog";
+import ContentItemInlineEditor from "@/pages/dashboard/assist/content-creation/ContentItemInlineEditor";
 import ContentItemForm from "@/pages/dashboard/assist/content-creation/ContentItemForm";
 
 type SortDirection = "asc" | "desc";
@@ -177,7 +176,7 @@ export default function ContentCreation() {
 
   const [detailsItems, setDetailsItems] = React.useState<DetailsListItem[]>([]);
 
-  const [editItemOpen, setEditItemOpen] = React.useState(false);
+  const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
   const [editItem, setEditItem] = React.useState<DetailsListItem | null>(null);
   const [deleteItemId, setDeleteItemId] = React.useState<string | null>(null);
 
@@ -643,7 +642,12 @@ export default function ContentCreation() {
 
   const openEditItem = (item: DetailsListItem) => {
     setEditItem(item);
-    setEditItemOpen(true);
+    setEditingItemId(item.id);
+  };
+
+  const cancelEditItem = () => {
+    setEditingItemId(null);
+    setEditItem(null);
   };
 
   const saveEditItem = async (values: ContentItemEditValues) => {
@@ -675,8 +679,7 @@ export default function ContentCreation() {
       if (error) throw error;
 
       toast({ title: "Updated", description: "Content item updated." });
-      setEditItemOpen(false);
-      setEditItem(null);
+      cancelEditItem();
 
       await fetchDetailsItem(detailsSortCategory, detailsSortTypeContent);
       await fetchContentRows();
@@ -692,14 +695,13 @@ export default function ContentCreation() {
 
     setDetailsSaving(true);
     try {
-      const { error } = await supabase
-        .from("content_items")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", deleteItemId);
+      const { error } = await supabase.from("content_items").delete().eq("id", deleteItemId);
       if (error) throw error;
 
-      toast({ title: "Deleted", description: "Content item deleted." });
+      toast({ title: "Deleted", description: "Content item deleted permanently." });
       setDeleteItemId(null);
+
+      if (editingItemId === deleteItemId) cancelEditItem();
 
       await fetchDetailsItem(detailsSortCategory, detailsSortTypeContent);
       await fetchContentRows();
@@ -1189,6 +1191,8 @@ export default function ContentCreation() {
                   const second = item.images.second || "/placeholder.svg";
                   const third = item.images.third || "/placeholder.svg";
 
+                  const isEditing = editingItemId === item.id;
+
                   return (
                     <section key={item.id} className="rounded-lg border p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
@@ -1197,73 +1201,106 @@ export default function ContentCreation() {
                           <p className="text-sm text-muted-foreground">Scheduled: {scheduledLabel}</p>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <Button type="button" variant="outline" size="sm" onClick={() => openEditItem(item)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </Button>
-                          <Button type="button" variant="destructive" size="sm" onClick={() => setDeleteItemId(item.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Hapus
-                          </Button>
-                        </div>
+                        {!isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={() => openEditItem(item)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setDeleteItemId(item.id);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Hapus
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
 
-                      <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_4fr]">
-                        {/* Images */}
-                        <div className="space-y-3">
-                          <p className="text-sm font-medium text-foreground">Images</p>
-                          <div className="grid gap-3">
-                            <img
-                              src={primary}
-                              alt="Primary image"
-                              loading="lazy"
-                              className="h-36 w-full rounded-md object-cover"
-                            />
-                            <div className="grid grid-cols-2 gap-3">
+                      {isEditing ? (
+                        <div className="mt-4">
+                          <ContentItemInlineEditor
+                            categories={categories}
+                            contentTypes={contentTypes}
+                            saving={detailsSaving}
+                            initialValues={{
+                              title: item.title ?? "",
+                              description: item.description ?? "",
+                              category: item.category ?? "",
+                              contentType: item.contentType ?? "",
+                              platform: item.platform ?? "",
+                              scheduledAt: item.scheduledAt ? toDatetimeLocalInput(item.scheduledAt) : "",
+                              primaryImageUrl: item.images.primary || "/placeholder.svg",
+                              secondaryImageUrl: item.images.second || "/placeholder.svg",
+                              thirdImageUrl: item.images.third || "/placeholder.svg",
+                            }}
+                            onCancel={cancelEditItem}
+                            onDelete={() => setDeleteItemId(item.id)}
+                            onSave={(values) => void saveEditItem(values)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_4fr]">
+                          {/* Images */}
+                          <div className="space-y-3">
+                            <p className="text-sm font-medium text-foreground">Images</p>
+                            <div className="grid gap-3">
                               <img
-                                src={second}
-                                alt="Secondary image"
+                                src={primary}
+                                alt="Primary image"
                                 loading="lazy"
-                                className="h-24 w-full rounded-md object-cover"
+                                className="h-36 w-full rounded-md object-cover"
                               />
-                              <img
-                                src={third}
-                                alt="Third image"
-                                loading="lazy"
-                                className="h-24 w-full rounded-md object-cover"
+                              <div className="grid grid-cols-2 gap-3">
+                                <img
+                                  src={second}
+                                  alt="Secondary image"
+                                  loading="lazy"
+                                  className="h-24 w-full rounded-md object-cover"
+                                />
+                                <img
+                                  src={third}
+                                  alt="Third image"
+                                  loading="lazy"
+                                  className="h-24 w-full rounded-md object-cover"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Content Details */}
+                          <div className="space-y-3">
+                            <p className="text-sm font-medium text-foreground">Content Details</p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Category</p>
+                                <p className="text-sm text-foreground">{item.category || "-"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Type Content</p>
+                                <p className="text-sm text-foreground">{item.contentType || "-"}</p>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <p className="text-xs text-muted-foreground">Platform</p>
+                                <p className="text-sm text-foreground">{item.platform || "-"}</p>
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-xs text-muted-foreground">Description</p>
+                              <div
+                                className="text-sm text-foreground"
+                                dangerouslySetInnerHTML={{ __html: item.description || "" }}
                               />
                             </div>
                           </div>
                         </div>
-
-                        {/* Content Details */}
-                        <div className="space-y-3">
-                          <p className="text-sm font-medium text-foreground">Content Details</p>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <p className="text-xs text-muted-foreground">Category</p>
-                              <p className="text-sm text-foreground">{item.category || "-"}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Type Content</p>
-                              <p className="text-sm text-foreground">{item.contentType || "-"}</p>
-                            </div>
-                            <div className="sm:col-span-2">
-                              <p className="text-xs text-muted-foreground">Platform</p>
-                              <p className="text-sm text-foreground">{item.platform || "-"}</p>
-                            </div>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-muted-foreground">Description</p>
-                            <div
-                              className="text-sm text-foreground"
-                              dangerouslySetInnerHTML={{ __html: item.description || "" }}
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </section>
                   );
                 })}
@@ -1272,48 +1309,22 @@ export default function ContentCreation() {
           </CardContent>
         </Card>
 
-        <ContentItemEditDialog
-          open={editItemOpen}
+        <AlertDialog
+          open={Boolean(deleteItemId)}
           onOpenChange={(open) => {
-            setEditItemOpen(open);
-            if (!open) setEditItem(null);
+            if (!open) setDeleteItemId(null);
           }}
-          categories={categories}
-          contentTypes={contentTypes}
-          initialValues={(() => {
-            const item = editItem;
-            return {
-              title: item?.title ?? "",
-              description: item?.description ?? "",
-              category: item?.category ?? "",
-              contentType: item?.contentType ?? "",
-              platform: item?.platform ?? "",
-              scheduledAt: item?.scheduledAt ? toDatetimeLocalInput(item.scheduledAt) : "",
-              primaryImageUrl: item?.images.primary || "/placeholder.svg",
-              secondaryImageUrl: item?.images.second || "/placeholder.svg",
-              thirdImageUrl: item?.images.third || "/placeholder.svg",
-            } satisfies ContentItemEditValues;
-          })()}
-          saving={detailsSaving}
-          onSave={(values) => void saveEditItem(values)}
-          onDelete={() => {
-            if (!editItem) return;
-            setEditItemOpen(false);
-            setDeleteItemId(editItem.id);
-          }}
-        />
-
-        <AlertDialog open={Boolean(deleteItemId)} onOpenChange={(open) => !open && setDeleteItemId(null)}>
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Hapus content?</AlertDialogTitle>
+              <AlertDialogTitle>Hapus permanen?</AlertDialogTitle>
               <AlertDialogDescription>
-                Content ini akan dihapus dari daftar (soft delete). Kamu bisa lanjutkan?
+                Content ini akan dihapus permanen dari database. Lanjutkan?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => void confirmDeleteItem()}>Hapus</AlertDialogAction>
+              <AlertDialogCancel>No</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void confirmDeleteItem()}>Yes</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
