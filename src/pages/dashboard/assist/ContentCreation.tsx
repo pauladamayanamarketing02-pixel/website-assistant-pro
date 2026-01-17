@@ -73,29 +73,6 @@ type ContentRow = {
   counts: Record<string, number>;
 };
 
-const DEFAULT_CONTENT_TYPES = [
-  "Social Media Posts",
-  "Content Media Posts",
-  "GMB Posts",
-  "Email Marketing",
-  "Ads Marketing",
-] as const;
-
-const FALLBACK_ROWS: ContentRow[] = [
-  {
-    id: "demo-1",
-    businessId: "demo",
-    businessName: "Demo Business",
-    category: "General",
-    counts: {
-      "Social Media Posts": 12,
-      "Content Media Posts": 6,
-      "GMB Posts": 4,
-      "Email Marketing": 3,
-      "Ads Marketing": 2,
-    },
-  },
-];
 
 function safeName(name: string | null | undefined) {
   return (name ?? "(No name)").trim() || "(No name)";
@@ -148,8 +125,8 @@ export default function ContentCreation() {
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
 
-  type ContentSortField = "business" | "category";
-  const [sortField, setSortField] = React.useState<ContentSortField>("business");
+  type ContentSortField = "category" | "contentTypes";
+  const [sortField, setSortField] = React.useState<ContentSortField>("contentTypes");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
 
   const [contentRows, setContentRows] = React.useState<ContentRow[]>([]);
@@ -353,6 +330,7 @@ export default function ContentCreation() {
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
 
+    // Row sort: keep a stable order for readability
     const dir = sortDirection === "asc" ? 1 : -1;
 
     return [...filtered].sort((a, b) => {
@@ -361,6 +339,14 @@ export default function ContentCreation() {
       return aKey.localeCompare(bKey, "id", { sensitivity: "base" }) * dir;
     });
   }, [rows, selectedBusinessId, sortDirection, sortField]);
+
+  // Column sort (Type Content) uses the same control as requested
+  const displayedContentTypes = React.useMemo(() => {
+    if (sortField !== "contentTypes") return contentTypes;
+
+    const dir = sortDirection === "asc" ? 1 : -1;
+    return [...contentTypes].sort((a, b) => a.localeCompare(b, "id", { sensitivity: "base" }) * dir);
+  }, [contentTypes, sortDirection, sortField]);
 
   const onImport = (type: string) => {
     setLastImportType(type);
@@ -1590,7 +1576,7 @@ export default function ContentCreation() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="z-50 w-64">
-              {contentTypes.map((t) => (
+              {displayedContentTypes.map((t) => (
                 <DropdownMenuItem key={t} onClick={() => onImport(t)}>
                   {t}
                 </DropdownMenuItem>
@@ -1639,8 +1625,8 @@ export default function ContentCreation() {
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                <SelectItem value="business:asc">Sort: Business (A-Z)</SelectItem>
-                <SelectItem value="business:desc">Sort: Business (Z-A)</SelectItem>
+                <SelectItem value="contentTypes:asc">Sort: Content Types (A-Z)</SelectItem>
+                <SelectItem value="contentTypes:desc">Sort: Content Types (Z-A)</SelectItem>
                 <SelectItem value="category:asc">Sort: Category (A-Z)</SelectItem>
                 <SelectItem value="category:desc">Sort: Category (Z-A)</SelectItem>
               </SelectContent>
@@ -1658,7 +1644,7 @@ export default function ContentCreation() {
                 <TableRow>
                   <TableHead>Business</TableHead>
                   <TableHead>Category</TableHead>
-                  {contentTypes.map((t) => (
+                  {displayedContentTypes.map((t) => (
                     <TableHead key={t} className="text-right">
                       {t}
                     </TableHead>
@@ -1672,7 +1658,7 @@ export default function ContentCreation() {
                   <TableRow key={row.id}>
                     <TableCell className="font-medium">{row.businessName}</TableCell>
                     <TableCell className="font-medium">{row.category}</TableCell>
-                    {contentTypes.map((t) => (
+                    {displayedContentTypes.map((t) => (
                       <TableCell key={t} className="text-right">
                         {row.counts?.[t] ?? 0}
                       </TableCell>
@@ -1687,7 +1673,7 @@ export default function ContentCreation() {
 
                 {rowsLoading && displayedRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={contentTypes.length + 3} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={displayedContentTypes.length + 3} className="py-10 text-center text-muted-foreground">
                       Loading...
                     </TableCell>
                   </TableRow>
@@ -1695,7 +1681,7 @@ export default function ContentCreation() {
 
                 {!rowsLoading && displayedRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={contentTypes.length + 3} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={displayedContentTypes.length + 3} className="py-10 text-center text-muted-foreground">
                       No data for the selected business.
                     </TableCell>
                   </TableRow>
