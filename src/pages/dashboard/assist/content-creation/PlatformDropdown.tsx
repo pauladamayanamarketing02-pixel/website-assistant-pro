@@ -13,7 +13,6 @@ type Props = {
   contentType: string;
   value: string;
   onChange: (next: string) => void;
-  disabled?: boolean;
 };
 
 const SOCIAL_MEDIA_PLATFORMS = ["Facebook", "Instagram", "X / Twitter", "Linkedin", "Reddit"] as const;
@@ -26,7 +25,7 @@ function getPlatforms(contentType: string): readonly string[] {
 }
 
 const PlatformDropdown = React.forwardRef<HTMLDivElement, Props>(
-  ({ contentType, value, onChange, disabled }, ref) => {
+  ({ contentType, value, onChange }, ref) => {
     const platforms = React.useMemo(() => getPlatforms(contentType), [contentType]);
 
     if (platforms.length === 0) return null;
@@ -35,7 +34,7 @@ const PlatformDropdown = React.forwardRef<HTMLDivElement, Props>(
       <div ref={ref} className="space-y-2">
         <Label>Platform</Label>
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger disabled={disabled}>
+          <SelectTrigger>
             <SelectValue placeholder="Choose Platform" />
           </SelectTrigger>
           <SelectContent className="z-50">
