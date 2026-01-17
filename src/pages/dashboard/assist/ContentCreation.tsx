@@ -147,9 +147,13 @@ export default function ContentCreation() {
   const [lastImportType, setLastImportType] = React.useState<string | null>(null);
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
+
+  type ContentSortField = "business" | "category";
+  const [sortField, setSortField] = React.useState<ContentSortField>("business");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
 
   const [contentRows, setContentRows] = React.useState<ContentRow[]>([]);
+  const contentRowsRef = React.useRef<ContentRow[]>([]);
   const [rowsLoading, setRowsLoading] = React.useState(false);
   const fetchRowsInFlight = React.useRef(false);
 
@@ -224,12 +228,16 @@ export default function ContentCreation() {
 
   const [confirmAction, setConfirmAction] = React.useState<ConfirmActionState | null>(null);
 
+  React.useEffect(() => {
+    contentRowsRef.current = contentRows;
+  }, [contentRows]);
+
   const fetchContentRows = React.useCallback(async () => {
     if (fetchRowsInFlight.current) return;
     fetchRowsInFlight.current = true;
 
-    // Only show "loading" state when table is empty to prevent flicker
-    const shouldShowLoading = contentRows.length === 0;
+    // Only show loading state when table is empty to prevent flicker
+    const shouldShowLoading = contentRowsRef.current.length === 0;
     if (shouldShowLoading) setRowsLoading(true);
 
     try {
@@ -272,12 +280,12 @@ export default function ContentCreation() {
       setContentRows(Array.from(map.values()));
     } catch (e: any) {
       toast({ variant: "destructive", title: "Failed to load table", description: e?.message ?? "Unknown error" });
-      setContentRows([]);
+      // Keep previous rows to avoid flicker.
     } finally {
       fetchRowsInFlight.current = false;
       setRowsLoading(false);
     }
-  }, [contentRows.length, contentTypes, toast]);
+  }, [contentTypes, toast]);
 
   // Keep Content Management table always in sync with DB + current columns
   React.useEffect(() => {
@@ -339,10 +347,12 @@ export default function ContentCreation() {
 
     const dir = sortDirection === "asc" ? 1 : -1;
 
-    return [...filtered].sort(
-      (a, b) => a.businessName.localeCompare(b.businessName, "id", { sensitivity: "base" }) * dir,
-    );
-  }, [rows, selectedBusinessId, sortDirection]);
+    return [...filtered].sort((a, b) => {
+      const aKey = sortField === "category" ? a.category : a.businessName;
+      const bKey = sortField === "category" ? b.category : b.businessName;
+      return aKey.localeCompare(bKey, "id", { sensitivity: "base" }) * dir;
+    });
+  }, [rows, selectedBusinessId, sortDirection, sortField]);
 
   const onImport = (type: string) => {
     setLastImportType(type);
@@ -1216,7 +1226,7 @@ export default function ContentCreation() {
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Hapus
+                              Delete
                             </Button>
                           </div>
                         ) : null}
@@ -1241,14 +1251,38 @@ export default function ContentCreation() {
                           }}
                           readOnly={editingItemId !== item.id}
                           onCancel={cancelEditItem}
-                          onDelete={() => setDeleteItemId(item.id)}
+                          onDelete={undefined}
                           onSave={(values) => void saveEditItem(values)}
                         />
                       </div>
                       ) : (
                         <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_4fr]">
+                          {/* Content Details */}
+                          <div className="order-1 space-y-3 lg:order-2">
+                            <p className="text-sm font-medium text-foreground">Content Details</p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Category</p>
+                                <p className="text-sm text-foreground">{item.category || "-"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Type Content</p>
+                                <p className="text-sm text-foreground">{item.contentType || "-"}</p>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <p className="text-xs text-muted-foreground">Platform</p>
+                                <p className="text-sm text-foreground">{item.platform || "-"}</p>
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-xs text-muted-foreground">Description</p>
+                              <div className="text-sm text-foreground" dangerouslySetInnerHTML={{ __html: item.description || "" }} />
+                            </div>
+                          </div>
+
                           {/* Images */}
-                          <div className="space-y-3">
+                          <div className="order-2 space-y-3 lg:order-1">
                             <p className="text-sm font-medium text-foreground">Images</p>
                             <div className="grid gap-3">
                               <img
@@ -1273,33 +1307,6 @@ export default function ContentCreation() {
                               </div>
                             </div>
                           </div>
-
-                          {/* Content Details */}
-                          <div className="space-y-3">
-                            <p className="text-sm font-medium text-foreground">Content Details</p>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div>
-                                <p className="text-xs text-muted-foreground">Category</p>
-                                <p className="text-sm text-foreground">{item.category || "-"}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground">Type Content</p>
-                                <p className="text-sm text-foreground">{item.contentType || "-"}</p>
-                              </div>
-                              <div className="sm:col-span-2">
-                                <p className="text-xs text-muted-foreground">Platform</p>
-                                <p className="text-sm text-foreground">{item.platform || "-"}</p>
-                              </div>
-                            </div>
-
-                            <div>
-                              <p className="text-xs text-muted-foreground">Description</p>
-                              <div
-                                className="text-sm text-foreground"
-                                dangerouslySetInnerHTML={{ __html: item.description || "" }}
-                              />
-                            </div>
-                          </div>
                         </div>
                       )}
                     </section>
@@ -1318,7 +1325,7 @@ export default function ContentCreation() {
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Hapus permanen?</AlertDialogTitle>
+              <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
               <AlertDialogDescription>
                 Content ini akan dihapus permanen dari database. Lanjutkan?
               </AlertDialogDescription>
@@ -1608,6 +1615,25 @@ export default function ContentCreation() {
                     {b.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={`${sortField}:${sortDirection}`}
+              onValueChange={(v) => {
+                const [field, dir] = v.split(":");
+                setSortField(field as ContentSortField);
+                setSortDirection(dir as SortDirection);
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[220px]">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent className="z-50">
+                <SelectItem value="business:asc">Sort: Business (A-Z)</SelectItem>
+                <SelectItem value="business:desc">Sort: Business (Z-A)</SelectItem>
+                <SelectItem value="category:asc">Sort: Category (A-Z)</SelectItem>
+                <SelectItem value="category:desc">Sort: Category (Z-A)</SelectItem>
               </SelectContent>
             </Select>
 
