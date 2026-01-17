@@ -1,13 +1,34 @@
 import * as React from "react";
 
+import { Lock, Unlock } from "lucide-react";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -23,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -69,6 +91,29 @@ function safeName(name: string | null | undefined) {
   return (name ?? "(No name)").trim() || "(No name)";
 }
 
+function lockKey(name: string) {
+  return (name ?? "").trim().toLowerCase();
+}
+
+const PERMANENT_CONTENT_TYPES = new Set([
+  "ads marketing",
+  "blog posts",
+  "email marketing",
+  "gmb posts",
+  "social media posts",
+]);
+
+function uniqueNonEmpty(values: string[]) {
+  const set = new Set<string>();
+  for (const v of values) {
+    const cleaned = (v ?? "").trim();
+    if (!cleaned) continue;
+    set.add(cleaned);
+  }
+  return Array.from(set);
+}
+
+
 export default function AssistMediaLibrary() {
   const { toast } = useToast();
 
@@ -77,71 +122,459 @@ export default function AssistMediaLibrary() {
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
 
+  // Category + Type Content management (same tables as Content Management)
+  const [categories, setCategories] = React.useState<string[]>([]);
+  const [contentTypes, setContentTypes] = React.useState<string[]>([]);
+  const [lockedCategories, setLockedCategories] = React.useState<Set<string>>(() => new Set());
+  const [lockedContentTypes, setLockedContentTypes] = React.useState<Set<string>>(() => new Set());
+
+  const [manageDialogOpen, setManageDialogOpen] = React.useState(false);
+  const [manageTab, setManageTab] = React.useState<"category" | "content">("category");
+
+  const [newCategory, setNewCategory] = React.useState("");
+  const [editingCategory, setEditingCategory] = React.useState<string | null>(null);
+  const [editingCategoryDraft, setEditingCategoryDraft] = React.useState("");
+
+  const [newContentType, setNewContentType] = React.useState("");
+  const [editingContentType, setEditingContentType] = React.useState<string | null>(null);
+  const [editingContentTypeDraft, setEditingContentTypeDraft] = React.useState("");
+
+  type ConfirmActionState =
+    | { kind: "delete_category"; name: string }
+    | { kind: "save_edit_category" }
+    | { kind: "delete_type"; name: string }
+    | { kind: "save_edit_type" };
+
+  const [confirmAction, setConfirmAction] = React.useState<ConfirmActionState | null>(null);
+
+  const resolveCategoryId = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) throw new Error("Category is required.");
+
+    const { data: existing, error: selectError } = await supabase
+      .from("content_categories")
+      .select("id")
+      .ilike("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (selectError) throw selectError;
+    if (existing?.id) return existing.id as string;
+
+    const { data: created, error: insertError } = await supabase
+      .from("content_categories")
+      .insert({ name: cleaned })
+      .select("id")
+      .single();
+
+    if (insertError) throw insertError;
+    return created.id as string;
+  };
+
+  const resolveContentTypeId = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) throw new Error("Type Content is required.");
+
+    const { data: existing, error: selectError } = await supabase
+      .from("content_types")
+      .select("id")
+      .ilike("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (selectError) throw selectError;
+    if (existing?.id) return existing.id as string;
+
+    const { data: created, error: insertError } = await supabase
+      .from("content_types")
+      .insert({ name: cleaned })
+      .select("id")
+      .single();
+
+    if (insertError) throw insertError;
+    return created.id as string;
+  };
+
+  const lookupCategoryIdInsensitive = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) return null;
+
+    const { data, error } = await supabase
+      .from("content_categories")
+      .select("id")
+      .ilike("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data?.id as string | undefined) ?? null;
+  };
+
+  const lookupContentTypeIdInsensitive = async (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned) return null;
+
+    const { data, error } = await supabase
+      .from("content_types")
+      .select("id")
+      .ilike("name", cleaned)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data?.id as string | undefined) ?? null;
+  };
+
+  const refreshCategories = React.useCallback(async () => {
+    const { data, error } = await supabase.from("content_categories").select("name, is_locked").order("name", { ascending: true });
+    if (error) throw error;
+
+    const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
+    setCategories(uniqueNonEmpty(rows.map((r) => r.name)));
+    setLockedCategories(new Set(rows.filter((r) => Boolean(r.is_locked)).map((r) => lockKey(r.name))));
+  }, []);
+
+  const refreshContentTypes = React.useCallback(async () => {
+    const { data, error } = await supabase.from("content_types").select("name, is_locked").order("name", { ascending: true });
+    if (error) throw error;
+
+    const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
+    setContentTypes(uniqueNonEmpty(rows.map((r) => r.name)));
+
+    const locked = new Set(rows.filter((r) => Boolean(r.is_locked)).map((r) => lockKey(r.name)));
+    for (const k of PERMANENT_CONTENT_TYPES) locked.add(k);
+    setLockedContentTypes(locked);
+  }, []);
+
   React.useEffect(() => {
     let cancelled = false;
 
-    const loadBusinesses = async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("id, business_name")
-        .order("business_name", { ascending: true, nullsFirst: false });
+    const load = async () => {
+      const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData }] = await Promise.all([
+        supabase.from("businesses").select("id, business_name").order("business_name", { ascending: true, nullsFirst: false }),
+        supabase.from("content_categories").select("name, is_locked").order("name", { ascending: true }),
+        supabase.from("content_types").select("name, is_locked").order("name", { ascending: true }),
+      ]);
 
       if (cancelled) return;
 
-      if (error) {
+      if (bizError) {
         setBusinesses([]);
-        return;
+      } else {
+        setBusinesses((bizData ?? []).map((b) => ({ id: b.id, name: safeName(b.business_name) })));
       }
 
-      const list: BusinessOption[] = (data ?? []).map((b) => ({
-        id: b.id,
-        name: safeName(b.business_name),
-      }));
+      const catRows = (catData ?? []) as Array<{ name: string; is_locked?: boolean }>;
+      setCategories(uniqueNonEmpty(catRows.map((c) => c.name)));
+      setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
 
-      setBusinesses(list);
+      const typeRows = (typeData ?? []) as Array<{ name: string; is_locked?: boolean }>;
+      setContentTypes(uniqueNonEmpty(typeRows.map((t) => t.name)));
+      const locked = new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name)));
+      for (const k of PERMANENT_CONTENT_TYPES) locked.add(k);
+      setLockedContentTypes(locked);
     };
 
-    void loadBusinesses();
+    void load();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
+  const openManage = (tab: "category" | "content") => {
+    setManageTab(tab);
+    setManageDialogOpen(true);
+    void refreshCategories();
+    void refreshContentTypes();
+  };
+
+  const addCategory = async () => {
+    const name = newCategory.trim();
+    if (!name) return;
+    if (categories.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      toast({ title: "Category already exists", description: `Category \"${name}\" is already registered.` });
+      return;
+    }
+
+    try {
+      await resolveCategoryId(name);
+      await refreshCategories();
+      setNewCategory("");
+      toast({ title: "Saved", description: "Category saved to database." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    }
+  };
+
+  const startEditCategory = (name: string) => {
+    setEditingCategory(name);
+    setEditingCategoryDraft(name);
+  };
+
+  const cancelEditCategory = () => {
+    setEditingCategory(null);
+    setEditingCategoryDraft("");
+  };
+
+  const saveEditCategory = async () => {
+    const from = (editingCategory ?? "").trim();
+    const to = editingCategoryDraft.trim();
+    if (!from || !to) return;
+
+    if (categories.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
+      toast({ title: "Category name conflict", description: `Category \"${to}\" already exists.` });
+      return;
+    }
+
+    try {
+      const id = await lookupCategoryIdInsensitive(from);
+      if (!id) throw new Error("Category not found in database.");
+
+      const { error } = await supabase.from("content_categories").update({ name: to }).eq("id", id);
+      if (error) throw error;
+
+      await refreshCategories();
+      cancelEditCategory();
+      toast({ title: "Saved", description: "Category updated." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    }
+  };
+
+  const deleteCategory = async (name: string) => {
+    try {
+      const id = await lookupCategoryIdInsensitive(name);
+      if (!id) throw new Error("Category not found in database.");
+
+      const { error } = await supabase.from("content_categories").delete().eq("id", id);
+      if (error) throw error;
+
+      await refreshCategories();
+      toast({ title: "Deleted", description: "Category deleted." });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: e?.message ?? "Category may be in use by existing items.",
+      });
+    }
+  };
+
+  const toggleCategoryLock = async (name: string) => {
+    try {
+      const cleaned = name.trim();
+      const { data, error } = await supabase
+        .from("content_categories")
+        .select("id, is_locked")
+        .ilike("name", cleaned)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data?.id) throw new Error("Category not found in database.");
+
+      const nextLocked = !Boolean((data as any).is_locked);
+      const { error: updateError } = await supabase.from("content_categories").update({ is_locked: nextLocked }).eq("id", (data as any).id);
+      if (updateError) throw updateError;
+
+      await refreshCategories();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed", description: e?.message ?? "Failed to toggle lock." });
+    }
+  };
+
+  const addContentType = async () => {
+    const name = newContentType.trim();
+    if (!name) return;
+    if (contentTypes.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      toast({ title: "Type already exists", description: `Type Content \"${name}\" is already registered.` });
+      return;
+    }
+
+    try {
+      await resolveContentTypeId(name);
+      await refreshContentTypes();
+      setNewContentType("");
+      toast({ title: "Saved", description: "Type Content saved to database." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    }
+  };
+
+  const startEditContentType = (name: string) => {
+    setEditingContentType(name);
+    setEditingContentTypeDraft(name);
+  };
+
+  const cancelEditContentType = () => {
+    setEditingContentType(null);
+    setEditingContentTypeDraft("");
+  };
+
+  const saveEditContentType = async () => {
+    const from = (editingContentType ?? "").trim();
+    const to = editingContentTypeDraft.trim();
+    if (!from || !to) return;
+
+    if (contentTypes.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
+      toast({ title: "Type name conflict", description: `Type Content \"${to}\" already exists.` });
+      return;
+    }
+
+    try {
+      const id = await lookupContentTypeIdInsensitive(from);
+      if (!id) throw new Error("Type Content not found in database.");
+
+      const { error } = await supabase.from("content_types").update({ name: to }).eq("id", id);
+      if (error) throw error;
+
+      await refreshContentTypes();
+      cancelEditContentType();
+      toast({ title: "Saved", description: "Type Content updated." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+    }
+  };
+
+  const deleteContentType = async (name: string) => {
+    try {
+      const key = lockKey(name);
+      if (PERMANENT_CONTENT_TYPES.has(key)) {
+        toast({ variant: "destructive", title: "Not allowed", description: "This Type Content is permanent." });
+        return;
+      }
+
+      const id = await lookupContentTypeIdInsensitive(name);
+      if (!id) throw new Error("Type Content not found in database.");
+
+      const { error } = await supabase.from("content_types").delete().eq("id", id);
+      if (error) throw error;
+
+      await refreshContentTypes();
+      toast({ title: "Deleted", description: "Type Content deleted." });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: e?.message ?? "Type Content may be in use by existing items.",
+      });
+    }
+  };
+
+  const toggleContentTypeLock = async (name: string) => {
+    const key = lockKey(name);
+    if (PERMANENT_CONTENT_TYPES.has(key)) return;
+
+    try {
+      const cleaned = name.trim();
+      const { data, error } = await supabase
+        .from("content_types")
+        .select("id, is_locked")
+        .ilike("name", cleaned)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data?.id) throw new Error("Type Content not found in database.");
+
+      const nextLocked = !Boolean((data as any).is_locked);
+      const { error: updateError } = await supabase.from("content_types").update({ is_locked: nextLocked }).eq("id", (data as any).id);
+      if (updateError) throw updateError;
+
+      await refreshContentTypes();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed", description: e?.message ?? "Failed to toggle lock." });
+    }
+  };
+
+  const getConfirmCopy = React.useCallback(() => {
+    if (!confirmAction) return null;
+
+    switch (confirmAction.kind) {
+      case "delete_category":
+        return {
+          title: "Delete category?",
+          description: `Are you sure you want to delete \"${confirmAction.name}\"? This action cannot be undone.`,
+          confirmLabel: "Yes, delete",
+        };
+      case "save_edit_category":
+        return {
+          title: "Save changes?",
+          description: `Save changes to category \"${editingCategory ?? ""}\"?`,
+          confirmLabel: "Yes, save",
+        };
+      case "delete_type":
+        return {
+          title: "Delete type content?",
+          description: `Are you sure you want to delete \"${confirmAction.name}\"? This action cannot be undone.`,
+          confirmLabel: "Yes, delete",
+        };
+      case "save_edit_type":
+        return {
+          title: "Save changes?",
+          description: `Save changes to type content \"${editingContentType ?? ""}\"?`,
+          confirmLabel: "Yes, save",
+        };
+    }
+  }, [confirmAction, editingCategory, editingContentType]);
+
+  const confirmCopy = getConfirmCopy();
+
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+
+    try {
+      switch (confirmAction.kind) {
+        case "delete_category":
+          await deleteCategory(confirmAction.name);
+          break;
+        case "save_edit_category":
+          await saveEditCategory();
+          break;
+        case "delete_type":
+          await deleteContentType(confirmAction.name);
+          break;
+        case "save_edit_type":
+          await saveEditContentType();
+          break;
+      }
+    } finally {
+      setConfirmAction(null);
+    }
+  };
+
   const rows: MediaRow[] = React.useMemo(() => {
-    // Placeholder sampai ada schema kategori media: buat 1 baris per bisnis
+    // Placeholder until media schema exists. We show one row per business.
     if (businesses.length > 0) {
+      const category = categories[0] ?? "General";
       return businesses.map((b) => ({
-        id: `${b.id}-general`,
+        id: `${b.id}-${category}`,
         businessId: b.id,
         businessName: b.name,
-        category: "General",
+        category,
         imagesGallery: 0,
         videoContent: 0,
       }));
     }
 
     return FALLBACK_ROWS;
-  }, [businesses]);
+  }, [businesses, categories]);
 
   const displayedRows = React.useMemo(() => {
-    const filtered =
-      selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
+    const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
 
     const dir = sortDirection === "asc" ? 1 : -1;
 
-    return [...filtered].sort((a, b) =>
-      a.businessName.localeCompare(b.businessName, "id", { sensitivity: "base" }) * dir,
-    );
+    return [...filtered].sort((a, b) => a.businessName.localeCompare(b.businessName, "en", { sensitivity: "base" }) * dir);
   }, [rows, selectedBusinessId, sortDirection]);
 
   const onImport = (type: ImportType) => {
     setLastImportType(type);
     toast({
-      title: "Import selected",
-      description: `You selected import: ${type}`,
+      title: "In Progress",
+      description: `Import \"${type}\" is in progress.`,
     });
   };
+
 
   return (
     <div className="space-y-6">
@@ -202,6 +635,13 @@ export default function AssistMediaLibrary() {
             >
               Sort Name: {sortDirection === "asc" ? "A–Z" : "Z–A"}
             </Button>
+
+            <Button type="button" variant="secondary" onClick={() => openManage("category")}>
+              Manage Category
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => openManage("content")}>
+              Manage Type Content
+            </Button>
           </div>
         </CardHeader>
 
@@ -253,6 +693,234 @@ export default function AssistMediaLibrary() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Manage dialog (Category / Type Content) */}
+      <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Manage</DialogTitle>
+            <DialogDescription className="sr-only">Manage categories and content types.</DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={manageTab} onValueChange={(v) => setManageTab(v as "category" | "content")}>
+            <TabsList>
+              <TabsTrigger value="category">Category</TabsTrigger>
+              <TabsTrigger value="content">Type Content</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="category" className="space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Category name..." />
+                <Button type="button" onClick={addCategory}>
+                  Add
+                </Button>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((c) => {
+                    const isEditing = editingCategory === c;
+                    const isLocked = lockedCategories.has(lockKey(c));
+
+                    return (
+                      <TableRow key={c}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input value={editingCategoryDraft} onChange={(e) => setEditingCategoryDraft(e.target.value)} />
+                          ) : (
+                            <span className="font-medium">{c}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isEditing}
+                              onClick={() => toggleCategoryLock(c)}
+                              aria-label={isLocked ? "Unlock" : "Lock"}
+                              title={isLocked ? "Unlock" : "Lock"}
+                            >
+                              {isLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                            </Button>
+
+                            {isEditing ? (
+                              <>
+                                <Button type="button" size="sm" onClick={() => setConfirmAction({ kind: "save_edit_category" })}>
+                                  Save
+                                </Button>
+                                <Button type="button" size="sm" variant="outline" onClick={cancelEditCategory}>
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={isLocked}
+                                onClick={() => startEditCategory(c)}
+                              >
+                                Edit
+                              </Button>
+                            )}
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isLocked}
+                              onClick={() => setConfirmAction({ kind: "delete_category", name: c })}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+
+                  {categories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
+                        No categories yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            <TabsContent value="content" className="space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  value={newContentType}
+                  onChange={(e) => setNewContentType(e.target.value)}
+                  placeholder="Type Content name..."
+                />
+                <Button type="button" onClick={addContentType}>
+                  Add
+                </Button>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type Content</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contentTypes.map((t) => {
+                    const key = lockKey(t);
+                    const isPermanent = PERMANENT_CONTENT_TYPES.has(key);
+                    const isEditing = editingContentType === t;
+                    const isLocked = isPermanent || lockedContentTypes.has(key);
+
+                    return (
+                      <TableRow key={t}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input value={editingContentTypeDraft} onChange={(e) => setEditingContentTypeDraft(e.target.value)} />
+                          ) : (
+                            <span className="font-medium">{t}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isEditing || isPermanent}
+                              onClick={() => toggleContentTypeLock(t)}
+                              aria-label={isLocked ? "Unlock" : "Lock"}
+                              title={isPermanent ? "Permanent" : isLocked ? "Unlock" : "Lock"}
+                            >
+                              {isPermanent ? (
+                                <Lock className="h-4 w-4" />
+                              ) : isLocked ? (
+                                <Unlock className="h-4 w-4" />
+                              ) : (
+                                <Lock className="h-4 w-4" />
+                              )}
+                            </Button>
+
+                            {isEditing ? (
+                              <>
+                                <Button type="button" size="sm" onClick={() => setConfirmAction({ kind: "save_edit_type" })}>
+                                  Save
+                                </Button>
+                                <Button type="button" size="sm" variant="outline" onClick={cancelEditContentType}>
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={isLocked}
+                                onClick={() => startEditContentType(t)}
+                              >
+                                Edit
+                              </Button>
+                            )}
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isLocked}
+                              onClick={() => setConfirmAction({ kind: "delete_type", name: t })}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+
+                  {contentTypes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
+                        No types yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </TabsContent>
+          </Tabs>
+
+          <AlertDialog open={!!confirmAction} onOpenChange={(open) => (!open ? setConfirmAction(null) : undefined)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{confirmCopy?.title}</AlertDialogTitle>
+                <AlertDialogDescription>{confirmCopy?.description}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>No</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirm}>{confirmCopy?.confirmLabel ?? "Yes"}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setManageDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
