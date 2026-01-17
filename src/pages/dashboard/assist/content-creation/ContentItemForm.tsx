@@ -52,7 +52,7 @@ export default function ContentItemForm({
   onCancel,
   onSave,
 }: Props) {
-  const [businessId, setBusinessId] = React.useState<string>(businesses[0]?.id ?? "");
+  const [businessId, setBusinessId] = React.useState<string>("");
   const business = React.useMemo(() => businesses.find((b) => b.id === businessId), [businessId, businesses]);
   const businessName = business?.name ?? "";
   const businessPublicId = business?.publicId ?? businessId;
@@ -114,6 +114,33 @@ export default function ContentItemForm({
         </CardHeader>
 
         <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-foreground">Images</h3>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <ImageFieldCard
+                variant="compact"
+                label="Primary Image"
+                value={images.primary.url}
+                originalValue={images.primary.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
+              />
+              <ImageFieldCard
+                variant="compact"
+                label="Secondary Image"
+                value={images.secondary.url}
+                originalValue={images.secondary.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
+              />
+              <ImageFieldCard
+                variant="compact"
+                label="Third Image"
+                value={images.third.url}
+                originalValue={images.third.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+              />
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Business</Label>
@@ -188,33 +215,6 @@ export default function ContentItemForm({
             <div className="space-y-2">
               <Label>Scheduled</Label>
               <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-foreground">Images</h3>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <ImageFieldCard
-                variant="compact"
-                label="Primary Image"
-                value={images.primary.url}
-                originalValue={images.primary.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
-              />
-              <ImageFieldCard
-                variant="compact"
-                label="Secondary Image"
-                value={images.secondary.url}
-                originalValue={images.secondary.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
-              />
-              <ImageFieldCard
-                variant="compact"
-                label="Third Image"
-                value={images.third.url}
-                originalValue={images.third.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
-              />
             </div>
           </div>
         </CardContent>

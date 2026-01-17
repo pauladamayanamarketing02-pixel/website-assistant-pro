@@ -121,8 +121,20 @@ export default function ImageFieldCard({
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3">
         <CardTitle className={variant === "compact" ? "text-sm" : "text-base"}>{label}</CardTitle>
+      </CardHeader>
+
+      <CardContent className={variant === "compact" ? "space-y-2" : "space-y-3"}>
+        <div className="overflow-hidden rounded-md border">
+          <img
+            src={value || "/placeholder.svg"}
+            alt={`${label} image preview`}
+            loading="lazy"
+            className={variant === "compact" ? "h-24 w-full object-cover" : "h-48 w-full object-cover"}
+          />
+        </div>
+
         <TooltipProvider delayDuration={150}>
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex flex-wrap gap-2">
             <IconActionButton label="Preview" onClick={preview} icon={<Eye className="h-4 w-4" />} disabled={!value} />
             <IconActionButton label="Copy URL" onClick={() => void copyUrl()} icon={<Copy className="h-4 w-4" />} disabled={!value} />
             <IconActionButton
@@ -142,17 +154,6 @@ export default function ImageFieldCard({
             />
           </div>
         </TooltipProvider>
-      </CardHeader>
-
-      <CardContent className={variant === "compact" ? "space-y-2" : "space-y-3"}>
-        <div className="overflow-hidden rounded-md border">
-          <img
-            src={value || "/placeholder.svg"}
-            alt={`${label} image preview`}
-            loading="lazy"
-            className={variant === "compact" ? "h-24 w-full object-cover" : "h-48 w-full object-cover"}
-          />
-        </div>
 
         <div className="space-y-2">
           <Label>Current URL</Label>
