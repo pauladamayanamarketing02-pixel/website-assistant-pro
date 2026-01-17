@@ -1223,27 +1223,28 @@ export default function ContentCreation() {
                       </div>
 
                       {isEditing ? (
-                        <div className="mt-4">
-                          <ContentItemInlineEditor
-                            categories={categories}
-                            contentTypes={contentTypes}
-                            saving={detailsSaving}
-                            initialValues={{
-                              title: item.title ?? "",
-                              description: item.description ?? "",
-                              category: item.category ?? "",
-                              contentType: item.contentType ?? "",
-                              platform: item.platform ?? "",
-                              scheduledAt: item.scheduledAt ? toDatetimeLocalInput(item.scheduledAt) : "",
-                              primaryImageUrl: item.images.primary || "/placeholder.svg",
-                              secondaryImageUrl: item.images.second || "/placeholder.svg",
-                              thirdImageUrl: item.images.third || "/placeholder.svg",
-                            }}
-                            onCancel={cancelEditItem}
-                            onDelete={() => setDeleteItemId(item.id)}
-                            onSave={(values) => void saveEditItem(values)}
-                          />
-                        </div>
+                      <div className="mt-4">
+                        <ContentItemInlineEditor
+                          categories={categories}
+                          contentTypes={contentTypes}
+                          saving={detailsSaving}
+                          initialValues={{
+                            title: item.title ?? "",
+                            description: item.description ?? "",
+                            category: item.category ?? "",
+                            contentType: item.contentType ?? "",
+                            platform: item.platform ?? "",
+                            scheduledAt: item.scheduledAt ? toDatetimeLocalInput(item.scheduledAt) : "",
+                            primaryImageUrl: item.images.primary || "/placeholder.svg",
+                            secondaryImageUrl: item.images.second || "/placeholder.svg",
+                            thirdImageUrl: item.images.third || "/placeholder.svg",
+                          }}
+                          readOnly={editingItemId !== item.id}
+                          onCancel={cancelEditItem}
+                          onDelete={() => setDeleteItemId(item.id)}
+                          onSave={(values) => void saveEditItem(values)}
+                        />
+                      </div>
                       ) : (
                         <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_4fr]">
                           {/* Images */}

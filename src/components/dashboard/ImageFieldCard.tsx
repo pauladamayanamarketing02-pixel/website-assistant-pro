@@ -23,6 +23,7 @@ type Props = {
   originalValue: string;
   onChange: (next: { url: string; originalUrl: string }) => void;
   variant?: "default" | "compact";
+  disabled?: boolean;
 };
 
 function IconActionButton({
@@ -62,6 +63,7 @@ export default function ImageFieldCard({
   originalValue,
   onChange,
   variant = "default",
+  disabled = false,
 }: Props) {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -94,10 +96,13 @@ export default function ImageFieldCard({
   };
 
   const openFilePicker = () => {
+    if (disabled) return;
     fileInputRef.current?.click();
   };
 
   const onPickFile: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    if (disabled) return;
+
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -145,21 +150,32 @@ export default function ImageFieldCard({
         <TooltipProvider delayDuration={150}>
           <div className="flex flex-wrap gap-2">
             <IconActionButton label="Preview" onClick={preview} icon={<Eye className="h-4 w-4" />} disabled={!value} />
-            <IconActionButton label="Copy URL" onClick={() => void copyUrl()} icon={<Copy className="h-4 w-4" />} disabled={!value} />
+            <IconActionButton
+              label="Copy URL"
+              onClick={() => void copyUrl()}
+              icon={<Copy className="h-4 w-4" />}
+              disabled={!value}
+            />
             <IconActionButton
               label="Change Image"
-              onClick={() => setUrlDialogOpen(true)}
+              onClick={() => {
+                if (disabled) return;
+                setUrlDialogOpen(true);
+              }}
               icon={<Link2 className="h-4 w-4" />}
+              disabled={disabled}
             />
             <IconActionButton
               label="Add From Computer"
               onClick={openFilePicker}
               icon={<Upload className="h-4 w-4" />}
+              disabled={disabled}
             />
             <IconActionButton
               label="Reset to Original"
               onClick={reset}
               icon={<RotateCcw className="h-4 w-4" />}
+              disabled={disabled}
             />
           </div>
         </TooltipProvider>
@@ -170,6 +186,7 @@ export default function ImageFieldCard({
           accept="image/*"
           className="hidden"
           onChange={onPickFile}
+          disabled={disabled}
         />
       </CardContent>
 

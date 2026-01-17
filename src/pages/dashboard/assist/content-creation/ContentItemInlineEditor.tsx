@@ -36,9 +36,10 @@ type Props = {
   contentTypes: string[];
   initialValues: ContentItemInlineEditValues;
   saving?: boolean;
-  onSave: (values: ContentItemInlineEditValues) => void;
-  onCancel: () => void;
-  onDelete: () => void;
+  readOnly?: boolean;
+  onSave?: (values: ContentItemInlineEditValues) => void;
+  onCancel?: () => void;
+  onDelete?: () => void;
 };
 
 export default function ContentItemInlineEditor({
@@ -46,6 +47,7 @@ export default function ContentItemInlineEditor({
   contentTypes,
   initialValues,
   saving,
+  readOnly = false,
   onSave,
   onCancel,
   onDelete,
@@ -72,13 +74,17 @@ export default function ContentItemInlineEditor({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-medium text-foreground">Edit Mode</p>
-        <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Hapus
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-medium text-foreground">Edit Mode</p>
+          {onDelete && (
+            <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Hapus
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_4fr]">
         <div className="space-y-3">
@@ -90,6 +96,7 @@ export default function ContentItemInlineEditor({
               value={images.primary.url}
               originalValue={images.primary.originalUrl}
               onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
+              disabled={readOnly}
             />
             <ImageFieldCard
               variant="compact"
@@ -97,6 +104,7 @@ export default function ContentItemInlineEditor({
               value={images.secondary.url}
               originalValue={images.secondary.originalUrl}
               onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
+              disabled={readOnly}
             />
             <ImageFieldCard
               variant="compact"
@@ -104,6 +112,7 @@ export default function ContentItemInlineEditor({
               value={images.third.url}
               originalValue={images.third.originalUrl}
               onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+              disabled={readOnly}
             />
           </div>
         </div>
@@ -112,13 +121,17 @@ export default function ContentItemInlineEditor({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label>Title</Label>
-              <Input value={values.title} onChange={(e) => setValues((p) => ({ ...p, title: e.target.value }))} />
+              <Input
+                value={values.title}
+                disabled={readOnly}
+                onChange={(e) => setValues((p) => ({ ...p, title: e.target.value }))}
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Category</Label>
               <Select value={values.category || undefined} onValueChange={(v) => setValues((p) => ({ ...p, category: v }))}>
-                <SelectTrigger>
+                <SelectTrigger disabled={readOnly}>
                   <SelectValue placeholder="Choose Category" />
                 </SelectTrigger>
                 <SelectContent className="z-50">
@@ -137,7 +150,7 @@ export default function ContentItemInlineEditor({
                 value={values.contentType || undefined}
                 onValueChange={(v) => setValues((p) => ({ ...p, contentType: v, platform: "" }))}
               >
-                <SelectTrigger>
+                <SelectTrigger disabled={readOnly}>
                   <SelectValue placeholder="Choose Type Content" />
                 </SelectTrigger>
                 <SelectContent className="z-50">
@@ -154,6 +167,7 @@ export default function ContentItemInlineEditor({
               contentType={values.contentType}
               value={values.platform}
               onChange={(v) => setValues((p) => ({ ...p, platform: v }))}
+              disabled={readOnly}
             />
 
             <div className="space-y-2">
@@ -161,6 +175,7 @@ export default function ContentItemInlineEditor({
               <Input
                 type="datetime-local"
                 value={values.scheduledAt}
+                disabled={readOnly}
                 onChange={(e) => setValues((p) => ({ ...p, scheduledAt: e.target.value }))}
               />
             </div>
@@ -172,7 +187,7 @@ export default function ContentItemInlineEditor({
               value={values.description}
               onChange={(v) => setValues((p) => ({ ...p, description: v }))}
               onSave={() => {}}
-              isEditing
+              isEditing={!readOnly}
               saving={false}
               title="Description"
               description="Write the content description."
@@ -182,27 +197,31 @@ export default function ContentItemInlineEditor({
             />
           </div>
 
-          <Separator />
+          {!readOnly && (
+            <>
+              <Separator />
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={Boolean(saving)}
-              onClick={() =>
-                onSave({
-                  ...values,
-                  primaryImageUrl: images.primary.url,
-                  secondaryImageUrl: images.secondary.url,
-                  thirdImageUrl: images.third.url,
-                })
-              }
-            >
-              {saving ? "Saving..." : "Save"}
-            </Button>
-          </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={Boolean(saving)}
+                  onClick={() =>
+                    onSave?.({
+                      ...values,
+                      primaryImageUrl: images.primary.url,
+                      secondaryImageUrl: images.secondary.url,
+                      thirdImageUrl: images.third.url,
+                    })
+                  }
+                >
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
