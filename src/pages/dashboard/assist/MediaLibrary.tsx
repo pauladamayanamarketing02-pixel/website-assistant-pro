@@ -66,7 +66,7 @@ const FALLBACK_ROWS: MediaRow[] = [
 ];
 
 function safeName(name: string | null | undefined) {
-  return (name ?? "(Tanpa Nama)").trim() || "(Tanpa Nama)";
+  return (name ?? "(No name)").trim() || "(No name)";
 }
 
 export default function AssistMediaLibrary() {
@@ -138,8 +138,8 @@ export default function AssistMediaLibrary() {
   const onImport = (type: ImportType) => {
     setLastImportType(type);
     toast({
-      title: "Import dipilih",
-      description: `Anda memilih import: ${type}`,
+      title: "Import selected",
+      description: `You selected import: ${type}`,
     });
   };
 
@@ -148,11 +148,11 @@ export default function AssistMediaLibrary() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Media Library</h1>
-          <p className="text-muted-foreground">Kelola asset media (gambar & video) untuk klien.</p>
+          <p className="text-muted-foreground">Manage media assets (images & video) for clients.</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button">Upload</Button>
+          <Button type="button">Add</Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -174,19 +174,19 @@ export default function AssistMediaLibrary() {
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <CardTitle>Manajemen Media</CardTitle>
+            <CardTitle>Media Management</CardTitle>
             {lastImportType ? (
-              <p className="text-sm text-muted-foreground">Terakhir dipilih: {lastImportType}</p>
+              <p className="text-sm text-muted-foreground">Last selected: {lastImportType}</p>
             ) : null}
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId}>
               <SelectTrigger className="w-full sm:w-[260px]">
-                <SelectValue placeholder="Sortir berdasarkan nama bisnis" />
+                <SelectValue placeholder="Filter by business name" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                <SelectItem value="all">Semua Bisnis</SelectItem>
+                <SelectItem value="all">All Businesses</SelectItem>
                 {businesses.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {b.name}
@@ -200,7 +200,7 @@ export default function AssistMediaLibrary() {
               variant="outline"
               onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
             >
-              Sort Nama: {sortDirection === "asc" ? "A–Z" : "Z–A"}
+              Sort Name: {sortDirection === "asc" ? "A–Z" : "Z–A"}
             </Button>
           </div>
         </CardHeader>
@@ -232,7 +232,7 @@ export default function AssistMediaLibrary() {
                       onClick={() =>
                         toast({
                           title: "View Details",
-                          description: `Bisnis: ${row.businessName} • Kategori: ${row.category} (sementara placeholder).`,
+                          description: `Business: ${row.businessName} • Category: ${row.category} (placeholder).`,
                         })
                       }
                     >
@@ -245,7 +245,7 @@ export default function AssistMediaLibrary() {
               {displayedRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                    Tidak ada data untuk bisnis yang dipilih.
+                    No data for the selected business.
                   </TableCell>
                 </TableRow>
               ) : null}

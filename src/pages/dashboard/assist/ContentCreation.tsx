@@ -43,6 +43,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
+import ContentItemForm from "@/pages/dashboard/assist/content-creation/ContentItemForm";
 
 type SortDirection = "asc" | "desc";
 
@@ -137,6 +138,9 @@ export default function ContentCreation() {
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
+
+  // Create (full page, not overlay)
+  const [createOpen, setCreateOpen] = React.useState(false);
 
   // View Details (full page, not overlay)
   const [detailsOpen, setDetailsOpen] = React.useState(false);
@@ -358,13 +362,30 @@ export default function ContentCreation() {
     if (editingContentType === name) cancelEditContentType();
   };
 
+  if (createOpen) {
+    return (
+      <ContentItemForm
+        businesses={businesses.length ? businesses : [{ id: "demo", name: "Demo Business" }]}
+        categories={categories}
+        contentTypes={contentTypes}
+        onCancel={() => setCreateOpen(false)}
+        onSave={() => {
+          toast({ title: "Saved", description: "New content item saved (still placeholder)." });
+          setCreateOpen(false);
+        }}
+      />
+    );
+  }
+
   if (detailsOpen && activeRow) {
     return (
       <div className="space-y-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground">View Details</h1>
-            <p className="text-muted-foreground">{activeRow.businessName} • {activeRow.category}</p>
+            <p className="text-muted-foreground">
+              {activeRow.businessName} • {activeRow.category}
+            </p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -488,10 +509,7 @@ export default function ContentCreation() {
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Manage</DialogTitle>
-              <DialogDescription>
-                Manage categories (add/edit/delete) and content columns (add/edit/delete).
-                Note: Business, Category, and Action columns cannot be changed.
-              </DialogDescription>
+              <DialogDescription className="sr-only">Manage categories and content columns.</DialogDescription>
             </DialogHeader>
 
             <Tabs value={manageTab} onValueChange={(v) => setManageTab(v as "category" | "content")}>
@@ -654,7 +672,9 @@ export default function ContentCreation() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button">Add</Button>
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            Add
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -705,7 +725,7 @@ export default function ContentCreation() {
               variant="outline"
               onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
             >
-              Sort Nama: {sortDirection === "asc" ? "A–Z" : "Z–A"}
+              Sort Name: {sortDirection === "asc" ? "A–Z" : "Z–A"}
             </Button>
 
             <Button type="button" variant="secondary" onClick={() => openManage("category")}>
@@ -764,10 +784,7 @@ export default function ContentCreation() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Manage</DialogTitle>
-            <DialogDescription>
-              Manage categories (add/edit/delete) and content columns (add/edit/delete).
-              Note: Business, Category, and Action columns cannot be changed.
-            </DialogDescription>
+            <DialogDescription className="sr-only">Manage categories and content columns.</DialogDescription>
           </DialogHeader>
 
           <Tabs value={manageTab} onValueChange={(v) => setManageTab(v as "category" | "content")}>
