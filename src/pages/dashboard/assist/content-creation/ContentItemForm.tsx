@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Select,
   SelectContent,
@@ -57,13 +58,15 @@ export default function ContentItemForm({
   onCancel,
   onSave,
 }: Props) {
+  const { toast } = useToast();
+
   const [businessId, setBusinessId] = React.useState<string>("");
   const business = React.useMemo(() => businesses.find((b) => b.id === businessId), [businessId, businesses]);
   const businessName = business?.name ?? "";
   const businessPublicId = business?.publicId ?? businessId;
 
-  const [category, setCategory] = React.useState<string>(categories[0] ?? "");
-  const [contentType, setContentType] = React.useState<string>(contentTypes[0] ?? "");
+  const [category, setCategory] = React.useState<string>("");
+  const [contentType, setContentType] = React.useState<string>("");
   const [platform, setPlatform] = React.useState<string>("");
   const [title, setTitle] = React.useState<string>("");
   const [description, setDescription] = React.useState<string>("");
@@ -85,6 +88,23 @@ export default function ContentItemForm({
   });
 
   const handleSave = () => {
+    const descriptionText = description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+    const missing: string[] = [];
+    if (!businessId) missing.push("Business Name");
+    if (!category) missing.push("Category");
+    if (!contentType) missing.push("Type Content");
+    if (!descriptionText) missing.push("Description");
+
+    if (missing.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Missing required fields",
+        description: `Please fill: ${missing.join(", ")}.`,
+      });
+      return;
+    }
+
     onSave({
       businessId,
       businessPublicId,
@@ -131,8 +151,8 @@ export default function ContentItemForm({
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Business Name</Label>
-              <Select value={businessId} onValueChange={setBusinessId}>
+              <Label>Business Name*</Label>
+              <Select value={businessId || undefined} onValueChange={setBusinessId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose Business Name" />
                 </SelectTrigger>
@@ -152,8 +172,8 @@ export default function ContentItemForm({
             </div>
 
             <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Label>Category*</Label>
+              <Select value={category || undefined} onValueChange={setCategory}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose Category" />
                 </SelectTrigger>
@@ -168,9 +188,9 @@ export default function ContentItemForm({
             </div>
 
             <div className="space-y-2">
-              <Label>Type Content</Label>
+              <Label>Type Content*</Label>
               <Select
-                value={contentType}
+                value={contentType || undefined}
                 onValueChange={(next) => {
                   setContentType(next);
                   setPlatform("");
@@ -199,7 +219,7 @@ export default function ContentItemForm({
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label>Description</Label>
+              <Label>Description*</Label>
               <RichTextEditor
                 value={description}
                 onChange={setDescription}
