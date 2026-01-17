@@ -1,8 +1,11 @@
 import * as React from "react";
 
+import { ArrowLeft, Type } from "lucide-react";
+
 import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
+import { RichTextEditor } from "@/components/dashboard/RichTextEditor";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 
 type BusinessOption = {
   id: string;
@@ -73,38 +76,41 @@ export default function ContentItemForm({
     third: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
   });
 
+  const handleSave = () => {
+    onSave({
+      businessId,
+      businessPublicId,
+      businessName,
+      category,
+      contentType,
+      title,
+      description,
+      scheduledAt,
+      primaryImageUrl: images.primary.url,
+      secondaryImageUrl: images.secondary.url,
+      thirdImageUrl: images.third.url,
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground">Add Content</h1>
-          <p className="text-muted-foreground">Create a new content item for a client.</p>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Back
-          </Button>
+      <header className="flex flex-col gap-3">
+        <div className="flex items-start gap-3">
           <Button
             type="button"
-            onClick={() =>
-              onSave({
-                businessId,
-                businessPublicId,
-                businessName,
-                category,
-                contentType,
-                title,
-                description,
-                scheduledAt,
-                primaryImageUrl: images.primary.url,
-                secondaryImageUrl: images.secondary.url,
-                thirdImageUrl: images.third.url,
-              })
-            }
+            variant="ghost"
+            size="icon"
+            className="mt-0.5"
+            onClick={onCancel}
+            aria-label="Back"
           >
-            Save
+            <ArrowLeft className="h-5 w-5" />
           </Button>
+
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-foreground">Add Content</h1>
+            <p className="text-muted-foreground">Create a new content item for a client.</p>
+          </div>
         </div>
       </header>
 
@@ -114,33 +120,6 @@ export default function ContentItemForm({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-foreground">Images</h3>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <ImageFieldCard
-                variant="compact"
-                label="Primary Image"
-                value={images.primary.url}
-                originalValue={images.primary.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
-              />
-              <ImageFieldCard
-                variant="compact"
-                label="Secondary Image"
-                value={images.secondary.url}
-                originalValue={images.secondary.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
-              />
-              <ImageFieldCard
-                variant="compact"
-                label="Third Image"
-                value={images.third.url}
-                originalValue={images.third.originalUrl}
-                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
-              />
-            </div>
-          </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Business</Label>
@@ -204,11 +183,17 @@ export default function ContentItemForm({
 
             <div className="space-y-2 sm:col-span-2">
               <Label>Description</Label>
-              <Textarea
+              <RichTextEditor
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Description..."
-                rows={5}
+                onChange={setDescription}
+                onSave={() => {}}
+                isEditing
+                saving={false}
+                title="Description"
+                description="Write the content description."
+                icon={Type}
+                showTopBar={false}
+                showSaveControls={false}
               />
             </div>
 
@@ -217,7 +202,45 @@ export default function ContentItemForm({
               <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
             </div>
           </div>
+
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-foreground">Images</h3>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <ImageFieldCard
+                variant="compact"
+                label="Primary Image"
+                value={images.primary.url}
+                originalValue={images.primary.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
+              />
+              <ImageFieldCard
+                variant="compact"
+                label="Secondary Image"
+                value={images.secondary.url}
+                originalValue={images.secondary.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
+              />
+              <ImageFieldCard
+                variant="compact"
+                label="Third Image"
+                value={images.third.url}
+                originalValue={images.third.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+              />
+            </div>
+          </div>
         </CardContent>
+
+        <Separator />
+
+        <CardFooter className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSave}>
+            Save
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );
