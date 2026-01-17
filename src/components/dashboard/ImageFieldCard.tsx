@@ -80,33 +80,43 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="text-base">{label}</CardTitle>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={preview}>
-            Preview
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={copyUrl}>
-            Copy Url
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setUrlDialogOpen(true)}>
-            Change Image
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={openFilePicker}>
-            Upload From Computer
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={reset}>
-            Reset to Original
-          </Button>
-        </div>
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <div className="overflow-hidden rounded-md border">
+        <div className="group relative overflow-hidden rounded-md border">
           <img
             src={value || "/placeholder.svg"}
             alt={`${label} image preview`}
             loading="lazy"
             className="h-48 w-full object-cover"
           />
+
+          {/* subtle hover layer */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/70 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+
+          {/* Controls inside image */}
+          <div className="pointer-events-none absolute inset-0 flex items-end p-2">
+            <div className="pointer-events-auto relative z-10 flex w-full flex-wrap items-center justify-between gap-2 rounded-md bg-background/80 p-2 backdrop-blur">
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={preview}>
+                  Preview
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={copyUrl}>
+                  Copy Url
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={() => setUrlDialogOpen(true)}>
+                  Change Image
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={openFilePicker}>
+                  Upload From Computer
+                </Button>
+              </div>
+
+              <Button type="button" variant="outline" size="sm" onClick={reset}>
+                Reset to Original
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">
