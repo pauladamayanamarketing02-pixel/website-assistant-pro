@@ -82,6 +82,14 @@ function lockKey(name: string) {
   return (name ?? "").trim().toLowerCase();
 }
 
+const PERMANENT_CONTENT_TYPES = new Set([
+  "ads marketing",
+  "blog posts",
+  "email marketing",
+  "gmb posts",
+  "social media posts",
+]);
+
 function formatBusinessId(businessNumber: number | null | undefined) {
   if (!businessNumber) return "";
   return `B${businessNumber.toString().padStart(5, "0")}`;
@@ -128,6 +136,11 @@ export default function ContentCreation() {
   type ContentSortField = "category" | "contentTypes";
   const [sortField, setSortField] = React.useState<ContentSortField>("contentTypes");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc");
+
+  // UI now only exposes sorting for Type Content (column order)
+  React.useEffect(() => {
+    if (sortField !== "contentTypes") setSortField("contentTypes");
+  }, [sortField]);
 
   const [contentRows, setContentRows] = React.useState<ContentRow[]>([]);
   const contentRowsRef = React.useRef<ContentRow[]>([]);
@@ -263,7 +276,7 @@ export default function ContentCreation() {
       // Keep previous rows to avoid flicker.
     } finally {
       fetchRowsInFlight.current = false;
-      setRowsLoading(false);
+      if (shouldShowLoading) setRowsLoading(false);
     }
   }, [contentTypes, toast]);
 
@@ -311,7 +324,10 @@ export default function ContentCreation() {
 
       // Hydrate lock state from DB so it survives refresh
       setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
-      setLockedContentTypes(new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name))));
+
+      const lockedTypes = new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name)));
+      for (const k of PERMANENT_CONTENT_TYPES) lockedTypes.add(k);
+      setLockedContentTypes(lockedTypes);
 
       // even if content_types query fails, we stop blocking the table forever
       if (typeError) setContentTypes([]);
@@ -1625,10 +1641,8 @@ export default function ContentCreation() {
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                <SelectItem value="contentTypes:asc">Sort: Content Types (A-Z)</SelectItem>
-                <SelectItem value="contentTypes:desc">Sort: Content Types (Z-A)</SelectItem>
-                <SelectItem value="category:asc">Sort: Category (A-Z)</SelectItem>
-                <SelectItem value="category:desc">Sort: Category (Z-A)</SelectItem>
+                <SelectItem value="contentTypes:asc">Sort: Type Content (A-Z)</SelectItem>
+                <SelectItem value="contentTypes:desc">Sort: Type Content (Z-A)</SelectItem>
               </SelectContent>
             </Select>
 
@@ -1815,8 +1829,10 @@ export default function ContentCreation() {
                 </TableHeader>
                 <TableBody>
                   {contentTypes.map((t) => {
+                    const key = lockKey(t);
+                    const isPermanent = PERMANENT_CONTENT_TYPES.has(key);
                     const isEditing = editingContentType === t;
-                    const isLocked = lockedContentTypes.has(lockKey(t));
+                    const isLocked = isPermanent || lockedContentTypes.has(key);
 
                     return (
                       <TableRow key={t}>
@@ -1836,12 +1852,18 @@ export default function ContentCreation() {
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={isEditing}
+                              disabled={isEditing || isPermanent}
                               onClick={() => toggleContentTypeLock(t)}
                               aria-label={isLocked ? "Unlock" : "Lock"}
-                              title={isLocked ? "Unlock" : "Lock"}
+                              title={isPermanent ? "Permanent" : isLocked ? "Unlock" : "Lock"}
                             >
-                              {isLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                              {isPermanent ? (
+                                <Lock className="h-4 w-4" />
+                              ) : isLocked ? (
+                                <Unlock className="h-4 w-4" />
+                              ) : (
+                                <Lock className="h-4 w-4" />
+                              )}
                             </Button>
 
                             {isEditing ? (
