@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,12 @@ import { Textarea } from "@/components/ui/textarea";
 type BusinessOption = {
   id: string;
   name: string;
+  publicId?: string;
+};
+
+type ImageSlotState = {
+  url: string;
+  originalUrl: string;
 };
 
 type Props = {
@@ -25,12 +32,16 @@ type Props = {
   onCancel: () => void;
   onSave: (payload: {
     businessId: string;
+    businessPublicId: string;
     businessName: string;
     category: string;
     contentType: string;
     title: string;
     description: string;
     scheduledAt: string;
+    primaryImageUrl: string;
+    secondaryImageUrl: string;
+    thirdImageUrl: string;
   }) => void;
 };
 
@@ -42,16 +53,25 @@ export default function ContentItemForm({
   onSave,
 }: Props) {
   const [businessId, setBusinessId] = React.useState<string>(businesses[0]?.id ?? "");
-  const businessName = React.useMemo(
-    () => businesses.find((b) => b.id === businessId)?.name ?? "",
-    [businessId, businesses],
-  );
+  const business = React.useMemo(() => businesses.find((b) => b.id === businessId), [businessId, businesses]);
+  const businessName = business?.name ?? "";
+  const businessPublicId = business?.publicId ?? businessId;
 
   const [category, setCategory] = React.useState<string>(categories[0] ?? "");
   const [contentType, setContentType] = React.useState<string>(contentTypes[0] ?? "");
   const [title, setTitle] = React.useState<string>("");
   const [description, setDescription] = React.useState<string>("");
   const [scheduledAt, setScheduledAt] = React.useState<string>("");
+
+  const [images, setImages] = React.useState<{
+    primary: ImageSlotState;
+    secondary: ImageSlotState;
+    third: ImageSlotState;
+  }>({
+    primary: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+    secondary: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+    third: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
+  });
 
   return (
     <div className="space-y-6">
@@ -70,12 +90,16 @@ export default function ContentItemForm({
             onClick={() =>
               onSave({
                 businessId,
+                businessPublicId,
                 businessName,
                 category,
                 contentType,
                 title,
                 description,
                 scheduledAt,
+                primaryImageUrl: images.primary.url,
+                secondaryImageUrl: images.secondary.url,
+                thirdImageUrl: images.third.url,
               })
             }
           >
@@ -108,7 +132,7 @@ export default function ContentItemForm({
 
             <div className="space-y-2">
               <Label>Business ID</Label>
-              <Input value={businessId} readOnly />
+              <Input value={businessPublicId} disabled />
             </div>
 
             <div className="space-y-2 sm:col-span-2">
@@ -146,6 +170,30 @@ export default function ContentItemForm({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-foreground">Images</h3>
+            <div className="space-y-3">
+              <ImageFieldCard
+                label="Primary Image"
+                value={images.primary.url}
+                originalValue={images.primary.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
+              />
+              <ImageFieldCard
+                label="Secondary Image"
+                value={images.secondary.url}
+                originalValue={images.secondary.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
+              />
+              <ImageFieldCard
+                label="Third Image"
+                value={images.third.url}
+                originalValue={images.third.originalUrl}
+                onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+              />
             </div>
           </div>
 
