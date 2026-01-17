@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { Lock, Unlock } from "lucide-react";
+import { ArrowLeft, Lock, Unlock } from "lucide-react";
 
 import {
   AlertDialog,
@@ -172,6 +172,9 @@ export default function ContentCreation() {
     category: "",
   });
 
+  const [detailsSortCategory, setDetailsSortCategory] = React.useState<string>("");
+  const [detailsSortTypeContent, setDetailsSortTypeContent] = React.useState<string>("");
+
   const [images, setImages] = React.useState<Record<ImageSlotKey, ImageSlotState>>({
     primary: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
     second: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
@@ -277,12 +280,14 @@ export default function ContentCreation() {
   const openDetails = (row: ContentRow) => {
     setActiveRow(row);
     setDetailsForm({
-      title: "",
-      description: "",
-      comments: "",
+      title: "Coming soon",
+      description: "Coming soon",
+      comments: "Coming soon",
       dateSuggest: new Date().toISOString().slice(0, 10),
       category: row.category,
     });
+    setDetailsSortCategory(row.category);
+    setDetailsSortTypeContent("");
     setImages({
       primary: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
       second: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
@@ -294,14 +299,6 @@ export default function ContentCreation() {
   const closeDetails = () => {
     setDetailsOpen(false);
     setActiveRow(null);
-  };
-
-  const saveDetails = () => {
-    toast({
-      title: "Saved",
-      description: "Changes saved (still placeholder).",
-    });
-    closeDetails();
   };
 
   const openManage = (tab: "category" | "content") => {
@@ -500,20 +497,64 @@ export default function ContentCreation() {
     return (
       <div className="space-y-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-foreground">View Details</h1>
-            <p className="text-muted-foreground">
-              {activeRow.businessName} • {activeRow.category}
-            </p>
+          <div className="flex items-start gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mt-0.5"
+              onClick={closeDetails}
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold text-foreground">View Details</h1>
+              <p className="text-muted-foreground">
+                {activeRow.businessName} • {activeRow.category}
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Button type="button" variant="outline" onClick={closeDetails}>
-              Back
-            </Button>
-            <Button type="button" onClick={saveDetails}>
-              Save
-            </Button>
+            <Select
+              value={detailsSortCategory || undefined}
+              onValueChange={(v) => {
+                setDetailsSortCategory(v);
+                toast({ title: "Coming soon", description: "Sort by Category will be available soon." });
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[220px]">
+                <SelectValue placeholder="Sort by Category" />
+              </SelectTrigger>
+              <SelectContent className="z-50">
+                {categories.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={detailsSortTypeContent || undefined}
+              onValueChange={(v) => {
+                setDetailsSortTypeContent(v);
+                toast({ title: "Coming soon", description: "Sort by Type Content will be available soon." });
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[220px]">
+                <SelectValue placeholder="Sort by Type Content" />
+              </SelectTrigger>
+              <SelectContent className="z-50">
+                {contentTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </header>
 
@@ -550,31 +591,17 @@ export default function ContentCreation() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Title</Label>
-                  <Input
-                    value={detailsForm.title}
-                    onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
-                    placeholder="Content title..."
-                  />
+                  <Input value={detailsForm.title} placeholder="Coming soon" disabled />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea
-                    value={detailsForm.description}
-                    onChange={(e) => setDetailsForm((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="Description..."
-                    rows={4}
-                  />
+                  <Textarea value={detailsForm.description} placeholder="Coming soon" rows={4} disabled />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Comments</Label>
-                  <Textarea
-                    value={detailsForm.comments}
-                    onChange={(e) => setDetailsForm((p) => ({ ...p, comments: e.target.value }))}
-                    placeholder="Notes / comments..."
-                    rows={3}
-                  />
+                  <Textarea value={detailsForm.comments} placeholder="Coming soon" rows={3} disabled />
                 </div>
               </CardContent>
             </Card>
@@ -587,21 +614,14 @@ export default function ContentCreation() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Date Suggest</Label>
-                    <Input
-                      type="date"
-                      value={detailsForm.dateSuggest}
-                      onChange={(e) => setDetailsForm((p) => ({ ...p, dateSuggest: e.target.value }))}
-                    />
+                    <Input type="date" value={detailsForm.dateSuggest} disabled />
                   </div>
 
                   <div className="space-y-2">
                     <Label>Category</Label>
-                    <Select
-                      value={detailsForm.category || ""}
-                      onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}
-                    >
+                    <Select value={detailsForm.category || ""} onValueChange={() => {}} disabled>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder="Coming soon" />
                       </SelectTrigger>
                       <SelectContent className="z-50">
                         {categories.map((c) => (
