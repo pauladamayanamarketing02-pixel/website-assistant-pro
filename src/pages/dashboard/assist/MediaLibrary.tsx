@@ -55,6 +55,7 @@ type BusinessOption = {
   id: string;
   name: string;
   userId: string;
+  publicId: string;
 };
 
 type MediaTypeOption = {
@@ -92,6 +93,11 @@ const FALLBACK_ROWS: MediaRow[] = [
 
 function safeName(name: string | null | undefined) {
   return (name ?? "(No name)").trim() || "(No name)";
+}
+
+function formatBusinessId(businessNumber: number | null | undefined) {
+  if (!businessNumber) return "";
+  return `B${businessNumber.toString().padStart(5, "0")}`;
 }
 
 function lockKey(name: string) {
@@ -274,7 +280,7 @@ export default function AssistMediaLibrary() {
       const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData }] = await Promise.all([
         supabase
           .from("businesses")
-          .select("id, business_name, user_id")
+          .select("id, business_name, user_id, business_number")
           .order("business_name", { ascending: true, nullsFirst: false }),
         supabase.from("media_categories").select("id, name, is_locked").order("name", { ascending: true }),
         supabase.from("media_types").select("id, name, is_locked").order("name", { ascending: true }),
@@ -290,6 +296,7 @@ export default function AssistMediaLibrary() {
             id: b.id,
             name: safeName(b.business_name),
             userId: b.user_id,
+            publicId: formatBusinessId((b as any).business_number as number | null) || b.id,
           }))
         );
       }
@@ -743,7 +750,11 @@ export default function AssistMediaLibrary() {
   if (createOpen) {
     return (
       <MediaItemForm
-        businesses={businesses.length ? businesses.map((b) => ({ id: b.id, name: b.name })) : [{ id: "demo", name: "Demo Business" }]}
+        businesses={
+          businesses.length
+            ? businesses.map((b) => ({ id: b.id, name: b.name, publicId: b.publicId }))
+            : [{ id: "demo", name: "Demo Business", publicId: "B00000" }]
+        }
         categories={categories.length ? categories : ["All"]}
         mediaTypes={visibleMediaTypeNames.length ? visibleMediaTypeNames : ["Gambar", "Video"]}
         onCancel={() => setCreateOpen(false)}
