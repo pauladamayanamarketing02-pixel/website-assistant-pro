@@ -530,7 +530,6 @@ export default function ContentCreation() {
           second: { url: "", originalUrl: "" },
           third: { url: "", originalUrl: "" },
         });
-        toast({ title: "No content found", description: "No items match the selected filters." });
         return;
       }
 
@@ -1098,134 +1097,138 @@ export default function ContentCreation() {
 
         <Card>
           <CardContent className="p-6">
-            <div className="grid gap-6 lg:grid-cols-[1fr_4fr]">
-              {/* Images (≈20%) */}
-              <section className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground">Images</h2>
+            {detailsLoading ? (
+              <div className="py-16 text-center text-sm text-muted-foreground">Loading content...</div>
+            ) : !detailsItemId ? (
+              <div className="py-16 text-center">
+                <p className="text-sm font-medium text-foreground">No results found</p>
+                <p className="mt-1 text-sm text-muted-foreground">Try changing the filters.</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 lg:grid-cols-[1fr_4fr]">
+                {/* Images (≈20%) */}
+                <section className="space-y-4">
+                  <h2 className="text-lg font-semibold text-foreground">Images</h2>
 
-                <ImageFieldCard
-                  label="Primary Image"
-                  value={images.primary.url}
-                  originalValue={images.primary.originalUrl}
-                  onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
-                  variant="compact"
-                />
-
-                <div className="grid gap-4">
                   <ImageFieldCard
-                    label="Secondary Image"
-                    value={images.second.url}
-                    originalValue={images.second.originalUrl}
-                    onChange={(next) => setImages((p) => ({ ...p, second: next }))}
+                    label="Primary Image"
+                    value={images.primary.url}
+                    originalValue={images.primary.originalUrl}
+                    onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
                     variant="compact"
                   />
-                  <ImageFieldCard
-                    label="Third Image"
-                    value={images.third.url}
-                    originalValue={images.third.originalUrl}
-                    onChange={(next) => setImages((p) => ({ ...p, third: next }))}
-                    variant="compact"
-                  />
-                </div>
-              </section>
 
-              {/* Content Details (≈80%) */}
-              <section className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
+                  <div className="grid gap-4">
+                    <ImageFieldCard
+                      label="Secondary Image"
+                      value={images.second.url}
+                      originalValue={images.second.originalUrl}
+                      onChange={(next) => setImages((p) => ({ ...p, second: next }))}
+                      variant="compact"
+                    />
+                    <ImageFieldCard
+                      label="Third Image"
+                      value={images.third.url}
+                      originalValue={images.third.originalUrl}
+                      onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+                      variant="compact"
+                    />
+                  </div>
+                </section>
 
-                {detailsLoading ? <p className="text-sm text-muted-foreground">Loading content...</p> : null}
+                {/* Content Details (≈80%) */}
+                <section className="space-y-4">
+                  <h2 className="text-lg font-semibold text-foreground">Content Details</h2>
 
-                <div className="space-y-2">
-                  <Label>Title</Label>
-                  <Input
-                    value={detailsForm.title}
-                    onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
-                    placeholder="Title"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <RichTextEditor
-                    value={detailsForm.description}
-                    onChange={(v) => setDetailsForm((p) => ({ ...p, description: v }))}
-                    onSave={() => void 0}
-                    title="Description"
-                    description=""
-                    icon={Pencil}
-                    showTopBar={false}
-                    showSaveControls={false}
-                  />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Category</Label>
-                    <Select
-                      value={detailsForm.category || undefined}
-                      onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose Category" />
-                      </SelectTrigger>
-                      <SelectContent className="z-50">
-                        {categories.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Title</Label>
+                    <Input
+                      value={detailsForm.title}
+                      onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
+                      placeholder="Title"
+                    />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Type Content</Label>
-                    <Select
-                      value={detailsForm.contentType || undefined}
-                      onValueChange={(v) => {
-                        setDetailsForm((p) => ({
-                          ...p,
-                          contentType: v,
-                          platform: "", // reset when changing type
-                        }));
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose Type Content" />
-                      </SelectTrigger>
-                      <SelectContent className="z-50">
-                        {contentTypes.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Description</Label>
+                    <RichTextEditor
+                      value={detailsForm.description}
+                      onChange={(v) => setDetailsForm((p) => ({ ...p, description: v }))}
+                      onSave={() => void 0}
+                      title="Description"
+                      description=""
+                      icon={Pencil}
+                      showTopBar={false}
+                      showSaveControls={false}
+                    />
                   </div>
-                </div>
 
-                <PlatformDropdown
-                  contentType={detailsForm.contentType}
-                  value={detailsForm.platform}
-                  onChange={(next) => setDetailsForm((p) => ({ ...p, platform: next }))}
-                />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Category</Label>
+                      <Select value={detailsForm.category || undefined} onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose Category" />
+                        </SelectTrigger>
+                        <SelectContent className="z-50">
+                          {categories.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label>Scheduled</Label>
-                  <Input
-                    type="datetime-local"
-                    value={detailsForm.scheduledAt}
-                    onChange={(e) => setDetailsForm((p) => ({ ...p, scheduledAt: e.target.value }))}
+                    <div className="space-y-2">
+                      <Label>Type Content</Label>
+                      <Select
+                        value={detailsForm.contentType || undefined}
+                        onValueChange={(v) => {
+                          setDetailsForm((p) => ({
+                            ...p,
+                            contentType: v,
+                            platform: "", // reset when changing type
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose Type Content" />
+                        </SelectTrigger>
+                        <SelectContent className="z-50">
+                          {contentTypes.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <PlatformDropdown
+                    contentType={detailsForm.contentType}
+                    value={detailsForm.platform}
+                    onChange={(next) => setDetailsForm((p) => ({ ...p, platform: next }))}
                   />
-                </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <Button type="button" onClick={() => void saveDetails()} disabled={detailsSaving || detailsLoading}>
-                    {detailsSaving ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-              </section>
-            </div>
+                  <div className="space-y-2">
+                    <Label>Scheduled</Label>
+                    <Input
+                      type="datetime-local"
+                      value={detailsForm.scheduledAt}
+                      onChange={(e) => setDetailsForm((p) => ({ ...p, scheduledAt: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button type="button" onClick={() => void saveDetails()} disabled={detailsSaving || detailsLoading}>
+                      {detailsSaving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </section>
+              </div>
+            )}
           </CardContent>
         </Card>
 
