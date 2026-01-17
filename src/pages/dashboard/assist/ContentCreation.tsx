@@ -184,6 +184,7 @@ export default function ContentCreation() {
     uniqueNonEmpty(["General", ...FALLBACK_ROWS.map((r) => r.category)]),
   );
 
+  const [lockedCategories, setLockedCategories] = React.useState<Set<string>>(() => new Set());
   const [lockedContentTypes, setLockedContentTypes] = React.useState<Set<string>>(() => new Set());
 
   const [manageDialogOpen, setManageDialogOpen] = React.useState(false);
@@ -347,8 +348,22 @@ export default function ContentCreation() {
 
   const deleteCategory = (name: string) => {
     setCategories((p) => p.filter((c) => c !== name));
+    setLockedCategories((prev) => {
+      const next = new Set(prev);
+      next.delete(name);
+      return next;
+    });
     setDetailsForm((p) => (p.category === name ? { ...p, category: "" } : p));
     if (editingCategory === name) cancelEditCategory();
+  };
+
+  const toggleCategoryLock = (name: string) => {
+    setLockedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
   };
 
   const addContentType = () => {
@@ -640,6 +655,8 @@ export default function ContentCreation() {
                   <TableBody>
                     {categories.map((c) => {
                       const isEditing = editingCategory === c;
+                      const isLocked = lockedCategories.has(c);
+
                       return (
                         <TableRow key={c}>
                           <TableCell>
@@ -651,6 +668,18 @@ export default function ContentCreation() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={isEditing}
+                                onClick={() => toggleCategoryLock(c)}
+                                aria-label={isLocked ? "Unlock" : "Lock"}
+                                title={isLocked ? "Unlock" : "Lock"}
+                              >
+                                {isLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                              </Button>
+
                               {isEditing ? (
                                 <>
                                   <Button type="button" size="sm" onClick={() => setConfirmAction({ kind: "save_edit_category" })}>
@@ -661,7 +690,13 @@ export default function ContentCreation() {
                                   </Button>
                                 </>
                               ) : (
-                                <Button type="button" size="sm" variant="secondary" onClick={() => startEditCategory(c)}>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={isLocked}
+                                  onClick={() => startEditCategory(c)}
+                                >
                                   Edit
                                 </Button>
                               )}
@@ -669,6 +704,7 @@ export default function ContentCreation() {
                                 type="button"
                                 size="sm"
                                 variant="outline"
+                                disabled={isLocked}
                                 onClick={() => setConfirmAction({ kind: "delete_category", name: c })}
                               >
                                 Delete
@@ -951,6 +987,8 @@ export default function ContentCreation() {
                 <TableBody>
                   {categories.map((c) => {
                     const isEditing = editingCategory === c;
+                    const isLocked = lockedCategories.has(c);
+
                     return (
                       <TableRow key={c}>
                         <TableCell>
@@ -962,6 +1000,18 @@ export default function ContentCreation() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isEditing}
+                              onClick={() => toggleCategoryLock(c)}
+                              aria-label={isLocked ? "Unlock" : "Lock"}
+                              title={isLocked ? "Unlock" : "Lock"}
+                            >
+                              {isLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                            </Button>
+
                             {isEditing ? (
                               <>
                                 <Button type="button" size="sm" onClick={() => setConfirmAction({ kind: "save_edit_category" })}>
@@ -972,7 +1022,13 @@ export default function ContentCreation() {
                                 </Button>
                               </>
                             ) : (
-                              <Button type="button" size="sm" variant="secondary" onClick={() => startEditCategory(c)}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={isLocked}
+                                onClick={() => startEditCategory(c)}
+                              >
                                 Edit
                               </Button>
                             )}
@@ -980,6 +1036,7 @@ export default function ContentCreation() {
                               type="button"
                               size="sm"
                               variant="outline"
+                              disabled={isLocked}
                               onClick={() => setConfirmAction({ kind: "delete_category", name: c })}
                             >
                               Delete
