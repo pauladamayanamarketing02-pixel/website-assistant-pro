@@ -113,6 +113,109 @@ export type Database = {
         }
         Relationships: []
       }
+      content_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      content_items: {
+        Row: {
+          business_id: string
+          category_id: string
+          content_type_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          image_primary_url: string | null
+          image_second_url: string | null
+          image_third_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          category_id: string
+          content_type_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          image_primary_url?: string | null
+          image_second_url?: string | null
+          image_third_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          category_id?: string
+          content_type_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          image_primary_url?: string | null
+          image_second_url?: string | null
+          image_third_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "content_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_content_type_id_fkey"
+            columns: ["content_type_id"]
+            isOneToOne: false
+            referencedRelation: "content_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
