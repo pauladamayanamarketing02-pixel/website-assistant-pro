@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { ArrowLeft, Copy, Eye, ImageUp, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, Download, Eye, ImageUp, Pencil, Trash2 } from "lucide-react";
 
 import { FileThumbnail, UniversalFilePreview } from "@/components/media/UniversalFilePreview";
 import {
@@ -241,6 +241,25 @@ export default function MediaDetailsView({
     }
   };
 
+  const downloadFile = async (item: MediaDetailsItem) => {
+    try {
+      const res = await fetch(item.url);
+      if (!res.ok) throw new Error("Failed to download file");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = item.name || "download";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Download failed", description: e?.message ?? "Unknown error" });
+    }
+  };
+
   const requestChange = (item: MediaDetailsItem) => {
     setChangeConfirmItem(item);
   };
@@ -422,6 +441,9 @@ export default function MediaDetailsView({
                       </Button>
                       <Button type="button" size="icon" variant="secondary" className="h-8 w-8" onClick={() => void copyUrl(item.url)} aria-label="Copy URL">
                         <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button type="button" size="icon" variant="secondary" className="h-8 w-8" onClick={() => void downloadFile(item)} aria-label="Download">
+                        <Download className="h-4 w-4" />
                       </Button>
                       <Button
                         type="button"
