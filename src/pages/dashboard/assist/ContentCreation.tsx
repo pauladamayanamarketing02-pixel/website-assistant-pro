@@ -296,7 +296,8 @@ export default function ContentCreation() {
           .select("id, business_name, business_number")
           .order("business_name", { ascending: true, nullsFirst: false }),
         supabase.from("content_categories").select("name, is_locked").order("name", { ascending: true }),
-        supabase.from("content_types").select("name, is_locked").order("name", { ascending: true }),
+        // Column order follows database order (created_at). UI can reverse it.
+        supabase.from("content_types").select("name, is_locked").order("created_at", { ascending: true }),
       ]);
 
       if (cancelled) return;
@@ -356,19 +357,18 @@ export default function ContentCreation() {
     });
   }, [rows, selectedBusinessId, sortDirection, sortField]);
 
-  // Column sort (Type Content) uses the same control as requested
+  // Column sort (Type Content) follows DB order (created_at) and can be reversed
   const displayedContentTypes = React.useMemo(() => {
     if (sortField !== "contentTypes") return contentTypes;
-
-    const dir = sortDirection === "asc" ? 1 : -1;
-    return [...contentTypes].sort((a, b) => a.localeCompare(b, "id", { sensitivity: "base" }) * dir);
+    if (sortDirection === "asc") return contentTypes;
+    return [...contentTypes].reverse();
   }, [contentTypes, sortDirection, sortField]);
 
   const onImport = (type: string) => {
     setLastImportType(type);
     toast({
-      title: "Import selected",
-      description: `You selected import: ${type}`,
+      title: "On Progress",
+      description: `Import "${type}" sedang diproses.`,
     });
   };
 
@@ -1641,8 +1641,8 @@ export default function ContentCreation() {
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                <SelectItem value="contentTypes:asc">Sort: Type Content (A-Z)</SelectItem>
-                <SelectItem value="contentTypes:desc">Sort: Type Content (Z-A)</SelectItem>
+                <SelectItem value="contentTypes:asc">Sort: Type Content (Database)</SelectItem>
+                <SelectItem value="contentTypes:desc">Sort: Type Content (Database - Reverse)</SelectItem>
               </SelectContent>
             </Select>
 
