@@ -351,124 +351,7 @@ export default function ContentCreation() {
           </div>
         </header>
 
-        {/* Desktop/table layout */}
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[42%]">Images</TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead className="w-[30%]">Manage</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow className="align-top">
-                <TableCell className="p-4">
-                  <div className="space-y-3">
-                    <ImageFieldCard
-                      label="Primary"
-                      value={images.primary.url}
-                      originalValue={images.primary.originalUrl}
-                      onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
-                    />
-                    <ImageFieldCard
-                      label="Second"
-                      value={images.second.url}
-                      originalValue={images.second.originalUrl}
-                      onChange={(next) => setImages((p) => ({ ...p, second: next }))}
-                    />
-                    <ImageFieldCard
-                      label="Third"
-                      value={images.third.url}
-                      originalValue={images.third.originalUrl}
-                      onChange={(next) => setImages((p) => ({ ...p, third: next }))}
-                    />
-                  </div>
-                </TableCell>
-
-                <TableCell className="p-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Title</Label>
-                        <Input
-                          value={detailsForm.title}
-                          onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
-                          placeholder="Judul konten..."
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Textarea
-                          value={detailsForm.description}
-                          onChange={(e) => setDetailsForm((p) => ({ ...p, description: e.target.value }))}
-                          placeholder="Deskripsi..."
-                          rows={4}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Comments</Label>
-                        <Textarea
-                          value={detailsForm.comments}
-                          onChange={(e) => setDetailsForm((p) => ({ ...p, comments: e.target.value }))}
-                          placeholder="Catatan / komentar..."
-                          rows={3}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TableCell>
-
-                <TableCell className="p-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Manage</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid gap-4">
-                        <div className="space-y-2">
-                          <Label>Date Suggest</Label>
-                          <Input
-                            type="date"
-                            value={detailsForm.dateSuggest}
-                            onChange={(e) => setDetailsForm((p) => ({ ...p, dateSuggest: e.target.value }))}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Category</Label>
-                          <Select value={detailsForm.category || ""} onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih kategori" />
-                            </SelectTrigger>
-                            <SelectContent className="z-50">
-                              {categories.map((c) => (
-                                <SelectItem key={c} value={c}>
-                                  {c}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button type="button" variant="secondary" onClick={() => setCategoryDialogOpen(true)}>
-                            Manage Category
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile layout */}
-        <div className="grid gap-6 md:hidden">
+        <div className="grid gap-6 lg:grid-cols-2">
           <section className="space-y-3">
             <h2 className="text-base font-semibold text-foreground">Images</h2>
             <div className="space-y-3">
@@ -547,7 +430,10 @@ export default function ContentCreation() {
 
                   <div className="space-y-2">
                     <Label>Category</Label>
-                    <Select value={detailsForm.category || ""} onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}>
+                    <Select
+                      value={detailsForm.category || ""}
+                      onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih kategori" />
                       </SelectTrigger>
