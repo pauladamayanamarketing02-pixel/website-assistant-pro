@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import PlatformDropdown from "@/pages/dashboard/assist/content-creation/PlatformDropdown";
 
 type BusinessOption = {
   id: string;
@@ -39,6 +40,7 @@ type Props = {
     businessName: string;
     category: string;
     contentType: string;
+    platform: string;
     title: string;
     description: string;
     scheduledAt: string;
@@ -62,9 +64,15 @@ export default function ContentItemForm({
 
   const [category, setCategory] = React.useState<string>(categories[0] ?? "");
   const [contentType, setContentType] = React.useState<string>(contentTypes[0] ?? "");
+  const [platform, setPlatform] = React.useState<string>("");
   const [title, setTitle] = React.useState<string>("");
   const [description, setDescription] = React.useState<string>("");
   const [scheduledAt, setScheduledAt] = React.useState<string>("");
+
+  React.useEffect(() => {
+    const needsPlatform = contentType === "Social Media Posts" || contentType === "Ads Marketing";
+    if (!needsPlatform) setPlatform("");
+  }, [contentType]);
 
   const [images, setImages] = React.useState<{
     primary: ImageSlotState;
@@ -83,6 +91,7 @@ export default function ContentItemForm({
       businessName,
       category,
       contentType,
+      platform,
       title,
       description,
       scheduledAt,
@@ -160,7 +169,13 @@ export default function ContentItemForm({
 
             <div className="space-y-2">
               <Label>Type Content</Label>
-              <Select value={contentType} onValueChange={setContentType}>
+              <Select
+                value={contentType}
+                onValueChange={(next) => {
+                  setContentType(next);
+                  setPlatform("");
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose Type Content" />
                 </SelectTrigger>
@@ -173,6 +188,8 @@ export default function ContentItemForm({
                 </SelectContent>
               </Select>
             </div>
+
+            <PlatformDropdown contentType={contentType} value={platform} onChange={setPlatform} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
