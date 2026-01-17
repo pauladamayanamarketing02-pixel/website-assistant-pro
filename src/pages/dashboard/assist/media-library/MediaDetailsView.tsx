@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { ArrowLeft, Copy, Eye, ImageUp, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, Eye, ImageUp, Pencil, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -18,9 +18,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -83,7 +85,15 @@ export default function MediaDetailsView({
 
   const [previewItem, setPreviewItem] = React.useState<MediaDetailsItem | null>(null);
   const [deleteItem, setDeleteItem] = React.useState<MediaDetailsItem | null>(null);
+
+  const [changeConfirmItem, setChangeConfirmItem] = React.useState<MediaDetailsItem | null>(null);
   const [changingItem, setChangingItem] = React.useState<MediaDetailsItem | null>(null);
+  const pendingFilePickRef = React.useRef(false);
+
+  const [renameItem, setRenameItem] = React.useState<MediaDetailsItem | null>(null);
+  const [renameDraft, setRenameDraft] = React.useState<string>("");
+  const [renameSaving, setRenameSaving] = React.useState(false);
+
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const categoryNameToId = React.useMemo(() => {
@@ -171,9 +181,16 @@ export default function MediaDetailsView({
   };
 
   const requestChange = (item: MediaDetailsItem) => {
-    setChangingItem(item);
-    fileInputRef.current?.click();
+    setChangeConfirmItem(item);
   };
+
+  React.useEffect(() => {
+    if (!changingItem) return;
+    if (!pendingFilePickRef.current) return;
+
+    pendingFilePickRef.current = false;
+    fileInputRef.current?.click();
+  }, [changingItem]);
 
   const handleChangeFile = async (file: File | null) => {
     if (!changingItem || !file) return;
@@ -338,6 +355,19 @@ export default function MediaDetailsView({
                       <Button type="button" size="icon" variant="secondary" className="h-8 w-8" onClick={() => void copyUrl(item.url)} aria-label="Copy URL">
                         <Copy className="h-4 w-4" />
                       </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="secondary"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setRenameItem(item);
+                          setRenameDraft(item.name ?? "");
+                        }}
+                        aria-label="Edit name"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       <Button type="button" size="icon" variant="secondary" className="h-8 w-8" onClick={() => requestChange(item)} aria-label="Change file">
                         <ImageUp className="h-4 w-4" />
                       </Button>
@@ -383,6 +413,80 @@ export default function MediaDetailsView({
               </div>
             </div>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Change file confirmation */}
+      <AlertDialog open={Boolean(changeConfirmItem)} onOpenChange={(open) => (!open ? setChangeConfirmItem(null) : null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change file?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Replace file for <span className="font-medium">{changeConfirmItem?.name}</span>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!changeConfirmItem) return;
+                pendingFilePickRef.current = true;
+                setChangingItem(changeConfirmItem);
+                setChangeConfirmItem(null);
+              }}
+            >
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Rename dialog */}
+      <Dialog open={Boolean(renameItem)} onOpenChange={(open) => (!open ? setRenameItem(null) : null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit name</DialogTitle>
+            <DialogDescription>Change the media name only (no file upload).</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">Name</p>
+            <Input value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)} placeholder="Media name" />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRenameItem(null)} disabled={renameSaving}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                if (!renameItem) return;
+                const nextName = renameDraft.trim();
+                if (!nextName) {
+                  toast({ variant: "destructive", title: "Invalid name", description: "Name cannot be empty." });
+                  return;
+                }
+
+                try {
+                  setRenameSaving(true);
+                  const { error } = await supabase.from("user_gallery").update({ name: nextName }).eq("id", renameItem.id);
+                  if (error) throw error;
+
+                  toast({ title: "Saved", description: "Name updated." });
+                  setRenameItem(null);
+                  await fetchItems();
+                } catch (e: any) {
+                  toast({ variant: "destructive", title: "Save failed", description: e?.message ?? "Unknown error" });
+                } finally {
+                  setRenameSaving(false);
+                }
+              }}
+              disabled={renameSaving}
+            >
+              Save
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -80,15 +80,15 @@ const FALLBACK_ROWS: MediaRow[] = [
     id: "demo-1",
     businessId: "demo",
     businessName: "Demo Business",
-    category: "All",
-    typeCounts: { gambar: 8, video: 2 },
+    category: "",
+    typeCounts: {},
   },
   {
     id: "demo-2",
     businessId: "demo",
     businessName: "Demo Business",
-    category: "All",
-    typeCounts: { gambar: 14, video: 4 },
+    category: "",
+    typeCounts: {},
   },
 ];
 
@@ -623,11 +623,10 @@ export default function AssistMediaLibrary() {
           if (!t.id.startsWith("__default_")) typeIdToKey.set(t.id, t.key);
         }
 
-        // Categories: create rows for "All" plus each configured category.
+        // Categories: create rows only for categories that exist in the database.
         const categoryIdToName = new Map<string, string>();
         for (const c of categoryOptions) categoryIdToName.set(c.id, c.name);
-        const categoryNames = categoryOptions.map((c) => c.name);
-        const categoriesForRows = ["All", ...categoryNames];
+        const categoriesForRows = categoryOptions.map((c) => c.name);
 
         const imagesKey = mediaTypes.find((t) => t.key === lockKey("Images Gallery"))?.key;
         const videoKey = mediaTypes.find((t) => t.key === lockKey("Video Content"))?.key;
@@ -656,14 +655,12 @@ export default function AssistMediaLibrary() {
           media_category_id: string | null;
         }>) {
           const userId = item.user_id;
-          const categoryName = item.media_category_id ? categoryIdToName.get(item.media_category_id) ?? "All" : "All";
+          const categoryName = item.media_category_id ? categoryIdToName.get(item.media_category_id) ?? "" : "";
+          if (!categoryName) continue;
 
-          // Always increment "All"
-          const allCounts = ensureUserCategoryInit(userId, "All");
           const catCounts = ensureUserCategoryInit(userId, categoryName);
 
           const applyIncrement = (key: string) => {
-            allCounts[key] = (allCounts[key] ?? 0) + 1;
             catCounts[key] = (catCounts[key] ?? 0) + 1;
           };
 
@@ -683,7 +680,7 @@ export default function AssistMediaLibrary() {
           return categoriesForRows.map((catName) => {
             const typeCounts = countsByUserCategory[b.userId]?.[catName] ?? ensureTypeInit();
             return {
-              id: `${b.id}-${lockKey(catName) || "all"}`,
+              id: `${b.id}-${lockKey(catName)}`,
               businessId: b.id,
               businessName: b.name,
               category: catName,
@@ -714,10 +711,9 @@ export default function AssistMediaLibrary() {
     const emptyTypeCounts = Object.fromEntries(typeKeys.map((k) => [k, 0] as const));
 
     if (businesses.length > 0 && mediaRowsLoading) {
-      const catNames = ["All", ...categories];
       return businesses.flatMap((b) =>
-        catNames.map((cat) => ({
-          id: `${b.id}-${lockKey(cat) || "all"}`,
+        categories.map((cat) => ({
+          id: `${b.id}-${lockKey(cat)}`,
           businessId: b.id,
           businessName: b.name,
           category: cat,
@@ -792,7 +788,7 @@ export default function AssistMediaLibrary() {
             ? businesses.map((b) => ({ id: b.id, name: b.name, publicId: b.publicId }))
             : [{ id: "demo", name: "Demo Business", publicId: "B00000" }]
         }
-        categories={categories.length ? categories : ["All"]}
+        categories={categories}
         mediaTypes={visibleMediaTypeNames.length ? visibleMediaTypeNames : ["Gambar", "Video"]}
         onCancel={() => setCreateOpen(false)}
         onSave={async (payload) => {
