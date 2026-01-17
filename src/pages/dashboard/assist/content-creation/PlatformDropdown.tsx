@@ -24,26 +24,31 @@ function getPlatforms(contentType: string): readonly string[] {
   return [];
 }
 
-export default function PlatformDropdown({ contentType, value, onChange }: Props) {
-  const platforms = React.useMemo(() => getPlatforms(contentType), [contentType]);
+const PlatformDropdown = React.forwardRef<HTMLDivElement, Props>(
+  ({ contentType, value, onChange }, ref) => {
+    const platforms = React.useMemo(() => getPlatforms(contentType), [contentType]);
 
-  if (platforms.length === 0) return null;
+    if (platforms.length === 0) return null;
 
-  return (
-    <div className="space-y-2">
-      <Label>Platform</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="Choose Platform" />
-        </SelectTrigger>
-        <SelectContent className="z-50">
-          {platforms.map((p) => (
-            <SelectItem key={p} value={p}>
-              {p}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
+    return (
+      <div ref={ref} className="space-y-2">
+        <Label>Platform</Label>
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Choose Platform" />
+          </SelectTrigger>
+          <SelectContent className="z-50">
+            {platforms.map((p) => (
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  },
+);
+PlatformDropdown.displayName = "PlatformDropdown";
+
+export default PlatformDropdown;

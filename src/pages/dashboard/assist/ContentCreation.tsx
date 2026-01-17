@@ -255,6 +255,11 @@ export default function ContentCreation() {
     }
   }, [contentTypes, toast]);
 
+  // Keep Content Management table always in sync with DB + current columns
+  React.useEffect(() => {
+    void fetchContentRows();
+  }, [fetchContentRows]);
+
   React.useEffect(() => {
     let cancelled = false;
 
@@ -294,9 +299,6 @@ export default function ContentCreation() {
       // Hydrate lock state from DB so it survives refresh
       setLockedCategories(new Set(catRows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
       setLockedContentTypes(new Set(typeRows.filter((t) => Boolean(t.is_locked)).map((t) => lockKey(t.name))));
-
-      // Load content management table rows
-      void fetchContentRows();
     };
 
     void loadBusinesses();
