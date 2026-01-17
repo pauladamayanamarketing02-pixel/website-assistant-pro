@@ -7,7 +7,6 @@ import {
   Sparkles,
   MessageCircle,
   BarChart3,
-  Globe,
   Settings,
   User,
 } from 'lucide-react';
@@ -23,8 +22,6 @@ import TaskManager from './assist/TaskManager';
 import AIGenerator from './assist/AIGenerator';
 import AssistMessages from './assist/Messages';
 import Reports from './assist/Reports';
-import EasyMarketingAssist from './assist/EasyMarketingAssist';
-import ConfigPage from './assist/config/ConfigPage';
 import AssistSettings from './assist/Settings';
 import AssistProfile from './assist/Profile';
 
@@ -36,8 +33,6 @@ const mainMenuItems: AssistNavItem[] = [
   { title: 'AI Generator', url: '/dashboard/assist/ai-generator', icon: Sparkles },
   { title: 'Messages', url: '/dashboard/assist/messages', icon: MessageCircle },
   { title: 'Reports', url: '/dashboard/assist/reports', icon: BarChart3 },
-  { title: 'EasyMarketingAssist', url: '/dashboard/assist/ema', icon: Globe },
-  { title: 'Config', url: '/dashboard/assist/config', icon: Settings },
   { title: 'Settings', url: '/dashboard/assist/settings', icon: Settings },
 ];
 
@@ -153,8 +148,6 @@ export default function AssistDashboard() {
               <Route path="ai-generator" element={<AIGenerator />} />
               <Route path="messages" element={<AssistMessages />} />
               <Route path="reports" element={<Reports />} />
-              <Route path="ema" element={<EasyMarketingAssist />} />
-              <Route path="config" element={<ConfigPage />} />
               <Route path="settings" element={<AssistSettings />} />
             </Routes>
           </main>
