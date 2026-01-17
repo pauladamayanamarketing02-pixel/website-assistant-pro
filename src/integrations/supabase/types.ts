@@ -269,6 +269,48 @@ export type Database = {
           },
         ]
       }
+      media_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_locked: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      media_types: {
+        Row: {
+          created_at: string
+          id: string
+          is_locked: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -590,6 +632,8 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          media_category_id: string | null
+          media_type_id: string | null
           name: string
           size: number | null
           type: string
@@ -599,6 +643,8 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          media_category_id?: string | null
+          media_type_id?: string | null
           name: string
           size?: number | null
           type: string
@@ -608,13 +654,30 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          media_category_id?: string | null
+          media_type_id?: string | null
           name?: string
           size?: number | null
           type?: string
           url?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_gallery_media_category_id_fkey"
+            columns: ["media_category_id"]
+            isOneToOne: false
+            referencedRelation: "media_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_gallery_media_type_id_fkey"
+            columns: ["media_type_id"]
+            isOneToOne: false
+            referencedRelation: "media_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_packages: {
         Row: {
