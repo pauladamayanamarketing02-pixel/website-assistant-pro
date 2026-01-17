@@ -112,9 +112,10 @@ export default function ContentItemForm({
         <CardHeader>
           <CardTitle>Details</CardTitle>
         </CardHeader>
+
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-2">
               <Label>Business</Label>
               <Select value={businessId} onValueChange={setBusinessId}>
                 <SelectTrigger>
