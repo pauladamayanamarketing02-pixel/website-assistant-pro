@@ -95,11 +95,8 @@ function lockKey(name: string) {
 }
 
 const PERMANENT_CONTENT_TYPES = new Set([
-  "ads marketing",
-  "blog posts",
-  "email marketing",
-  "gmb posts",
-  "social media posts",
+  "images gallery",
+  "video content",
 ]);
 
 function uniqueNonEmpty(values: string[]) {
@@ -120,7 +117,7 @@ export default function AssistMediaLibrary() {
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
 
-  // Category + Type Content management (same tables as Content Management)
+  // Category + Media Type management (media_categories + media_types)
   const [categories, setCategories] = React.useState<string[]>([]);
   const [contentTypes, setContentTypes] = React.useState<string[]>([]);
   const [lockedCategories, setLockedCategories] = React.useState<Set<string>>(() => new Set());
@@ -150,7 +147,7 @@ export default function AssistMediaLibrary() {
     if (!cleaned) throw new Error("Category is required.");
 
     const { data: existing, error: selectError } = await supabase
-      .from("content_categories")
+      .from("media_categories")
       .select("id")
       .ilike("name", cleaned)
       .limit(1)
@@ -160,7 +157,7 @@ export default function AssistMediaLibrary() {
     if (existing?.id) return existing.id as string;
 
     const { data: created, error: insertError } = await supabase
-      .from("content_categories")
+      .from("media_categories")
       .insert({ name: cleaned })
       .select("id")
       .single();
@@ -174,7 +171,7 @@ export default function AssistMediaLibrary() {
     if (!cleaned) throw new Error("Type Content is required.");
 
     const { data: existing, error: selectError } = await supabase
-      .from("content_types")
+      .from("media_types")
       .select("id")
       .ilike("name", cleaned)
       .limit(1)
@@ -184,7 +181,7 @@ export default function AssistMediaLibrary() {
     if (existing?.id) return existing.id as string;
 
     const { data: created, error: insertError } = await supabase
-      .from("content_types")
+      .from("media_types")
       .insert({ name: cleaned })
       .select("id")
       .single();
@@ -198,7 +195,7 @@ export default function AssistMediaLibrary() {
     if (!cleaned) return null;
 
     const { data, error } = await supabase
-      .from("content_categories")
+      .from("media_categories")
       .select("id")
       .ilike("name", cleaned)
       .limit(1)
@@ -213,7 +210,7 @@ export default function AssistMediaLibrary() {
     if (!cleaned) return null;
 
     const { data, error } = await supabase
-      .from("content_types")
+      .from("media_types")
       .select("id")
       .ilike("name", cleaned)
       .limit(1)
@@ -224,7 +221,7 @@ export default function AssistMediaLibrary() {
   };
 
   const refreshCategories = React.useCallback(async () => {
-    const { data, error } = await supabase.from("content_categories").select("name, is_locked").order("name", { ascending: true });
+    const { data, error } = await supabase.from("media_categories").select("name, is_locked").order("name", { ascending: true });
     if (error) throw error;
 
     const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
@@ -233,7 +230,7 @@ export default function AssistMediaLibrary() {
   }, []);
 
   const refreshContentTypes = React.useCallback(async () => {
-    const { data, error } = await supabase.from("content_types").select("name, is_locked").order("name", { ascending: true });
+    const { data, error } = await supabase.from("media_types").select("name, is_locked").order("name", { ascending: true });
     if (error) throw error;
 
     const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
@@ -250,8 +247,8 @@ export default function AssistMediaLibrary() {
     const load = async () => {
       const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData }] = await Promise.all([
         supabase.from("businesses").select("id, business_name").order("business_name", { ascending: true, nullsFirst: false }),
-        supabase.from("content_categories").select("name, is_locked").order("name", { ascending: true }),
-        supabase.from("content_types").select("name, is_locked").order("name", { ascending: true }),
+        supabase.from("media_categories").select("name, is_locked").order("name", { ascending: true }),
+        supabase.from("media_types").select("name, is_locked").order("name", { ascending: true }),
       ]);
 
       if (cancelled) return;
@@ -329,7 +326,7 @@ export default function AssistMediaLibrary() {
       const id = await lookupCategoryIdInsensitive(from);
       if (!id) throw new Error("Category not found in database.");
 
-      const { error } = await supabase.from("content_categories").update({ name: to }).eq("id", id);
+      const { error } = await supabase.from("media_categories").update({ name: to }).eq("id", id);
       if (error) throw error;
 
       await refreshCategories();
@@ -345,7 +342,7 @@ export default function AssistMediaLibrary() {
       const id = await lookupCategoryIdInsensitive(name);
       if (!id) throw new Error("Category not found in database.");
 
-      const { error } = await supabase.from("content_categories").delete().eq("id", id);
+      const { error } = await supabase.from("media_categories").delete().eq("id", id);
       if (error) throw error;
 
       await refreshCategories();
@@ -363,7 +360,7 @@ export default function AssistMediaLibrary() {
     try {
       const cleaned = name.trim();
       const { data, error } = await supabase
-        .from("content_categories")
+        .from("media_categories")
         .select("id, is_locked")
         .ilike("name", cleaned)
         .limit(1)
@@ -372,7 +369,7 @@ export default function AssistMediaLibrary() {
       if (!data?.id) throw new Error("Category not found in database.");
 
       const nextLocked = !Boolean((data as any).is_locked);
-      const { error: updateError } = await supabase.from("content_categories").update({ is_locked: nextLocked }).eq("id", (data as any).id);
+      const { error: updateError } = await supabase.from("media_categories").update({ is_locked: nextLocked }).eq("id", (data as any).id);
       if (updateError) throw updateError;
 
       await refreshCategories();
@@ -423,7 +420,7 @@ export default function AssistMediaLibrary() {
       const id = await lookupContentTypeIdInsensitive(from);
       if (!id) throw new Error("Type Content not found in database.");
 
-      const { error } = await supabase.from("content_types").update({ name: to }).eq("id", id);
+      const { error } = await supabase.from("media_types").update({ name: to }).eq("id", id);
       if (error) throw error;
 
       await refreshContentTypes();
@@ -445,7 +442,7 @@ export default function AssistMediaLibrary() {
       const id = await lookupContentTypeIdInsensitive(name);
       if (!id) throw new Error("Type Content not found in database.");
 
-      const { error } = await supabase.from("content_types").delete().eq("id", id);
+      const { error } = await supabase.from("media_types").delete().eq("id", id);
       if (error) throw error;
 
       await refreshContentTypes();
@@ -466,7 +463,7 @@ export default function AssistMediaLibrary() {
     try {
       const cleaned = name.trim();
       const { data, error } = await supabase
-        .from("content_types")
+        .from("media_types")
         .select("id, is_locked")
         .ilike("name", cleaned)
         .limit(1)
@@ -475,7 +472,7 @@ export default function AssistMediaLibrary() {
       if (!data?.id) throw new Error("Type Content not found in database.");
 
       const nextLocked = !Boolean((data as any).is_locked);
-      const { error: updateError } = await supabase.from("content_types").update({ is_locked: nextLocked }).eq("id", (data as any).id);
+      const { error: updateError } = await supabase.from("media_types").update({ is_locked: nextLocked }).eq("id", (data as any).id);
       if (updateError) throw updateError;
 
       await refreshContentTypes();

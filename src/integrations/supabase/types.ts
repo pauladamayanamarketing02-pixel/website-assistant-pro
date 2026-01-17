@@ -662,22 +662,7 @@ export type Database = {
           url?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_gallery_media_category_id_fkey"
-            columns: ["media_category_id"]
-            isOneToOne: false
-            referencedRelation: "media_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_gallery_media_type_id_fkey"
-            columns: ["media_type_id"]
-            isOneToOne: false
-            referencedRelation: "media_types"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_packages: {
         Row: {
