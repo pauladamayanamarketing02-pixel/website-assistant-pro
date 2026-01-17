@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MediaItemForm from "@/pages/dashboard/assist/media-library/MediaItemForm";
+import MediaDetailsView from "@/pages/dashboard/assist/media-library/MediaDetailsView";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -122,6 +123,15 @@ export default function AssistMediaLibrary() {
 
   const [lastImportType, setLastImportType] = React.useState<ImportType | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
+
+  // View Details (full page, not overlay)
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [detailsRow, setDetailsRow] = React.useState<{
+    businessId: string;
+    businessName: string;
+    userId: string;
+    category: string;
+  } | null>(null);
 
   const [businesses, setBusinesses] = React.useState<BusinessOption[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = React.useState<string>("all");
@@ -733,7 +743,9 @@ export default function AssistMediaLibrary() {
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
 
-    return [...filtered].sort((a, b) => {
+    const withCounts = filtered.filter((r) => Object.values(r.typeCounts ?? {}).some((v) => (v ?? 0) > 0));
+
+    return [...withCounts].sort((a, b) => {
       const byBusiness = a.businessName.localeCompare(b.businessName, "en", { sensitivity: "base" });
       if (byBusiness !== 0) return byBusiness;
       return a.category.localeCompare(b.category, "en", { sensitivity: "base" });
@@ -747,6 +759,41 @@ export default function AssistMediaLibrary() {
       description: `Import \"${type}\" is in progress.`,
     });
   };
+
+  const openDetails = (row: MediaRow) => {
+    const biz = businesses.find((b) => b.id === row.businessId);
+    if (!biz?.userId) {
+      toast({ variant: "destructive", title: "Cannot open details", description: "Business user not found." });
+      return;
+    }
+
+    setDetailsRow({
+      businessId: row.businessId,
+      businessName: row.businessName,
+      userId: biz.userId,
+      category: row.category,
+    });
+    setDetailsOpen(true);
+  };
+
+  const closeDetails = () => {
+    setDetailsOpen(false);
+    setDetailsRow(null);
+  };
+
+  if (detailsOpen && detailsRow) {
+    return (
+      <MediaDetailsView
+        businessName={detailsRow.businessName}
+        userId={detailsRow.userId}
+        categories={categories}
+        categoryOptions={categoryOptions.map((c) => ({ id: c.id, name: c.name }))}
+        mediaTypes={mediaTypes}
+        initialCategory={detailsRow.category}
+        onBack={closeDetails}
+      />
+    );
+  }
 
   if (createOpen) {
     return (
@@ -914,12 +961,7 @@ export default function AssistMediaLibrary() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        toast({
-                          title: "View Details",
-                          description: `Business: ${row.businessName} • Category: ${row.category} (placeholder).`,
-                        })
-                      }
+                      onClick={() => openDetails(row)}
                     >
                       View Details
                     </Button>
