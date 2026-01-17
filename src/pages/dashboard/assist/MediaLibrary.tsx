@@ -105,7 +105,7 @@ function lockKey(name: string) {
   return (name ?? "").trim().toLowerCase();
 }
 
-const PERMANENT_CONTENT_TYPES = new Set(["images gallery", "video content"]);
+const PERMANENT_CONTENT_TYPES = new Set(["manage files", "images gallery", "logo", "video content"]);
 
 function uniqueNonEmpty(values: string[]) {
   const set = new Set<string>();

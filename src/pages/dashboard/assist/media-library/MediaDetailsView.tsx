@@ -58,6 +58,26 @@ type Props = {
   onBack: () => void;
 };
 
+function extFromName(name: string) {
+  const n = (name ?? "").trim();
+  const dot = n.lastIndexOf(".");
+  return dot >= 0 ? n.slice(dot).toLowerCase() : "";
+}
+
+function isOfficeExt(ext: string) {
+  return ext === ".doc" || ext === ".docx" || ext === ".xls" || ext === ".xlsx";
+}
+
+function isTextLike(type: string, ext: string) {
+  const t = (type ?? "").toLowerCase();
+  return t.startsWith("text/") || ext === ".txt";
+}
+
+function isPdfLike(type: string, ext: string) {
+  const t = (type ?? "").toLowerCase();
+  return t === "application/pdf" || ext === ".pdf";
+}
+
 function parseStoragePathFromPublicUrl(url: string) {
   // expected: .../storage/v1/object/public/user-files/<path>
   const marker = "/storage/v1/object/public/user-files/";
@@ -65,6 +85,7 @@ function parseStoragePathFromPublicUrl(url: string) {
   if (idx === -1) return null;
   return decodeURIComponent(url.slice(idx + marker.length));
 }
+
 
 export default function MediaDetailsView({
   businessName,
@@ -84,6 +105,9 @@ export default function MediaDetailsView({
   const [sortTypeContent, setSortTypeContent] = React.useState<string>("");
 
   const [previewItem, setPreviewItem] = React.useState<MediaDetailsItem | null>(null);
+  const [previewText, setPreviewText] = React.useState<string>("");
+  const [previewLoading, setPreviewLoading] = React.useState(false);
+
   const [deleteItem, setDeleteItem] = React.useState<MediaDetailsItem | null>(null);
 
   const [changeConfirmItem, setChangeConfirmItem] = React.useState<MediaDetailsItem | null>(null);
@@ -170,6 +194,42 @@ export default function MediaDetailsView({
   React.useEffect(() => {
     void fetchItems();
   }, [fetchItems]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      if (!previewItem) {
+        setPreviewText("");
+        setPreviewLoading(false);
+        return;
+      }
+
+      const ext = extFromName(previewItem.name);
+      if (!isTextLike(previewItem.type, ext)) {
+        setPreviewText("");
+        setPreviewLoading(false);
+        return;
+      }
+
+      try {
+        setPreviewLoading(true);
+        const res = await fetch(previewItem.url);
+        const txt = await res.text();
+        if (!cancelled) setPreviewText(txt.slice(0, 20000));
+      } catch {
+        if (!cancelled) setPreviewText("");
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewItem]);
 
   const copyUrl = async (url: string) => {
     try {
@@ -259,7 +319,14 @@ export default function MediaDetailsView({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept={(() => {
+          const ext = extFromName(changingItem?.name ?? "");
+          const t = (changingItem?.type ?? "").toLowerCase();
+          if (t.startsWith("image/")) return "image/*";
+          if (t.startsWith("video/")) return "video/*";
+          if (isOfficeExt(ext) || ext === ".pdf" || ext === ".txt") return ".pdf,.txt,.doc,.docx,.xls,.xlsx";
+          return "image/*,video/*,.pdf,.txt,.doc,.docx,.xls,.xlsx";
+        })()}
         className="hidden"
         onChange={(e) => handleChangeFile(e.target.files?.[0] ?? null)}
       />
@@ -403,13 +470,48 @@ export default function MediaDetailsView({
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground break-all">{previewItem.name}</p>
               <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
-                {previewItem.type.toLowerCase().startsWith("image/") ? (
-                  <img src={previewItem.url} alt={previewItem.name || "Preview"} className="h-full w-full object-contain" />
-                ) : previewItem.type.toLowerCase().startsWith("video/") ? (
-                  <video src={previewItem.url} className="h-full w-full" controls />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">No preview</div>
-                )}
+                {(() => {
+                  const ext = extFromName(previewItem.name);
+                  const type = (previewItem.type ?? "").toLowerCase();
+
+                  if (type.startsWith("image/")) {
+                    return <img src={previewItem.url} alt={previewItem.name || "Preview"} className="h-full w-full object-contain" />;
+                  }
+
+                  if (type.startsWith("video/")) {
+                    return <video src={previewItem.url} className="h-full w-full" controls />;
+                  }
+
+                  if (isPdfLike(type, ext)) {
+                    return <iframe title="PDF preview" src={previewItem.url} className="h-full w-full" />;
+                  }
+
+                  if (isTextLike(type, ext)) {
+                    return (
+                      <div className="h-full w-full overflow-auto p-4">
+                        {previewLoading ? (
+                          <p className="text-sm text-muted-foreground">Loading...</p>
+                        ) : previewText ? (
+                          <pre className="text-xs text-foreground whitespace-pre-wrap break-words">{previewText}</pre>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No preview</p>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  if (isOfficeExt(ext)) {
+                    const viewer = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(previewItem.url)}`;
+                    return <iframe title="Document preview" src={viewer} className="h-full w-full" />;
+                  }
+
+                  return (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4">
+                      <p className="text-sm text-muted-foreground">Preview not available.</p>
+                      <Button type="button" variant="outline" onClick={() => window.open(previewItem.url, "_blank", "noopener,noreferrer")}>Open file</Button>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ) : null}
