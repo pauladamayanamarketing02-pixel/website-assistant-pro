@@ -60,6 +60,7 @@ type MediaRow = {
   businessId: string;
   businessName: string;
   category: string;
+  typeContent: string;
   imagesGallery: number;
   videoContent: number;
 };
@@ -73,15 +74,17 @@ const FALLBACK_ROWS: MediaRow[] = [
     businessId: "demo",
     businessName: "Demo Business",
     category: "General",
+    typeContent: "Images Gallery",
     imagesGallery: 8,
-    videoContent: 2,
+    videoContent: 0,
   },
   {
     id: "demo-2",
     businessId: "demo",
     businessName: "Demo Business",
     category: "Campaign",
-    imagesGallery: 14,
+    typeContent: "Video Content",
+    imagesGallery: 0,
     videoContent: 4,
   },
 ];
@@ -538,21 +541,28 @@ export default function AssistMediaLibrary() {
   };
 
   const rows: MediaRow[] = React.useMemo(() => {
-    // Placeholder until media schema exists. We show one row per business.
+    // Placeholder until gallery items are wired. For now we show one row per Business × Category × Type Content.
     if (businesses.length > 0) {
-      const category = categories[0] ?? "General";
-      return businesses.map((b) => ({
-        id: `${b.id}-${category}`,
-        businessId: b.id,
-        businessName: b.name,
-        category,
-        imagesGallery: 0,
-        videoContent: 0,
-      }));
+      const availableCategories = categories.length > 0 ? categories : ["General"];
+      const availableTypes = contentTypes.length > 0 ? contentTypes : IMPORT_TYPES;
+
+      return businesses.flatMap((b) =>
+        availableCategories.flatMap((category) =>
+          availableTypes.map((typeContent) => ({
+            id: `${b.id}-${category}-${typeContent}`,
+            businessId: b.id,
+            businessName: b.name,
+            category,
+            typeContent,
+            imagesGallery: 0,
+            videoContent: 0,
+          }))
+        )
+      );
     }
 
     return FALLBACK_ROWS;
-  }, [businesses, categories]);
+  }, [businesses, categories, contentTypes]);
 
   const displayedRows = React.useMemo(() => {
     const filtered = selectedBusinessId === "all" ? rows : rows.filter((r) => r.businessId === selectedBusinessId);
@@ -560,7 +570,11 @@ export default function AssistMediaLibrary() {
     return [...filtered].sort((a, b) => {
       const byBusiness = a.businessName.localeCompare(b.businessName, "en", { sensitivity: "base" });
       if (byBusiness !== 0) return byBusiness;
-      return a.category.localeCompare(b.category, "en", { sensitivity: "base" });
+
+      const byCategory = a.category.localeCompare(b.category, "en", { sensitivity: "base" });
+      if (byCategory !== 0) return byCategory;
+
+      return a.typeContent.localeCompare(b.typeContent, "en", { sensitivity: "base" });
     });
   }, [rows, selectedBusinessId]);
 
@@ -638,6 +652,7 @@ export default function AssistMediaLibrary() {
               <TableRow>
                 <TableHead>Business</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Type Content</TableHead>
                 <TableHead className="text-right">Images Gallery</TableHead>
                 <TableHead className="text-right">Video Content</TableHead>
                 <TableHead className="text-right">Action</TableHead>
@@ -649,6 +664,7 @@ export default function AssistMediaLibrary() {
                 <TableRow key={row.id}>
                   <TableCell className="font-medium">{row.businessName}</TableCell>
                   <TableCell className="font-medium">{row.category}</TableCell>
+                  <TableCell className="font-medium">{row.typeContent}</TableCell>
                   <TableCell className="text-right">{row.imagesGallery}</TableCell>
                   <TableCell className="text-right">{row.videoContent}</TableCell>
                   <TableCell className="text-right">
@@ -659,7 +675,7 @@ export default function AssistMediaLibrary() {
                       onClick={() =>
                         toast({
                           title: "View Details",
-                          description: `Business: ${row.businessName} • Category: ${row.category} (placeholder).`,
+                          description: `Business: ${row.businessName} • Category: ${row.category} • Type: ${row.typeContent} (placeholder).`,
                         })
                       }
                     >
@@ -671,11 +687,12 @@ export default function AssistMediaLibrary() {
 
               {displayedRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                     No data for the selected business.
                   </TableCell>
                 </TableRow>
               ) : null}
+
             </TableBody>
           </Table>
         </CardContent>
