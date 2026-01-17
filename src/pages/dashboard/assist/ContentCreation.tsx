@@ -178,11 +178,9 @@ export default function ContentCreation() {
     third: { url: "/placeholder.svg", originalUrl: "/placeholder.svg" },
   });
 
-  // Category + Content column management (UI only for now)
+  // Category + Content column management
   const [contentTypes, setContentTypes] = React.useState<string[]>(Array.from(DEFAULT_CONTENT_TYPES));
-  const [categories, setCategories] = React.useState<string[]>(
-    uniqueNonEmpty(["General", ...FALLBACK_ROWS.map((r) => r.category)]),
-  );
+  const [categories, setCategories] = React.useState<string[]>([]);
 
   const [lockedCategories, setLockedCategories] = React.useState<Set<string>>(() => new Set());
   const [lockedContentTypes, setLockedContentTypes] = React.useState<Set<string>>(() => new Set());
@@ -588,6 +586,9 @@ export default function ContentCreation() {
   const openManage = (tab: "category" | "content") => {
     setManageTab(tab);
     setManageDialogOpen(true);
+    // ensure lists reflect DB-only values
+    void refreshCategories();
+    void refreshContentTypes();
   };
 
   const refreshCategories = React.useCallback(async () => {
@@ -600,8 +601,8 @@ export default function ContentCreation() {
     const rows = (data ?? []) as Array<{ name: string; is_locked?: boolean }>;
     const names = rows.map((c) => (c as any).name as string);
 
-    // Always keep "General" available in the UI
-    setCategories(uniqueNonEmpty(["General", ...names]));
+    // Only show categories coming from DB
+    setCategories(uniqueNonEmpty(names));
     setLockedCategories(new Set(rows.filter((c) => Boolean(c.is_locked)).map((c) => lockKey(c.name))));
   }, []);
 
@@ -733,19 +734,7 @@ export default function ContentCreation() {
       });
     }
   };
-
   const toggleCategoryLock = async (name: string) => {
-    const generalKey = lockKey(name);
-    if (generalKey === "general") {
-      setLockedCategories((prev) => {
-        const next = new Set(prev);
-        if (next.has(generalKey)) next.delete(generalKey);
-        else next.add(generalKey);
-        return next;
-      });
-      return;
-    }
-
     try {
       const cleaned = name.trim();
       const { data, error } = await supabase
