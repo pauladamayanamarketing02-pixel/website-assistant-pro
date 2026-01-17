@@ -1,8 +1,8 @@
 import * as React from "react";
 
-import { ArrowLeft, Type } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
-import { RichTextEditor } from "@/components/dashboard/RichTextEditor";
+import MultiImageUpload, { type UploadItem } from "@/pages/dashboard/assist/media-library/MultiImageUpload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,8 +33,9 @@ type Props = {
     businessName: string;
     category: string;
     mediaType: string;
-    title: string;
-    description: string;
+    imageName: string;
+    files: File[];
+    generatedNames: string[];
   }) => void;
 };
 
@@ -48,17 +49,23 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
 
   const [category, setCategory] = React.useState<string>("");
   const [mediaType, setMediaType] = React.useState<string>("");
-  const [title, setTitle] = React.useState<string>("");
-  const [description, setDescription] = React.useState<string>("");
+  const [imageName, setImageName] = React.useState<string>("");
+
+  const [uploads, setUploads] = React.useState<UploadItem[]>([]);
+
+  const generatedNames = React.useMemo(() => {
+    const base = imageName.trim();
+    if (!base) return uploads.map(() => "");
+    return uploads.map((_, idx) => (idx === 0 ? base : `${base}${idx}`));
+  }, [uploads, imageName]);
 
   const handleSave = () => {
-    const descriptionText = description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-
     const missing: string[] = [];
     if (!businessId) missing.push("Business Name");
     if (!category) missing.push("Category");
     if (!mediaType) missing.push("Type Content");
-    if (!descriptionText) missing.push("Description");
+    if (!imageName.trim()) missing.push("Image name");
+    if (uploads.length === 0) missing.push("File Upload");
 
     if (missing.length > 0) {
       toast({
@@ -74,8 +81,9 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
       businessName,
       category,
       mediaType,
-      title,
-      description,
+      imageName: imageName.trim(),
+      files: uploads.map((u) => u.file),
+      generatedNames,
     });
   };
 
@@ -96,7 +104,7 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
 
           <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground">Add Media</h1>
-            <p className="text-muted-foreground">Create a new media record for a client.</p>
+            <p className="text-muted-foreground">Upload new media files for a client.</p>
           </div>
         </div>
       </header>
@@ -164,26 +172,17 @@ export default function MediaItemForm({ businesses, categories, mediaTypes, onCa
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label>Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Media title..." />
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Description*</Label>
-              <RichTextEditor
-                value={description}
-                onChange={setDescription}
-                onSave={() => {}}
-                isEditing
-                saving={false}
-                title="Description"
-                description="Write the media description."
-                icon={Type}
-                showTopBar={false}
-                showSaveControls={false}
-              />
+              <Label>Image name*</Label>
+              <Input value={imageName} onChange={(e) => setImageName(e.target.value)} placeholder="e.g. test" />
+              {uploads.length > 0 && imageName.trim() ? (
+                <p className="text-xs text-muted-foreground">
+                  Generated names: {generatedNames.filter(Boolean).join(", ")}
+                </p>
+              ) : null}
             </div>
           </div>
+
+          <MultiImageUpload baseName={imageName} items={uploads} onChange={setUploads} />
         </CardContent>
 
         <Separator />
