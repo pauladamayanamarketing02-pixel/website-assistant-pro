@@ -70,7 +70,7 @@ const FALLBACK_ROWS: ContentRow[] = [
     id: "demo-1",
     businessId: "demo",
     businessName: "Demo Business",
-    category: "Promotion",
+    category: "Promo",
     socialMediaPosts: 12,
     contentMediaPosts: 6,
     gmbPosts: 4,
@@ -81,7 +81,7 @@ const FALLBACK_ROWS: ContentRow[] = [
     id: "demo-2",
     businessId: "demo",
     businessName: "Demo Business",
-    category: "Education",
+    category: "Edukasi",
     socialMediaPosts: 18,
     contentMediaPosts: 10,
     gmbPosts: 5,
@@ -92,7 +92,7 @@ const FALLBACK_ROWS: ContentRow[] = [
     id: "demo-3",
     businessId: "demo",
     businessName: "Demo Business",
-    category: "Testimonials",
+    category: "Testimoni",
     socialMediaPosts: 7,
     contentMediaPosts: 3,
     gmbPosts: 2,
@@ -102,7 +102,7 @@ const FALLBACK_ROWS: ContentRow[] = [
 ];
 
 function safeName(name: string | null | undefined) {
-  return (name ?? "(Unnamed)").trim() || "(Unnamed)";
+  return (name ?? "(Tanpa Nama)").trim() || "(Tanpa Nama)";
 }
 
 function uniqueNonEmpty(values: string[]) {
@@ -164,7 +164,6 @@ export default function ContentCreation() {
   const [newContentType, setNewContentType] = React.useState("");
   const [renameContentTypeFrom, setRenameContentTypeFrom] = React.useState<string>("");
   const [renameContentTypeTo, setRenameContentTypeTo] = React.useState("");
-  const [deleteContentTypeName, setDeleteContentTypeName] = React.useState<string>("");
 
   React.useEffect(() => {
     let cancelled = false;
@@ -178,7 +177,7 @@ export default function ContentCreation() {
       if (cancelled) return;
 
       if (error) {
-        // Don't block the UI — fall back to demo data
+        // Jangan blok UI — fallback ke data demo
         setBusinesses([]);
         return;
       }
@@ -199,7 +198,7 @@ export default function ContentCreation() {
   }, []);
 
   const rows: ContentRow[] = React.useMemo(() => {
-    // Placeholder until real data exists: one row per business
+    // Placeholder sampai data real dibuat: buat 1 baris per bisnis
     if (businesses.length > 0) {
       return businesses.map((b) => ({
         id: `${b.id}-general`,
@@ -230,8 +229,8 @@ export default function ContentCreation() {
   const onImport = (type: string) => {
     setLastImportType(type);
     toast({
-      title: "Import selected",
-      description: `You selected: ${type}`,
+      title: "Import dipilih",
+      description: `Anda memilih import: ${type}`,
     });
   };
 
@@ -259,8 +258,8 @@ export default function ContentCreation() {
 
   const saveDetails = () => {
     toast({
-      title: "Saved",
-      description: "Changes saved (placeholder only).",
+      title: "Tersimpan",
+      description: "Perubahan disimpan (sementara masih placeholder).",
     });
     closeDetails();
   };
@@ -270,8 +269,8 @@ export default function ContentCreation() {
     if (!name) return;
     if (categories.some((c) => c.toLowerCase() === name.toLowerCase())) {
       toast({
-        title: "Category already exists",
-        description: `Category "${name}" already exists.`,
+        title: "Kategori sudah ada",
+        description: `Kategori \"${name}\" sudah terdaftar.`,
       });
       return;
     }
@@ -286,15 +285,15 @@ export default function ContentCreation() {
 
     if (categories.some((c) => c.toLowerCase() === to.toLowerCase())) {
       toast({
-        title: "Category name conflict",
-        description: `Category "${to}" already exists.`,
+        title: "Nama kategori bentrok",
+        description: `Kategori \"${to}\" sudah ada.`,
       });
       return;
     }
 
     setCategories((p) => p.map((c) => (c === from ? to : c)));
 
-    // Keep the Details form in sync if it was using the renamed category
+    // jika form detail sedang memakai category yang di-rename
     setDetailsForm((p) => (p.category === from ? { ...p, category: to } : p));
 
     setRenameCategoryFrom("");
@@ -306,8 +305,8 @@ export default function ContentCreation() {
     if (!name) return;
     if (contentTypes.some((c) => c.toLowerCase() === name.toLowerCase())) {
       toast({
-        title: "Content type already exists",
-        description: `Content type "${name}" already exists.`,
+        title: "Jenis konten sudah ada",
+        description: `Jenis konten \"${name}\" sudah terdaftar.`,
       });
       return;
     }
@@ -322,8 +321,8 @@ export default function ContentCreation() {
 
     if (contentTypes.some((c) => c.toLowerCase() === to.toLowerCase())) {
       toast({
-        title: "Content type name conflict",
-        description: `Content type "${to}" already exists.`,
+        title: "Nama jenis konten bentrok",
+        description: `Jenis konten \"${to}\" sudah ada.`,
       });
       return;
     }
@@ -331,23 +330,6 @@ export default function ContentCreation() {
     setContentTypes((p) => p.map((c) => (c === from ? to : c)));
     setRenameContentTypeFrom("");
     setRenameContentTypeTo("");
-  };
-
-  const deleteContentType = () => {
-    const name = deleteContentTypeName.trim();
-    if (!name) return;
-
-    setContentTypes((p) => p.filter((t) => t !== name));
-
-    if (lastImportType === name) setLastImportType(null);
-    if (renameContentTypeFrom === name) setRenameContentTypeFrom("");
-
-    setDeleteContentTypeName("");
-
-    toast({
-      title: "Deleted",
-      description: `Content type "${name}" was deleted.`,
-    });
   };
 
   if (detailsOpen && activeRow) {
@@ -405,7 +387,7 @@ export default function ContentCreation() {
                   <Input
                     value={detailsForm.title}
                     onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
-                    placeholder="Content title..."
+                    placeholder="Judul konten..."
                   />
                 </div>
 
@@ -414,7 +396,7 @@ export default function ContentCreation() {
                   <Textarea
                     value={detailsForm.description}
                     onChange={(e) => setDetailsForm((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="Description..."
+                    placeholder="Deskripsi..."
                     rows={4}
                   />
                 </div>
@@ -424,7 +406,7 @@ export default function ContentCreation() {
                   <Textarea
                     value={detailsForm.comments}
                     onChange={(e) => setDetailsForm((p) => ({ ...p, comments: e.target.value }))}
-                    placeholder="Notes / comments..."
+                    placeholder="Catatan / komentar..."
                     rows={3}
                   />
                 </div>
@@ -453,7 +435,7 @@ export default function ContentCreation() {
                       onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder="Pilih kategori" />
                       </SelectTrigger>
                       <SelectContent className="z-50">
                         {categories.map((c) => (
@@ -479,15 +461,15 @@ export default function ContentCreation() {
         <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
           <DialogContent className="max-w-xl">
             <DialogHeader>
-                <DialogTitle>Manage Categories</DialogTitle>
-                <DialogDescription>Add or rename categories (UI only for now).</DialogDescription>
+              <DialogTitle>Manage Category</DialogTitle>
+              <DialogDescription>Tambah atau ubah nama category (sementara hanya UI).</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6">
               <section className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Add new category</h3>
                 <div className="flex gap-2">
-                  <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Category name..." />
+                  <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nama category..." />
                   <Button type="button" onClick={addCategory}>
                     Add
                   </Button>
@@ -499,7 +481,7 @@ export default function ContentCreation() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Select value={renameCategoryFrom} onValueChange={setRenameCategoryFrom}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
+                      <SelectValue placeholder="Pilih category" />
                     </SelectTrigger>
                     <SelectContent className="z-50">
                       {categories.map((c) => (
@@ -512,7 +494,7 @@ export default function ContentCreation() {
                   <Input
                     value={renameCategoryTo}
                     onChange={(e) => setRenameCategoryTo(e.target.value)}
-                    placeholder="New name..."
+                    placeholder="Nama baru..."
                   />
                 </div>
                 <Button type="button" variant="secondary" onClick={renameCategory}>
@@ -548,7 +530,7 @@ export default function ContentCreation() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Content Creation</h1>
-          <p className="text-muted-foreground">Manage ideas, categories, and content for clients.</p>
+          <p className="text-muted-foreground">Kelola ide, kategori, dan konten untuk klien.</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -581,19 +563,19 @@ export default function ContentCreation() {
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <CardTitle>Content Management</CardTitle>
+            <CardTitle>Manajemen Content</CardTitle>
             {lastImportType ? (
-              <p className="text-sm text-muted-foreground">Last selected: {lastImportType}</p>
+              <p className="text-sm text-muted-foreground">Terakhir dipilih: {lastImportType}</p>
             ) : null}
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId}>
               <SelectTrigger className="w-full sm:w-[260px]">
-                <SelectValue placeholder="Filter by business" />
+                <SelectValue placeholder="Sortir berdasarkan nama bisnis" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                <SelectItem value="all">All businesses</SelectItem>
+                <SelectItem value="all">Semua Bisnis</SelectItem>
                 {businesses.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {b.name}
@@ -607,7 +589,7 @@ export default function ContentCreation() {
               variant="outline"
               onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
             >
-              Sort name: {sortDirection === "asc" ? "A–Z" : "Z–A"}
+              Sort Nama: {sortDirection === "asc" ? "A–Z" : "Z–A"}
             </Button>
 
             <Button type="button" variant="secondary" onClick={() => setCategoryDialogOpen(true)}>
@@ -652,7 +634,7 @@ export default function ContentCreation() {
               {displayedRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                    No data for the selected business.
+                    Tidak ada data untuk bisnis yang dipilih.
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -664,16 +646,16 @@ export default function ContentCreation() {
       {/* Manage Category dialog (list page) */}
       <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
         <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle>Manage Categories</DialogTitle>
-              <DialogDescription>Add or rename categories (UI only for now).</DialogDescription>
-            </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Manage Category</DialogTitle>
+            <DialogDescription>Tambah atau ubah nama category (sementara hanya UI).</DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-6">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Add new category</h3>
               <div className="flex gap-2">
-                <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Category name..." />
+                <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nama category..." />
                 <Button type="button" onClick={addCategory}>
                   Add
                 </Button>
@@ -685,7 +667,7 @@ export default function ContentCreation() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <Select value={renameCategoryFrom} onValueChange={setRenameCategoryFrom}>
                   <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder="Pilih category" />
                   </SelectTrigger>
                   <SelectContent className="z-50">
                     {categories.map((c) => (
@@ -695,7 +677,7 @@ export default function ContentCreation() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Input value={renameCategoryTo} onChange={(e) => setRenameCategoryTo(e.target.value)} placeholder="New name..." />
+                <Input value={renameCategoryTo} onChange={(e) => setRenameCategoryTo(e.target.value)} placeholder="Nama baru..." />
               </div>
               <Button type="button" variant="secondary" onClick={renameCategory}>
                 Rename
@@ -725,16 +707,16 @@ export default function ContentCreation() {
       {/* Manage Content Types dialog */}
       <Dialog open={contentTypeDialogOpen} onOpenChange={setContentTypeDialogOpen}>
         <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle>Manage Content Types</DialogTitle>
-              <DialogDescription>Add, rename, or delete content types for the Import menu (UI only for now).</DialogDescription>
-            </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Manage Content Types</DialogTitle>
+            <DialogDescription>Tambah atau ubah nama jenis content untuk menu Import (sementara hanya UI).</DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-6">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Add new type</h3>
               <div className="flex gap-2">
-                <Input value={newContentType} onChange={(e) => setNewContentType(e.target.value)} placeholder="Content type name..." />
+                <Input value={newContentType} onChange={(e) => setNewContentType(e.target.value)} placeholder="Nama jenis content..." />
                 <Button type="button" onClick={addContentType}>
                   Add
                 </Button>
@@ -746,7 +728,7 @@ export default function ContentCreation() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <Select value={renameContentTypeFrom} onValueChange={setRenameContentTypeFrom}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a content type" />
+                    <SelectValue placeholder="Pilih jenis content" />
                   </SelectTrigger>
                   <SelectContent className="z-50">
                     {contentTypes.map((t) => (
@@ -759,7 +741,7 @@ export default function ContentCreation() {
                 <Input
                   value={renameContentTypeTo}
                   onChange={(e) => setRenameContentTypeTo(e.target.value)}
-                  placeholder="New name..."
+                  placeholder="Nama baru..."
                 />
               </div>
               <Button type="button" variant="secondary" onClick={renameContentType}>
@@ -767,26 +749,6 @@ export default function ContentCreation() {
               </Button>
             </section>
 
-            <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Delete type</h3>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Select value={deleteContentTypeName} onValueChange={setDeleteContentTypeName}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a content type" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {contentTypes.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" onClick={deleteContentType}>
-                  Delete
-                </Button>
-              </div>
-            </section>
             <section className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">Current types</h3>
               <div className="flex flex-wrap gap-2">
