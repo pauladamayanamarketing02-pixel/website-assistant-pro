@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { Eye, Copy, Link2, Upload, RotateCcw } from "lucide-react";
+import { Eye, Copy, Link2, Upload, RotateCcw, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   label: string;
@@ -68,6 +69,8 @@ export default function ImageFieldCard({
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  const [uploading, setUploading] = React.useState(false);
+
   const [urlDialogOpen, setUrlDialogOpen] = React.useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
   const [draftUrl, setDraftUrl] = React.useState(value);
@@ -96,23 +99,48 @@ export default function ImageFieldCard({
   };
 
   const openFilePicker = () => {
-    if (disabled) return;
+    if (disabled || uploading) return;
     fileInputRef.current?.click();
   };
 
   const onPickFile: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    if (disabled) return;
+    if (disabled || uploading) return;
 
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const nextUrl = URL.createObjectURL(file);
-    onChange({ url: nextUrl, originalUrl: originalValue });
+    // allow picking the same file again
+    e.target.value = "";
 
-    toast({
-      title: "Image updated",
-      description: `${label} updated from a local file (preview only).`,
-    });
+    void (async () => {
+      setUploading(true);
+      try {
+        const { data: userRes, error: userErr } = await supabase.auth.getUser();
+        if (userErr) throw userErr;
+        const userId = userRes.user?.id;
+        if (!userId) throw new Error("Not authenticated");
+
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const filePath = `content-images/${userId}/${Date.now()}-${safeFileName}`;
+
+        const { error: uploadError } = await supabase.storage.from("user-files").upload(filePath, file, {
+          upsert: true,
+          cacheControl: "3600",
+          contentType: file.type,
+        });
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from("user-files").getPublicUrl(filePath);
+        const publicUrl = urlData.publicUrl;
+
+        onChange({ url: publicUrl, originalUrl: originalValue });
+        toast({ title: "Image uploaded", description: `${label} was uploaded and is ready to save.` });
+      } catch (err: any) {
+        toast({ variant: "destructive", title: "Upload failed", description: err?.message ?? "Unknown error" });
+      } finally {
+        setUploading(false);
+      }
+    })();
   };
 
   const saveUrl = () => {
@@ -149,33 +177,38 @@ export default function ImageFieldCard({
 
         <TooltipProvider delayDuration={150}>
           <div className="flex flex-wrap gap-2">
-            <IconActionButton label="Preview" onClick={preview} icon={<Eye className="h-4 w-4" />} disabled={!value} />
+            <IconActionButton
+              label="Preview"
+              onClick={preview}
+              icon={<Eye className="h-4 w-4" />}
+              disabled={!value || uploading}
+            />
             <IconActionButton
               label="Copy URL"
               onClick={() => void copyUrl()}
               icon={<Copy className="h-4 w-4" />}
-              disabled={!value}
+              disabled={!value || uploading}
             />
             <IconActionButton
               label="Change Image"
               onClick={() => {
-                if (disabled) return;
+                if (disabled || uploading) return;
                 setUrlDialogOpen(true);
               }}
               icon={<Link2 className="h-4 w-4" />}
-              disabled={disabled}
+              disabled={disabled || uploading}
             />
             <IconActionButton
-              label="Add From Computer"
+              label={uploading ? "Uploading..." : "Add From Computer"}
               onClick={openFilePicker}
-              icon={<Upload className="h-4 w-4" />}
-              disabled={disabled}
+              icon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              disabled={disabled || uploading}
             />
             <IconActionButton
               label="Reset to Original"
               onClick={reset}
               icon={<RotateCcw className="h-4 w-4" />}
-              disabled={disabled}
+              disabled={disabled || uploading}
             />
           </div>
         </TooltipProvider>
