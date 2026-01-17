@@ -40,15 +40,15 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
   const copyUrl = async () => {
     try {
       await navigator.clipboard.writeText(value);
-      toast({ title: "Copied", description: "URL berhasil disalin." });
+      toast({ title: "Copied", description: "URL copied to clipboard." });
     } catch {
-      toast({ title: "Gagal", description: "Tidak bisa menyalin URL pada browser ini." });
+      toast({ title: "Copy failed", description: "Your browser blocked clipboard access." });
     }
   };
 
   const reset = () => {
     onChange({ url: originalValue, originalUrl: originalValue });
-    toast({ title: "Reset", description: `${label} dikembalikan ke original.` });
+    toast({ title: "Reset", description: `${label} restored to the original image.` });
   };
 
   const openFilePicker = () => {
@@ -64,7 +64,7 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
 
     toast({
       title: "Image updated",
-      description: `${label} diganti dari file komputer (preview lokal).`,
+      description: `${label} replaced from your computer (local preview).`,
     });
   };
 
@@ -73,7 +73,7 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
     if (!next) return;
     onChange({ url: next, originalUrl: originalValue });
     setUrlDialogOpen(false);
-    toast({ title: "Image updated", description: `${label} diganti via URL.` });
+    toast({ title: "Image updated", description: `${label} replaced via URL.` });
   };
 
   return (
@@ -127,7 +127,7 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Change Image URL</DialogTitle>
-            <DialogDescription>Tempel URL gambar baru untuk {label}.</DialogDescription>
+            <DialogDescription>Paste a new image URL for {label}.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
