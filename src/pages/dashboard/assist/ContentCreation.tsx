@@ -110,7 +110,7 @@ const FALLBACK_ROWS: ContentRow[] = [
 ];
 
 function safeName(name: string | null | undefined) {
-  return (name ?? "(Tanpa Nama)").trim() || "(Tanpa Nama)";
+  return (name ?? "(No name)").trim() || "(No name)";
 }
 
 function uniqueNonEmpty(values: string[]) {
@@ -235,8 +235,8 @@ export default function ContentCreation() {
   const onImport = (type: string) => {
     setLastImportType(type);
     toast({
-      title: "Import dipilih",
-      description: `Anda memilih import: ${type}`,
+      title: "Import selected",
+      description: `You selected import: ${type}`,
     });
   };
 
@@ -264,8 +264,8 @@ export default function ContentCreation() {
 
   const saveDetails = () => {
     toast({
-      title: "Tersimpan",
-      description: "Perubahan disimpan (sementara masih placeholder).",
+      title: "Saved",
+      description: "Changes saved (still placeholder).",
     });
     closeDetails();
   };
@@ -279,7 +279,7 @@ export default function ContentCreation() {
     const name = newCategory.trim();
     if (!name) return;
     if (categories.some((c) => c.toLowerCase() === name.toLowerCase())) {
-      toast({ title: "Kategori sudah ada", description: `Kategori \"${name}\" sudah terdaftar.` });
+      toast({ title: "Category already exists", description: `Category "${name}" is already registered.` });
       return;
     }
     setCategories((p) => [...p, name]);
@@ -302,7 +302,7 @@ export default function ContentCreation() {
     if (!from || !to) return;
 
     if (categories.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
-      toast({ title: "Nama kategori bentrok", description: `Kategori \"${to}\" sudah ada.` });
+      toast({ title: "Category name conflict", description: `Category "${to}" already exists.` });
       return;
     }
 
@@ -322,7 +322,7 @@ export default function ContentCreation() {
     const name = newContentType.trim();
     if (!name) return;
     if (contentTypes.some((c) => c.toLowerCase() === name.toLowerCase())) {
-      toast({ title: "Kolom sudah ada", description: `Content \"${name}\" sudah terdaftar.` });
+      toast({ title: "Column already exists", description: `Content "${name}" is already registered.` });
       return;
     }
     setContentTypes((p) => [...p, name]);
@@ -345,7 +345,7 @@ export default function ContentCreation() {
     if (!from || !to) return;
 
     if (contentTypes.some((c) => c !== from && c.toLowerCase() === to.toLowerCase())) {
-      toast({ title: "Nama kolom bentrok", description: `Content \"${to}\" sudah ada.` });
+      toast({ title: "Column name conflict", description: `Content "${to}" already exists.` });
       return;
     }
 
@@ -413,7 +413,7 @@ export default function ContentCreation() {
                   <Input
                     value={detailsForm.title}
                     onChange={(e) => setDetailsForm((p) => ({ ...p, title: e.target.value }))}
-                    placeholder="Judul konten..."
+                    placeholder="Content title..."
                   />
                 </div>
 
@@ -422,7 +422,7 @@ export default function ContentCreation() {
                   <Textarea
                     value={detailsForm.description}
                     onChange={(e) => setDetailsForm((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="Deskripsi..."
+                    placeholder="Description..."
                     rows={4}
                   />
                 </div>
@@ -432,7 +432,7 @@ export default function ContentCreation() {
                   <Textarea
                     value={detailsForm.comments}
                     onChange={(e) => setDetailsForm((p) => ({ ...p, comments: e.target.value }))}
-                    placeholder="Catatan / komentar..."
+                    placeholder="Notes / comments..."
                     rows={3}
                   />
                 </div>
@@ -461,7 +461,7 @@ export default function ContentCreation() {
                       onValueChange={(v) => setDetailsForm((p) => ({ ...p, category: v }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih kategori" />
+                        <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent className="z-50">
                         {categories.map((c) => (
@@ -489,8 +489,8 @@ export default function ContentCreation() {
             <DialogHeader>
               <DialogTitle>Manage</DialogTitle>
               <DialogDescription>
-                Category: tambah / edit / delete kategori. Content: tambah / edit / delete kolom konten (Business, Category,
-                dan Action tidak bisa diubah).
+                Manage categories (add/edit/delete) and content columns (add/edit/delete).
+                Note: Business, Category, and Action columns cannot be changed.
               </DialogDescription>
             </DialogHeader>
 
@@ -502,7 +502,7 @@ export default function ContentCreation() {
 
               <TabsContent value="category" className="space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nama category..." />
+                  <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Category name..." />
                   <Button type="button" onClick={addCategory}>
                     Add
                   </Button>
@@ -555,7 +555,7 @@ export default function ContentCreation() {
                     {categories.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
-                          Belum ada kategori.
+                          No categories yet.
                         </TableCell>
                       </TableRow>
                     ) : null}
@@ -568,7 +568,7 @@ export default function ContentCreation() {
                   <Input
                     value={newContentType}
                     onChange={(e) => setNewContentType(e.target.value)}
-                    placeholder="Nama kolom content..."
+                    placeholder="Content column name..."
                   />
                   <Button type="button" onClick={addContentType}>
                     Add
@@ -625,7 +625,7 @@ export default function ContentCreation() {
                     {contentTypes.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
-                          Belum ada kolom content.
+                          No content columns yet.
                         </TableCell>
                       </TableRow>
                     ) : null}
@@ -650,11 +650,11 @@ export default function ContentCreation() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Content Creation</h1>
-          <p className="text-muted-foreground">Kelola ide, kategori, dan konten untuk klien.</p>
+          <p className="text-muted-foreground">Manage content ideas, categories, and deliverables for clients.</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button">Upload</Button>
+          <Button type="button">Add</Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -679,19 +679,19 @@ export default function ContentCreation() {
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <CardTitle>Manajemen Content</CardTitle>
+            <CardTitle>Content Management</CardTitle>
             {lastImportType ? (
-              <p className="text-sm text-muted-foreground">Terakhir dipilih: {lastImportType}</p>
+              <p className="text-sm text-muted-foreground">Last selected: {lastImportType}</p>
             ) : null}
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId}>
               <SelectTrigger className="w-full sm:w-[260px]">
-                <SelectValue placeholder="Sortir berdasarkan nama bisnis" />
+                <SelectValue placeholder="Filter by business name" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                <SelectItem value="all">Semua Bisnis</SelectItem>
+                <SelectItem value="all">All Businesses</SelectItem>
                 {businesses.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {b.name}
@@ -750,7 +750,7 @@ export default function ContentCreation() {
                 {displayedRows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={contentTypes.length + 3} className="py-10 text-center text-muted-foreground">
-                      Tidak ada data untuk bisnis yang dipilih.
+                      No data for the selected business.
                     </TableCell>
                   </TableRow>
                 ) : null}
@@ -765,8 +765,8 @@ export default function ContentCreation() {
           <DialogHeader>
             <DialogTitle>Manage</DialogTitle>
             <DialogDescription>
-              Category: tambah / edit / delete kategori. Content: tambah / edit / delete kolom konten (Business, Category, dan
-              Action tidak bisa diubah).
+              Manage categories (add/edit/delete) and content columns (add/edit/delete).
+              Note: Business, Category, and Action columns cannot be changed.
             </DialogDescription>
           </DialogHeader>
 
@@ -778,7 +778,7 @@ export default function ContentCreation() {
 
             <TabsContent value="category" className="space-y-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nama category..." />
+                <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Category name..." />
                 <Button type="button" onClick={addCategory}>
                   Add
                 </Button>
@@ -831,7 +831,7 @@ export default function ContentCreation() {
                   {categories.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
-                        Belum ada kategori.
+                        No categories yet.
                       </TableCell>
                     </TableRow>
                   ) : null}
@@ -844,7 +844,7 @@ export default function ContentCreation() {
                 <Input
                   value={newContentType}
                   onChange={(e) => setNewContentType(e.target.value)}
-                  placeholder="Nama kolom content..."
+                  placeholder="Content column name..."
                 />
                 <Button type="button" onClick={addContentType}>
                   Add
@@ -901,7 +901,7 @@ export default function ContentCreation() {
                   {contentTypes.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
-                        Belum ada kolom content.
+                        No content columns yet.
                       </TableCell>
                     </TableRow>
                   ) : null}

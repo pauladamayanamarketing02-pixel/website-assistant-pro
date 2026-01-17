@@ -40,15 +40,15 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
   const copyUrl = async () => {
     try {
       await navigator.clipboard.writeText(value);
-      toast({ title: "Copied", description: "URL berhasil disalin." });
+      toast({ title: "Copied", description: "URL copied to clipboard." });
     } catch {
-      toast({ title: "Gagal", description: "Tidak bisa menyalin URL pada browser ini." });
+      toast({ title: "Failed", description: "Unable to copy the URL in this browser." });
     }
   };
 
   const reset = () => {
     onChange({ url: originalValue, originalUrl: originalValue });
-    toast({ title: "Reset", description: `${label} dikembalikan ke original.` });
+    toast({ title: "Reset", description: `${label} reverted to the original.` });
   };
 
   const openFilePicker = () => {
@@ -64,7 +64,7 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
 
     toast({
       title: "Image updated",
-      description: `${label} diganti dari file komputer (preview lokal).`,
+      description: `${label} updated from a local file (preview only).`,
     });
   };
 
@@ -73,7 +73,7 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
     if (!next) return;
     onChange({ url: next, originalUrl: originalValue });
     setUrlDialogOpen(false);
-    toast({ title: "Image updated", description: `${label} diganti via URL.` });
+    toast({ title: "Image updated", description: `${label} updated via URL.` });
   };
 
   return (
@@ -85,13 +85,13 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
             Preview
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={copyUrl}>
-            Copy Url
+            Copy URL
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={() => setUrlDialogOpen(true)}>
             Change Image
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={openFilePicker}>
-            Upload From Computer
+            Add From Computer
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={reset}>
             Reset to Original
@@ -127,7 +127,7 @@ export default function ImageFieldCard({ label, value, originalValue, onChange }
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Change Image URL</DialogTitle>
-            <DialogDescription>Tempel URL gambar baru untuk {label}.</DialogDescription>
+            <DialogDescription>Paste a new image URL for {label}.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
