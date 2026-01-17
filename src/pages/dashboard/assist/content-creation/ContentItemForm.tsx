@@ -23,6 +23,7 @@ type BusinessOption = {
   id: string;
   name: string;
   publicId?: string;
+  userId?: string;
 };
 
 type ImageSlotState = {
@@ -249,6 +250,7 @@ export default function ContentItemForm({
                 value={images.primary.url}
                 originalValue={images.primary.originalUrl}
                 onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
+                mediaPicker={businessId && business?.userId ? { businessId, userId: business.userId } : null}
               />
               <ImageFieldCard
                 variant="compact"
@@ -256,6 +258,7 @@ export default function ContentItemForm({
                 value={images.secondary.url}
                 originalValue={images.secondary.originalUrl}
                 onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
+                mediaPicker={businessId && business?.userId ? { businessId, userId: business.userId } : null}
               />
               <ImageFieldCard
                 variant="compact"
@@ -263,6 +266,7 @@ export default function ContentItemForm({
                 value={images.third.url}
                 originalValue={images.third.originalUrl}
                 onChange={(next) => setImages((p) => ({ ...p, third: next }))}
+                mediaPicker={businessId && business?.userId ? { businessId, userId: business.userId } : null}
               />
             </div>
           </div>

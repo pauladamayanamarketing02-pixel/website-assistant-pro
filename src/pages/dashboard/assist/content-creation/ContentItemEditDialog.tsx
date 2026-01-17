@@ -41,6 +41,7 @@ type Props = {
   saving?: boolean;
   onSave: (values: ContentItemEditValues) => void;
   onDelete?: () => void;
+  mediaPicker?: { userId: string; businessId: string } | null;
 };
 
 export default function ContentItemEditDialog({
@@ -52,6 +53,7 @@ export default function ContentItemEditDialog({
   saving,
   onSave,
   onDelete,
+  mediaPicker = null,
 }: Props) {
   const [values, setValues] = React.useState<ContentItemEditValues>(initialValues);
   const [images, setImages] = React.useState<{
@@ -102,6 +104,7 @@ export default function ContentItemEditDialog({
                 onChange={(next) => {
                   setImages((p) => ({ ...p, primary: next }));
                 }}
+                mediaPicker={mediaPicker}
               />
               <ImageFieldCard
                 variant="compact"
@@ -111,6 +114,7 @@ export default function ContentItemEditDialog({
                 onChange={(next) => {
                   setImages((p) => ({ ...p, secondary: next }));
                 }}
+                mediaPicker={mediaPicker}
               />
               <ImageFieldCard
                 variant="compact"
@@ -120,6 +124,7 @@ export default function ContentItemEditDialog({
                 onChange={(next) => {
                   setImages((p) => ({ ...p, third: next }));
                 }}
+                mediaPicker={mediaPicker}
               />
             </div>
           </div>

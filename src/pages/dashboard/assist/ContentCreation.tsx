@@ -63,6 +63,7 @@ type BusinessOption = {
   id: string;
   name: string;
   publicId?: string;
+  userId?: string;
 };
 
 type ContentRow = {
@@ -280,11 +281,11 @@ export default function ContentCreation() {
   React.useEffect(() => {
     let cancelled = false;
 
-    const loadBusinesses = async () => {
+      const loadBusinesses = async () => {
       const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData, error: typeError }] = await Promise.all([
         supabase
           .from("businesses")
-          .select("id, business_name, business_number")
+          .select("id, business_name, business_number, user_id")
           .order("business_name", { ascending: true, nullsFirst: false }),
         supabase.from("content_categories").select("name, is_locked").order("name", { ascending: true }),
         // Column order follows database order (created_at). UI can reverse it.
@@ -297,10 +298,11 @@ export default function ContentCreation() {
         // Jangan blok UI — fallback ke list kosong
         setBusinesses([]);
       } else {
-        const list: BusinessOption[] = (bizData ?? []).map((b) => ({
-          id: b.id,
-          name: safeName(b.business_name),
+        const list: BusinessOption[] = (bizData ?? []).map((b: any) => ({
+          id: b.id as string,
+          name: safeName(b.business_name as string | null | undefined),
           publicId: formatBusinessId((b as any).business_number as number | null),
+          userId: (b.user_id ?? undefined) as string | undefined,
         }));
         setBusinesses(list);
       }
@@ -1062,7 +1064,7 @@ export default function ContentCreation() {
   if (createOpen) {
     return (
       <ContentItemForm
-        businesses={businesses.length ? businesses : [{ id: "demo", name: "Demo Business", publicId: "B00000" }]}
+        businesses={businesses.length ? businesses : [{ id: "demo", name: "Demo Business", publicId: "B00000", userId: undefined }]}
         categories={categories}
         contentTypes={contentTypes}
         onCancel={() => setCreateOpen(false)}
@@ -1246,6 +1248,10 @@ export default function ContentCreation() {
                             thirdImageUrl: item.images.third || "/placeholder.svg",
                           }}
                           readOnly={editingItemId !== item.id}
+                          mediaPicker={(() => {
+                            const biz = businesses.find((b) => b.id === activeRow?.businessId);
+                            return biz?.userId && activeRow?.businessId ? { userId: biz.userId, businessId: activeRow.businessId } : null;
+                          })()}
                           onCancel={cancelEditItem}
                           onDelete={undefined}
                           onSave={(values) => void saveEditItem(values)}
