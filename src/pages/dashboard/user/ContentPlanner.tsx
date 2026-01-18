@@ -166,7 +166,7 @@ export default function ContentPlanner() {
   const [filter, setFilter] = useState<ContentFilter>("all");
 
   const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
-  const [selectedBusinessId, setSelectedBusinessId] = useState<string>("all");
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
 
   const [scheduledItems, setScheduledItems] = useState<ScheduledContentItem[]>([]);
   const [loadingScheduled, setLoadingScheduled] = useState(false);
@@ -194,6 +194,11 @@ export default function ContentPlanner() {
         }));
 
         setBusinesses(mapped);
+
+        // Default to the first business so users never see an "All Businesses" view.
+        if (!selectedBusinessId && mapped.length > 0) {
+          setSelectedBusinessId(mapped[0].id);
+        }
       } catch (e: any) {
         toast({
           variant: "destructive",
@@ -209,7 +214,7 @@ export default function ContentPlanner() {
     return () => {
       cancelled = true;
     };
-  }, [toast, user]);
+  }, [selectedBusinessId, toast, user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -241,7 +246,7 @@ export default function ContentPlanner() {
           .lte("scheduled_at", to)
           .order("scheduled_at", { ascending: true });
 
-        if (selectedBusinessId !== "all") {
+        if (selectedBusinessId) {
           query = query.eq("business_id", selectedBusinessId);
         } else {
           query = query.in("business_id", businessIds);
@@ -364,10 +369,9 @@ export default function ContentPlanner() {
 
               <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId}>
                 <SelectTrigger className="w-full sm:w-[280px]" disabled={businesses.length <= 1}>
-                  <SelectValue placeholder="Filter by business name" />
+                  <SelectValue placeholder="Business" />
                 </SelectTrigger>
                 <SelectContent className="z-50">
-                  <SelectItem value="all">All Businesses</SelectItem>
                   {businesses.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
