@@ -435,7 +435,7 @@ export default function ContentPlanner() {
               Content Recommendations
             </CardTitle>
             <CardDescription>
-              Menampilkan hanya konten yang terjadwal pada kalender untuk bulan {format(month, "MMMM yyyy")}.
+              Shows only content scheduled on the calendar for {format(month, "MMMM yyyy")}.
             </CardDescription>
           </CardHeader>
 
