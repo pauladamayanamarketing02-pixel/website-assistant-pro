@@ -49,6 +49,7 @@ import MediaItemForm from "@/pages/dashboard/assist/media-library/MediaItemForm"
 import MediaDetailsView from "@/pages/dashboard/assist/media-library/MediaDetailsView";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useSupabaseRealtimeReload } from "@/hooks/useSupabaseRealtimeReload";
 
 type ImportType = "Gambar" | "Video";
 
@@ -598,6 +599,42 @@ export default function AssistMediaLibrary() {
   const [mediaRows, setMediaRows] = React.useState<MediaRow[]>([]);
   const [mediaRowsLoading, setMediaRowsLoading] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
+
+  useSupabaseRealtimeReload({
+    channelName: "assist-media-library-sync",
+    targets: [
+      { table: "user_gallery" },
+      { table: "media_categories" },
+      { table: "media_types" },
+      { table: "businesses" },
+    ],
+    debounceMs: 300,
+    onChange: () => {
+      // Refresh meta + recount (counts are derived from user_gallery)
+      void refreshCategories();
+      void refreshContentTypes();
+      setRefreshKey((v) => v + 1);
+
+      // Business list may change (new client onboarding)
+      void (async () => {
+        const { data: bizData, error: bizError } = await supabase
+          .from("businesses")
+          .select("id, business_name, user_id, business_number")
+          .order("business_name", { ascending: true, nullsFirst: false });
+
+        if (bizError) return;
+
+        setBusinesses(
+          (bizData ?? []).map((b: any) => ({
+            id: b.id,
+            name: safeName(b.business_name),
+            userId: b.user_id,
+            publicId: formatBusinessId((b as any).business_number as number | null) || b.id,
+          })),
+        );
+      })();
+    },
+  });
 
   React.useEffect(() => {
     let cancelled = false;

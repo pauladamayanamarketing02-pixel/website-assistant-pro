@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useSupabaseRealtimeReload } from "@/hooks/useSupabaseRealtimeReload";
 import type { ContentItemEditValues } from "@/pages/dashboard/assist/content-creation/ContentItemEditDialog";
 import ContentItemInlineEditor from "@/pages/dashboard/assist/content-creation/ContentItemInlineEditor";
 import ContentItemForm from "@/pages/dashboard/assist/content-creation/ContentItemForm";
@@ -570,6 +571,28 @@ export default function ContentCreation() {
       setDetailsLoading(false);
     }
   };
+
+  useSupabaseRealtimeReload({
+    channelName: "assist-content-creation-sync",
+    targets: [
+      { table: "content_items" },
+      { table: "content_categories" },
+      { table: "content_types" },
+      { table: "businesses" },
+    ],
+    debounceMs: 300,
+    onChange: () => {
+      // Keep the table counts + details view in sync without manual refresh.
+      if (typesReady) void fetchContentRows();
+      // Meta lists might be changed by other admins/assists.
+      void refreshCategories();
+      void refreshContentTypes();
+
+      if (detailsOpen && activeRow && !detailsSaving) {
+        void fetchDetailsItem(detailsSortCategory, detailsSortTypeContent);
+      }
+    },
+  });
 
   const saveDetails = async () => {
     if (!activeRow) return;

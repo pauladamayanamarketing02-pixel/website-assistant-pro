@@ -33,6 +33,7 @@ import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
 import PlatformDropdown from "@/pages/dashboard/assist/content-creation/PlatformDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseRealtimeReload } from "@/hooks/useSupabaseRealtimeReload";
 
 type BusinessOption = {
   id: string;
@@ -100,6 +101,7 @@ export default function AssistCalendar() {
   const [items, setItems] = useState<ScheduledContentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewItem, setViewItem] = useState<ScheduledContentItem | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [contentTypes, setContentTypes] = useState<Array<{ id: string; name: string }>>([]);
@@ -160,7 +162,7 @@ export default function AssistCalendar() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -192,7 +194,7 @@ export default function AssistCalendar() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -261,7 +263,19 @@ export default function AssistCalendar() {
     return () => {
       cancelled = true;
     };
-  }, [month, selectedBusinessId, toast]);
+  }, [month, selectedBusinessId, toast, reloadKey]);
+
+  useSupabaseRealtimeReload({
+    channelName: "assist-calendar-sync",
+    targets: [
+      { table: "content_items" },
+      { table: "content_categories" },
+      { table: "content_types" },
+      { table: "businesses" },
+    ],
+    debounceMs: 350,
+    onChange: () => setReloadKey((v) => v + 1),
+  });
 
   const dayToItems = useMemo(() => {
     const map = new Map<string, ScheduledContentItem[]>();
