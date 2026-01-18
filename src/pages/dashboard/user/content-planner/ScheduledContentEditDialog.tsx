@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import PlatformDropdown from "@/pages/dashboard/assist/content-creation/PlatformDropdown";
 
 export type ScheduledContentEditValues = {
   title: string;
@@ -71,6 +72,14 @@ export default function ScheduledContentEditDialog({
       third: { url: initialValues.thirdImageUrl, originalUrl: initialValues.thirdImageUrl },
     });
   }, [open, initialValues]);
+
+  React.useEffect(() => {
+    const needsPlatform =
+      values.contentTypeName === "Social Media Posts" || values.contentTypeName === "Ads Marketing";
+    if (!needsPlatform && values.platform) {
+      setValues((p) => ({ ...p, platform: "" }));
+    }
+  }, [values.contentTypeName, values.platform]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -142,7 +151,13 @@ export default function ScheduledContentEditDialog({
                 <Label>Type Content</Label>
                 <Select
                   value={values.contentTypeName || undefined}
-                  onValueChange={(v) => setValues((p) => ({ ...p, contentTypeName: v }))}
+                  onValueChange={(v) =>
+                    setValues((p) => ({
+                      ...p,
+                      contentTypeName: v,
+                      platform: "",
+                    }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose Type Content" />
@@ -157,12 +172,11 @@ export default function ScheduledContentEditDialog({
                 </Select>
               </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Platform</Label>
-                <Input
+              <div className="sm:col-span-2">
+                <PlatformDropdown
+                  contentType={values.contentTypeName}
                   value={values.platform}
-                  onChange={(e) => setValues((p) => ({ ...p, platform: e.target.value }))}
-                  placeholder="e.g. Instagram"
+                  onChange={(v) => setValues((p) => ({ ...p, platform: v }))}
                 />
               </div>
             </div>
