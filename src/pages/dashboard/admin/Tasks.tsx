@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
 
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,43 +40,92 @@ const statusLabel: Record<TaskStatus, string> = {
   completed: "Completed",
 };
 
+const toTaskStatus = (status: unknown): TaskStatus => {
+  const s = String(status ?? "pending") as TaskStatus;
+  if (s === "pending") return "pending";
+  if (s === "assigned") return "assigned";
+  if (s === "in_progress") return "in_progress";
+  if (s === "ready_for_review") return "ready_for_review";
+  if (s === "completed") return "completed";
+  return "pending";
+};
+
 export default function AdminTasks() {
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [rows, setRows] = useState<TaskRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const tasks: TaskRow[] = useMemo(
-    () => [
-      {
-        id: "t-1001",
-        businessName: "Acme Coffee",
-        title: "Write Instagram captions for weekly promo",
-        assignee: "Sarah Kim",
-        deadline: "2026-01-22",
-        status: "in_progress",
-      },
-      {
-        id: "t-1002",
-        businessName: "Bright Dental",
-        title: "Draft blog post: Teeth Whitening Tips",
-        assignee: "John Doe",
-        deadline: "2026-01-25",
-        status: "ready_for_review",
-      },
-      {
-        id: "t-1003",
-        businessName: "Nova Fitness",
-        title: "Set up weekly email campaign",
-        assignee: "Unassigned",
-        deadline: "2026-01-28",
-        status: "pending",
-      },
-    ],
-    [],
-  );
+  useEffect(() => {
+    void fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+
+      const { data: tasks, error } = await (supabase as any)
+        .from("tasks")
+        .select("id, task_number, user_id, assigned_to, title, deadline, status")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const taskList = (tasks as any[]) ?? [];
+      if (taskList.length === 0) {
+        setRows([]);
+        return;
+      }
+
+      const userIds = Array.from(new Set(taskList.map((t) => t.user_id).filter(Boolean)));
+      const assigneeIds = Array.from(new Set(taskList.map((t) => t.assigned_to).filter(Boolean)));
+
+      const [{ data: businesses, error: businessesError }, { data: assignees, error: assigneesError }] = await Promise.all([
+        (supabase as any).from("businesses").select("user_id, business_name").in("user_id", userIds),
+        assigneeIds.length
+          ? (supabase as any).from("profiles").select("id, name").in("id", assigneeIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (businessesError) throw businessesError;
+      if (assigneesError) throw assigneesError;
+
+      const businessByUserId = new Map<string, string>();
+      ((businesses as any[]) ?? []).forEach((b) => {
+        if (b?.user_id) businessByUserId.set(b.user_id, b?.business_name || "—");
+      });
+
+      const assigneeById = new Map<string, string>();
+      ((assignees as any[]) ?? []).forEach((a) => {
+        if (a?.id) assigneeById.set(a.id, a?.name || "—");
+      });
+
+      const nextRows: TaskRow[] = taskList.map((t) => {
+        const taskNumber = t?.task_number;
+        const label = taskNumber ? `T-${String(taskNumber).padStart(4, "0")}` : String(t.id);
+
+        return {
+          id: label,
+          businessName: businessByUserId.get(t.user_id) ?? "—",
+          title: t.title ?? "—",
+          assignee: t.assigned_to ? assigneeById.get(t.assigned_to) ?? "—" : "Unassigned",
+          deadline: t.deadline ? String(t.deadline).slice(0, 10) : "—",
+          status: toTaskStatus(t.status),
+        };
+      });
+
+      setRows(nextRows);
+    } catch (e) {
+      console.error("Error fetching tasks:", e);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return tasks;
-    return tasks.filter((t) => t.status === statusFilter);
-  }, [tasks, statusFilter]);
+    if (statusFilter === "all") return rows;
+    return rows.filter((t) => t.status === statusFilter);
+  }, [rows, statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -118,48 +168,52 @@ export default function AdminTasks() {
         </CardHeader>
 
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Task ID</TableHead>
-                <TableHead>Business Name</TableHead>
-                <TableHead>Task Title</TableHead>
-                <TableHead>Assignee</TableHead>
-                <TableHead>Deadline</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {filtered.length === 0 ? (
+          {loading ? (
+            <div className="py-8 text-sm text-muted-foreground">Loading tasks...</div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No tasks match the selected status.
-                  </TableCell>
+                  <TableHead>Task ID</TableHead>
+                  <TableHead>Business Name</TableHead>
+                  <TableHead>Task Title</TableHead>
+                  <TableHead>Assignee</TableHead>
+                  <TableHead>Deadline</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
-              ) : (
-                filtered.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.id}</TableCell>
-                    <TableCell>{t.businessName}</TableCell>
-                    <TableCell className="text-muted-foreground">{t.title}</TableCell>
-                    <TableCell className="text-muted-foreground">{t.assignee}</TableCell>
-                    <TableCell className="text-muted-foreground">{t.deadline}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{statusLabel[t.status]}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => {}}>
-                        <Eye className="h-4 w-4" />
-                        View Details
-                      </Button>
+              </TableHeader>
+
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      No tasks match the selected status.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filtered.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="font-medium">{t.id}</TableCell>
+                      <TableCell>{t.businessName}</TableCell>
+                      <TableCell className="text-muted-foreground">{t.title}</TableCell>
+                      <TableCell className="text-muted-foreground">{t.assignee}</TableCell>
+                      <TableCell className="text-muted-foreground">{t.deadline}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{statusLabel[t.status]}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => {}}>
+                          <Eye className="h-4 w-4" />
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

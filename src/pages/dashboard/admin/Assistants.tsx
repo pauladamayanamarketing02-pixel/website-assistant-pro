@@ -19,6 +19,7 @@ type AssistantRow = {
   email: string;
   phone: string | null;
   country: string | null;
+  assistId: string;
 };
 
 export default function AdminAssistants() {
@@ -28,6 +29,11 @@ export default function AdminAssistants() {
   useEffect(() => {
     void fetchAssistants();
   }, []);
+
+  const formatAssistId = (userId: string) => {
+    const idNum = (parseInt(userId.slice(-4), 16) % 900) + 100;
+    return `A${String(idNum).padStart(5, "0")}`;
+  };
 
   const fetchAssistants = async () => {
     try {
@@ -55,7 +61,12 @@ export default function AdminAssistants() {
 
       if (profilesError) throw profilesError;
 
-      setRows((profiles as any[]) ?? []);
+      const nextRows: AssistantRow[] = ((profiles as any[]) ?? []).map((p) => ({
+        ...p,
+        assistId: formatAssistId(p.id),
+      }));
+
+      setRows(nextRows);
     } catch (error) {
       console.error("Error fetching assistants:", error);
       setRows([]);
@@ -111,14 +122,14 @@ export default function AdminAssistants() {
                       No assistants found.
                     </TableCell>
                   </TableRow>
-                ) : (
-                  rows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-medium">{row.id}</TableCell>
-                      <TableCell className="font-medium">{row.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.email}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.phone ?? "—"}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.country ?? "—"}</TableCell>
+                  ) : (
+                    rows.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="font-medium">{row.assistId}</TableCell>
+                        <TableCell className="font-medium">{row.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{row.email}</TableCell>
+                        <TableCell className="text-muted-foreground">{row.phone ?? "—"}</TableCell>
+                        <TableCell className="text-muted-foreground">{row.country ?? "—"}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => {}}>
                           <Eye className="h-4 w-4" />
