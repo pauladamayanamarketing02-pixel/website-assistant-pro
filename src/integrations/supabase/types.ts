@@ -33,6 +33,8 @@ export type Database = {
           hours: Json | null
           id: string
           last_name: string | null
+          marketing_goal_text: string | null
+          marketing_goal_type: string | null
           onboarding_completed: boolean | null
           persona1_content: string | null
           persona1_title: string | null
@@ -41,6 +43,10 @@ export type Database = {
           persona3_content: string | null
           persona3_title: string | null
           phone_number: string | null
+          primary_service: string | null
+          secondary_services: Json
+          service_area: string | null
+          service_short_description: string | null
           social_links: Json | null
           stage: string | null
           updated_at: string
@@ -65,6 +71,8 @@ export type Database = {
           hours?: Json | null
           id?: string
           last_name?: string | null
+          marketing_goal_text?: string | null
+          marketing_goal_type?: string | null
           onboarding_completed?: boolean | null
           persona1_content?: string | null
           persona1_title?: string | null
@@ -73,6 +81,10 @@ export type Database = {
           persona3_content?: string | null
           persona3_title?: string | null
           phone_number?: string | null
+          primary_service?: string | null
+          secondary_services?: Json
+          service_area?: string | null
+          service_short_description?: string | null
           social_links?: Json | null
           stage?: string | null
           updated_at?: string
@@ -97,6 +109,8 @@ export type Database = {
           hours?: Json | null
           id?: string
           last_name?: string | null
+          marketing_goal_text?: string | null
+          marketing_goal_type?: string | null
           onboarding_completed?: boolean | null
           persona1_content?: string | null
           persona1_title?: string | null
@@ -105,6 +119,10 @@ export type Database = {
           persona3_content?: string | null
           persona3_title?: string | null
           phone_number?: string | null
+          primary_service?: string | null
+          secondary_services?: Json
+          service_area?: string | null
+          service_short_description?: string | null
           social_links?: Json | null
           stage?: string | null
           updated_at?: string
