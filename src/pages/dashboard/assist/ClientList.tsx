@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,10 +12,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { FileThumbnail, UniversalFilePreview } from '@/components/media/UniversalFilePreview';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useSupabaseRealtimeReload } from '@/hooks/useSupabaseRealtimeReload';
 import {
-  Eye, ArrowLeft, Building2, BookOpen, Image, FileText, Package, Settings,
-  Copy, Save, Pencil, ImageIcon, Video, FileIcon, Upload, Trash2, Grid, List,
-  User, Lock, Mail, ExternalLink, EyeOff, X, Plus, Check, Download
+  Eye,
+  ArrowLeft,
+  Building2,
+  BookOpen,
+  Image,
+  FileText,
+  Package,
+  Settings,
+  Copy,
+  Save,
+  Pencil,
+  ImageIcon,
+  Video,
+  FileIcon,
+  Upload,
+  Trash2,
+  Grid,
+  List,
+  User,
+  Lock,
+  Mail,
+  ExternalLink,
+  EyeOff,
+  X,
+  Plus,
+  Check,
+  Download,
 } from 'lucide-react';
 import { RichTextEditor } from '@/components/dashboard/RichTextEditor';
 import { SocialMediaInput, SocialMediaLink } from '@/components/dashboard/SocialMediaInput';
@@ -471,6 +496,26 @@ export default function ClientList() {
       setLoadingBusiness(false);
     }
   };
+
+  const syncFromDb = useCallback(() => {
+    // Keep the list + currently opened client details always up to date.
+    void fetchClients();
+    if (showDetails && selectedClient) void fetchClientData(selectedClient);
+  }, [showDetails, selectedClient]);
+
+  useSupabaseRealtimeReload({
+    channelName: "assist-clients-sync",
+    targets: [
+      { table: "profiles" },
+      { table: "businesses" },
+      { table: "user_roles" },
+      { table: "user_gallery" },
+      { table: "user_packages" },
+      { table: "packages" },
+    ],
+    onChange: syncFromDb,
+    debounceMs: 300,
+  });
 
   const handleBack = () => {
     setShowDetails(false);
