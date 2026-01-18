@@ -561,7 +561,11 @@ export default function ContentPlanner() {
 
       const description =
         postTarget.kind === "scheduled"
-          ? `View Detail Content: ${buildScheduledContentDetailUrl({ itemId: postTarget.id, businessId: postTarget.businessId })}`
+          ? [
+              `View Content (Read-only): ${new URL(`${window.location.origin}/dashboard/assist/calendar/view/${postTarget.id}`).toString()}`,
+              // Keep the existing deep-link to Content Planner so we can detect "already posted" items reliably.
+              `View Detail Content: ${buildScheduledContentDetailUrl({ itemId: postTarget.id, businessId: postTarget.businessId })}`,
+            ].join("\n")
           : postTarget.notes;
 
       const taskTitle = `Content Post - ${postTarget.title}`;
