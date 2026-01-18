@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -71,6 +73,15 @@ export default function MyBusiness() {
   const [isEditing, setIsEditing] = useState(false);
   const [showEmailSecondary, setShowEmailSecondary] = useState(false);
   const [showPhoneSecondary, setShowPhoneSecondary] = useState(false);
+
+  const [marketingSetupOpen, setMarketingSetupOpen] = useState(false);
+  const [marketingSetup, setMarketingSetup] = useState({
+    marketingGoalType: 'calls' as 'calls' | 'leads' | 'booking',
+    marketingGoalText: '',
+    serviceName: '',
+    shortDescription: '',
+    serviceArea: '',
+  });
 
   // Track the businesses row (some accounts may not have a row yet)
   const [businessRowId, setBusinessRowId] = useState<string | null>(null);
@@ -689,8 +700,9 @@ export default function MyBusiness() {
       </div>
 
       {currentView === 'details' ? (
-        <Card>
-          <CardHeader>
+        <>
+          <Card>
+            <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -721,14 +733,25 @@ export default function MyBusiness() {
                     Edit
                   </Button>
                 )}
-                  <Button 
-                    variant="outline" 
-                    onClick={handleOpenKnowledgeBase}
-                    className="flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    View Details
-                  </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMarketingSetupOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Marketing Setup
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  onClick={handleOpenKnowledgeBase}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Knowledge Files
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -1193,6 +1216,126 @@ export default function MyBusiness() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={marketingSetupOpen} onOpenChange={setMarketingSetupOpen}>
+          <DialogContent className="left-0 top-0 h-screen w-screen max-w-none translate-x-0 translate-y-0 rounded-none p-0">
+            <div className="flex h-full flex-col">
+              <div className="border-b border-border px-6 py-4">
+                <DialogHeader className="space-y-0">
+                  <DialogTitle className="text-xl">Marketing Setup</DialogTitle>
+                  <p className="text-sm text-muted-foreground">Set marketing goal & services/offerings.</p>
+                </DialogHeader>
+              </div>
+
+              <div className="flex-1 overflow-auto p-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Marketing Goal</CardTitle>
+                      <CardDescription>Pick your main outcome.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Marketing Goal</Label>
+                        <RadioGroup
+                          value={marketingSetup.marketingGoalType}
+                          onValueChange={(value) =>
+                            setMarketingSetup((prev) => ({
+                              ...prev,
+                              marketingGoalType: value as 'calls' | 'leads' | 'booking',
+                            }))
+                          }
+                          className="grid gap-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem id="goal_calls" value="calls" />
+                            <Label htmlFor="goal_calls">Calls</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem id="goal_leads" value="leads" />
+                            <Label htmlFor="goal_leads">Leads</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem id="goal_booking" value="booking" />
+                            <Label htmlFor="goal_booking">Booking</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="marketing_goal_text">Goal Details</Label>
+                        <Input
+                          id="marketing_goal_text"
+                          value={marketingSetup.marketingGoalText}
+                          onChange={(e) =>
+                            setMarketingSetup((prev) => ({ ...prev, marketingGoalText: e.target.value }))
+                          }
+                          placeholder="Contoh: 30 booking per bulan"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Services / Offerings</CardTitle>
+                      <CardDescription>Describe your main service.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="service_name">Service Name</Label>
+                        <Input
+                          id="service_name"
+                          value={marketingSetup.serviceName}
+                          onChange={(e) => setMarketingSetup((prev) => ({ ...prev, serviceName: e.target.value }))}
+                          placeholder="Contoh: Home Cleaning"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="service_short_desc">Short Description</Label>
+                        <Textarea
+                          id="service_short_desc"
+                          value={marketingSetup.shortDescription}
+                          onChange={(e) =>
+                            setMarketingSetup((prev) => ({ ...prev, shortDescription: e.target.value }))
+                          }
+                          placeholder="Singkat, jelas, dan fokus pada benefit"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="service_area">Service Area</Label>
+                        <Input
+                          id="service_area"
+                          value={marketingSetup.serviceArea}
+                          onChange={(e) => setMarketingSetup((prev) => ({ ...prev, serviceArea: e.target.value }))}
+                          placeholder="Contoh: Jakarta Selatan"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              <div className="border-t border-border px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={() => setMarketingSetupOpen(false)}>
+                  Close
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    toast({ title: 'Saved', description: 'Marketing setup saved locally.' });
+                    setMarketingSetupOpen(false);
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        </>
       ) : (
         <Card>
           <CardHeader>
