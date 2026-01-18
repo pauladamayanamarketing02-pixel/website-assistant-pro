@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ const mapDbPackageToUi = (pkgType: unknown): BusinessPackage => {
 };
 
 export default function AdminBusinessUsers() {
+  const navigate = useNavigate();
   const [packageFilter, setPackageFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -177,7 +179,7 @@ export default function AdminBusinessUsers() {
           <p className="text-sm text-muted-foreground">Manage business accounts, contacts, and account status.</p>
         </div>
 
-        <Button type="button" onClick={() => {}}>
+        <Button type="button" onClick={() => navigate("/dashboard/admin/business-users/new")}>
           <Plus className="h-4 w-4" />
           Add New Business
         </Button>
