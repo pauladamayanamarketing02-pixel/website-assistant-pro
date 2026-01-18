@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FileThumbnail, UniversalFilePreview } from '@/components/media/UniversalFilePreview';
@@ -17,6 +19,7 @@ import {
   Eye,
   ArrowLeft,
   Building2,
+  Megaphone,
   BookOpen,
   Image,
   FileText,
@@ -137,7 +140,7 @@ interface UserPackage {
   } | null;
 }
 
-type DetailTab = 'business' | 'knowledge' | 'gallery' | 'reports' | 'packages' | 'config';
+type DetailTab = 'business' | 'marketing' | 'knowledge' | 'gallery' | 'reports' | 'packages' | 'config';
 type KBEditingState = {
   bkb: boolean;
   brandExpert: boolean;
@@ -164,6 +167,16 @@ export default function ClientList() {
 
   const [showEmailSecondary, setShowEmailSecondary] = useState(false);
   const [showPhoneSecondary, setShowPhoneSecondary] = useState(false);
+
+  const [marketingSetup, setMarketingSetup] = useState({
+    marketingGoalType: 'calls' as 'calls' | 'leads' | 'booking',
+    marketingGoalText: '',
+    primaryService: '',
+    secondaryServices: [''],
+    shortDescription: '',
+    serviceArea: '',
+  });
+  const [savingMarketingSetup, setSavingMarketingSetup] = useState(false);
 
   const [formData, setFormData] = useState<BusinessFormData>({
     business_name: '',
@@ -430,6 +443,20 @@ export default function ClientList() {
           persona2Title: (business as any).persona2_title || 'My Persona 2',
           persona3Title: (business as any).persona3_title || 'My Persona 3',
         });
+
+        const secondaryServicesRaw = (business as any).secondary_services;
+        const parsedSecondaryServices = Array.isArray(secondaryServicesRaw)
+          ? (secondaryServicesRaw as any[]).map((v) => String(v ?? '')).filter((v) => v.trim() !== '')
+          : [];
+
+        setMarketingSetup({
+          marketingGoalType: ((business as any).marketing_goal_type || 'calls') as 'calls' | 'leads' | 'booking',
+          marketingGoalText: (business as any).marketing_goal_text || '',
+          primaryService: (business as any).primary_service || '',
+          secondaryServices: parsedSecondaryServices.length ? parsedSecondaryServices : [''],
+          shortDescription: (business as any).service_short_description || '',
+          serviceArea: (business as any).service_area || '',
+        });
       } else {
         setBusinessData(null);
         setFormData({
@@ -456,6 +483,15 @@ export default function ClientList() {
           first_name: getFirstName(profileData?.name || ''),
           last_name: getLastName(profileData?.name || ''),
           social_links: [],
+        });
+
+        setMarketingSetup({
+          marketingGoalType: 'calls',
+          marketingGoalText: '',
+          primaryService: '',
+          secondaryServices: [''],
+          shortDescription: '',
+          serviceArea: '',
         });
 
         setShowEmailSecondary(false);
@@ -682,6 +718,54 @@ export default function ClientList() {
     }
   };
 
+  const handleSaveMarketingSetup = async () => {
+    if (!selectedClient) return;
+
+    const primary = marketingSetup.primaryService.trim();
+    if (!primary) {
+      toast({
+        variant: 'destructive',
+        title: 'Primary Service is required',
+        description: 'Please fill Primary Service before saving.',
+      });
+      return;
+    }
+
+    setSavingMarketingSetup(true);
+    try {
+      const cleanedSecondary = marketingSetup.secondaryServices
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      const { error } = await supabase
+        .from('businesses')
+        .update({
+          marketing_goal_type: marketingSetup.marketingGoalType,
+          marketing_goal_text: marketingSetup.marketingGoalText || null,
+          primary_service: primary,
+          secondary_services: cleanedSecondary as any,
+          service_short_description: marketingSetup.shortDescription || null,
+          service_area: marketingSetup.serviceArea || null,
+        })
+        .eq('user_id', selectedClient.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Saved!',
+        description: 'Marketing setup has been updated.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to save marketing setup.',
+      });
+    } finally {
+      setSavingMarketingSetup(false);
+    }
+  };
+
   const handleCopyContent = (content: string) => {
     navigator.clipboard.writeText(content);
     toast({
@@ -855,10 +939,14 @@ export default function ClientList() {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="business" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
               Business Details
+            </TabsTrigger>
+            <TabsTrigger value="marketing" className="flex items-center gap-2">
+              <Megaphone className="h-4 w-4" />
+              Marketing Setup
             </TabsTrigger>
             <TabsTrigger value="knowledge" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -1356,6 +1444,188 @@ export default function ClientList() {
                         </div>
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Marketing Setup Tab - Synced with User Marketing Setup */}
+              <TabsContent value="marketing" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <CardTitle>Marketing Setup</CardTitle>
+                        <CardDescription>Services / offerings and marketing goal for this client.</CardDescription>
+                      </div>
+                      <Button onClick={handleSaveMarketingSetup} disabled={savingMarketingSetup} className="sm:w-auto">
+                        <Save className="h-4 w-4 mr-2" />
+                        {savingMarketingSetup ? 'Saving...' : 'Save'}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Services / Offerings</CardTitle>
+                          <CardDescription>Describe what the client sells and where they serve.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="assist_primary_service">Primary Service*</Label>
+                            <Input
+                              id="assist_primary_service"
+                              value={marketingSetup.primaryService}
+                              onChange={(e) =>
+                                setMarketingSetup((prev) => ({
+                                  ...prev,
+                                  primaryService: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g., Home Cleaning"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <Label>Secondary Service</Label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setMarketingSetup((prev) => ({
+                                    ...prev,
+                                    secondaryServices: [...prev.secondaryServices, ''],
+                                  }))
+                                }
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add
+                              </Button>
+                            </div>
+
+                            <div className="space-y-2">
+                              {marketingSetup.secondaryServices.map((value, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <Input
+                                    value={value}
+                                    onChange={(e) =>
+                                      setMarketingSetup((prev) => {
+                                        const next = [...prev.secondaryServices];
+                                        next[index] = e.target.value;
+                                        return { ...prev, secondaryServices: next };
+                                      })
+                                    }
+                                    placeholder={index === 0 ? 'e.g., Deep Cleaning' : 'e.g., Move-out Cleaning'}
+                                  />
+                                  {marketingSetup.secondaryServices.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() =>
+                                        setMarketingSetup((prev) => ({
+                                          ...prev,
+                                          secondaryServices: prev.secondaryServices.filter((_, i) => i !== index),
+                                        }))
+                                      }
+                                      aria-label="Delete secondary service"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="assist_service_short_desc">Short Description</Label>
+                            <Textarea
+                              id="assist_service_short_desc"
+                              value={marketingSetup.shortDescription}
+                              onChange={(e) =>
+                                setMarketingSetup((prev) => ({
+                                  ...prev,
+                                  shortDescription: e.target.value,
+                                }))
+                              }
+                              placeholder="Short, clear, benefit-focused description"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="assist_service_area">Service Area</Label>
+                            <Input
+                              id="assist_service_area"
+                              value={marketingSetup.serviceArea}
+                              onChange={(e) =>
+                                setMarketingSetup((prev) => ({
+                                  ...prev,
+                                  serviceArea: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g., South Jakarta"
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Marketing Goal</CardTitle>
+                          <CardDescription>Pick the main outcome the client wants.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Marketing Goal</Label>
+                            <RadioGroup
+                              value={marketingSetup.marketingGoalType}
+                              onValueChange={(value) =>
+                                setMarketingSetup((prev) => ({
+                                  ...prev,
+                                  marketingGoalType: value as 'calls' | 'leads' | 'booking',
+                                }))
+                              }
+                              className="grid gap-2"
+                            >
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem id="assist_goal_calls" value="calls" />
+                                <Label htmlFor="assist_goal_calls">Calls</Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem id="assist_goal_leads" value="leads" />
+                                <Label htmlFor="assist_goal_leads">Leads</Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem id="assist_goal_booking" value="booking" />
+                                <Label htmlFor="assist_goal_booking">Bookings</Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="assist_marketing_goal_text">Goal Details</Label>
+                            <Input
+                              id="assist_marketing_goal_text"
+                              value={marketingSetup.marketingGoalText}
+                              onChange={(e) =>
+                                setMarketingSetup((prev) => ({
+                                  ...prev,
+                                  marketingGoalText: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g., 30 bookings per month"
+                            />
+                          </div>
+
+                          <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                            Tip: Keep goal details measurable (numbers + timeframe).
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
