@@ -304,8 +304,6 @@ export default function ContentPlanner() {
   }, [scheduledItems]);
 
   const recommendations = useMemo(() => {
-    const ideas = getMonthlyRecommendations(month.getMonth());
-
     const scheduled: Recommendation[] = scheduledItems.map((it) => ({
       kind: "scheduled",
       id: it.id,
@@ -317,26 +315,16 @@ export default function ContentPlanner() {
       businessName: it.businessName,
     }));
 
-    const merged: Recommendation[] = [...scheduled, ...ideas];
+    const filtered = filter === "all" ? scheduled : scheduled.filter((r) => r.type === filter);
 
-    const filtered = filter === "all" ? merged : merged.filter((r) => r.type === filter);
-
-    // Sort by business name first (then by schedule), then ideas at the end
+    // Sort by the month currently shown on the calendar (already filtered in query), then by date/time.
     return [...filtered].sort((a, b) => {
-      const aBiz = a.kind === "scheduled" ? (a.businessName ?? "") : "";
-      const bBiz = b.kind === "scheduled" ? (b.businessName ?? "") : "";
-      const bizCmp = aBiz.toLowerCase().localeCompare(bBiz.toLowerCase());
-      if (bizCmp !== 0) return bizCmp;
-
       if (a.kind === "scheduled" && b.kind === "scheduled") {
         return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
       }
-
-      if (a.kind === "scheduled" && b.kind === "idea") return -1;
-      if (a.kind === "idea" && b.kind === "scheduled") return 1;
       return a.title.localeCompare(b.title);
     });
-  }, [filter, month, scheduledItems]);
+  }, [filter, scheduledItems]);
 
   const handlePost = () => {
     // User requested button only (no integration yet)
@@ -447,7 +435,7 @@ export default function ContentPlanner() {
               Content Recommendations
             </CardTitle>
             <CardDescription>
-              Mixed view: scheduled content + monthly ideas. Sorted by Business Name.
+              Menampilkan hanya konten yang terjadwal pada kalender untuk bulan {format(month, "MMMM yyyy")}.
             </CardDescription>
           </CardHeader>
 
