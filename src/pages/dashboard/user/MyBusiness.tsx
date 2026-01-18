@@ -1219,8 +1219,8 @@ export default function MyBusiness() {
         </Card>
 
         <Dialog open={marketingSetupOpen} onOpenChange={setMarketingSetupOpen}>
-          <DialogContent className="left-0 top-0 h-screen w-screen max-w-none translate-x-0 translate-y-0 rounded-none p-0">
-            <div className="flex h-full flex-col">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl p-0 sm:rounded-lg">
+            <div className="flex max-h-[85vh] flex-col">
               <div className="border-b border-border px-6 py-4">
                 <DialogHeader className="space-y-0">
                   <DialogTitle className="text-xl">Marketing Setup</DialogTitle>
@@ -1228,8 +1228,8 @@ export default function MyBusiness() {
                 </DialogHeader>
               </div>
 
-              <div className="flex-1 overflow-auto p-6">
-                <div className="grid gap-6 md:grid-cols-2">
+              <div className="flex-1 overflow-auto p-4 sm:p-6">
+                <div className="grid gap-6 lg:grid-cols-2">
                   {/* Services / Offerings (Left) */}
                   <Card>
                     <CardHeader>
