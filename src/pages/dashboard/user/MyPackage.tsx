@@ -224,41 +224,77 @@ export default function MyPackage() {
                   <Card
                     key={pkg.id}
                     className={
-                      "hover:border-primary/30 transition-colors " +
-                      (isRecommended ? "border-primary ring-2 ring-primary/20" : "")
+                      "group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md " +
+                      (isRecommended
+                        ? "border-primary/50 ring-2 ring-primary/15 bg-gradient-to-br from-primary/10 via-background to-background"
+                        : "hover:border-primary/30 bg-gradient-to-br from-muted/30 via-background to-background")
                     }
                   >
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                        {isRecommended && (
-                          <Badge className="bg-primary text-primary-foreground">
-                            <Star className="h-3 w-3 mr-1" />
-                            Recommended
-                          </Badge>
-                        )}
+                    {/* subtle decorative glow */}
+                    <div
+                      aria-hidden="true"
+                      className={
+                        "pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full blur-3xl opacity-0 transition-opacity group-hover:opacity-100 " +
+                        (isRecommended ? "bg-primary/20" : "bg-muted")
+                      }
+                    />
+
+                    <CardHeader className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <CardTitle className="text-lg truncate">{pkg.name}</CardTitle>
+                            {isRecommended && (
+                              <Badge className="bg-primary text-primary-foreground">
+                                <Star className="h-3 w-3 mr-1" />
+                                Best value
+                              </Badge>
+                            )}
+                          </div>
+                          <CardDescription className="mt-1">{pkg.description}</CardDescription>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <div className="font-bold text-foreground text-xl leading-none">${pkg.price}</div>
+                          <div className="text-xs text-muted-foreground">/month</div>
+                          {activePackage && (
+                            <Badge variant="secondary" className="mt-2 bg-primary/10 text-primary">
+                              +${Math.max(0, pkg.price - activePackage.packages.price)}/mo
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <CardDescription>{pkg.description}</CardDescription>
                     </CardHeader>
+
                     <CardContent className="space-y-4">
-                      <ul className="space-y-2">
-                        {pkg.features.map((feature, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <p className="font-bold text-foreground text-lg">
-                          ${pkg.price}
-                          <span className="text-sm font-normal text-muted-foreground">/month</span>
-                        </p>
-                        <Button variant={isRecommended ? "default" : "outline"} size="sm">
-                          Upgrade
-                          <ArrowUpRight className="h-3 w-3 ml-1" />
-                        </Button>
+                      <div className="rounded-lg border bg-card/50 p-3">
+                        <p className="text-sm font-medium text-foreground">What you’ll get</p>
+                        <ul className="mt-3 space-y-2">
+                          {pkg.features.map((feature, index) => (
+                            <li
+                              key={index}
+                              className="flex items-start gap-2 text-sm text-muted-foreground"
+                            >
+                              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
+                                <Check className="h-3 w-3 text-primary" />
+                              </div>
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
+
+                      <Button
+                        variant={isRecommended ? "default" : "outline"}
+                        className="w-full"
+                      >
+                        Upgrade to {pkg.name}
+                        <ArrowUpRight className="h-4 w-4 ml-2" />
+                      </Button>
+
+                      <p className="text-xs text-muted-foreground">
+                        Upgrade anytime. Your team will be notified once payment is enabled.
+                      </p>
                     </CardContent>
                   </Card>
                 );
