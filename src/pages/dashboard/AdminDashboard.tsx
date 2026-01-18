@@ -33,6 +33,7 @@ import AdminPlaceholder from "./admin/Placeholder";
 import AdminWebsiteBlog from "./admin/WebsiteBlog";
 import AdminWebsiteMedia from "./admin/WebsiteMedia";
 import AdminBusinessUsers from "./admin/BusinessUsers";
+import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
 import AdminAssistants from "./admin/Assistants";
 import AdminTasks from "./admin/Tasks";
 function LoadingScreen() {
@@ -152,6 +153,7 @@ export default function AdminDashboard() {
             <Routes>
               <Route index element={<AdminOverview />} />
               <Route path="business-users" element={<AdminBusinessUsers />} />
+              <Route path="business-users/new" element={<AdminCreateBusinessUser />} />
               <Route path="assistants" element={<AdminAssistants />} />
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
