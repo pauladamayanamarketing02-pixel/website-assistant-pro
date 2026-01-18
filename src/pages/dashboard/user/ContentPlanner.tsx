@@ -25,6 +25,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -35,17 +36,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import ScheduledContentEditDialog, {
   type ScheduledContentEditValues,
 } from "@/pages/dashboard/user/content-planner/ScheduledContentEditDialog";
-
-
 type ContentFilter = "all" | "blog" | "email_marketing" | "social_media" | "gmb_posts";
 
 type BusinessOption = {
+  id: string;
+  name: string;
+};
+
+type AssistAccount = {
   id: string;
   name: string;
 };
@@ -181,6 +186,12 @@ export default function ContentPlanner() {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [contentTypes, setContentTypes] = useState<{ id: string; name: string }[]>([]);
 
+  const [assists, setAssists] = useState<AssistAccount[]>([]);
+  const [postOpen, setPostOpen] = useState(false);
+  const [postTarget, setPostTarget] = useState<Recommendation | null>(null);
+  const [postAssignee, setPostAssignee] = useState<string>("none");
+  const [posting, setPosting] = useState(false);
+
   const [editOpen, setEditOpen] = useState(false);
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [editBusinessId, setEditBusinessId] = useState<string | null>(null);
@@ -231,48 +242,6 @@ export default function ContentPlanner() {
     };
   }, [selectedBusinessId, toast, user]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadBusinesses = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from("businesses")
-          .select("id, business_name")
-          .eq("user_id", user.id)
-          .order("business_name", { ascending: true });
-
-        if (cancelled) return;
-        if (error) throw error;
-
-        const mapped: BusinessOption[] = (data ?? []).map((b: any) => ({
-          id: b.id as string,
-          name: (b.business_name ?? "Unnamed Business") as string,
-        }));
-
-        setBusinesses(mapped);
-
-        // Default to the first business so users never see an "All Businesses" view.
-        if (!selectedBusinessId && mapped.length > 0) {
-          setSelectedBusinessId(mapped[0].id);
-        }
-      } catch (e: any) {
-        toast({
-          variant: "destructive",
-          title: "Failed to load businesses",
-          description: e?.message ?? "Unknown error",
-        });
-        setBusinesses([]);
-      }
-    };
-
-    void loadBusinesses();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedBusinessId, toast, user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -291,14 +260,28 @@ export default function ContentPlanner() {
 
         setCategories((catData ?? []).map((c: any) => ({ id: c.id as string, name: c.name as string })));
         setContentTypes((typeData ?? []).map((t: any) => ({ id: t.id as string, name: t.name as string })));
-      } catch (e: any) {
+      } catch {
         // not fatal for the page; only affects edit dialog
         setCategories([]);
         setContentTypes([]);
       }
     };
 
+    const loadAssists = async () => {
+      if (!user) return;
+      const { data: assistAccounts, error } = await supabase.rpc("get_assist_accounts");
+      if (cancelled) return;
+      if (!error && assistAccounts) {
+        setAssists(
+          [...assistAccounts].sort((a, b) => (a.name || "").localeCompare(b.name || "")) as AssistAccount[],
+        );
+      } else {
+        setAssists([]);
+      }
+    };
+
     void loadMeta();
+    void loadAssists();
 
     return () => {
       cancelled = true;
@@ -417,12 +400,93 @@ export default function ContentPlanner() {
     });
   }, [filter, scheduledItems]);
 
-  const handlePost = () => {
-    // User requested button only (no integration yet)
-    toast({
-      title: "Post",
-      description: "Post action is not configured yet.",
-    });
+  function mapRecommendationToTaskType(rec: Recommendation): "blog" | "social_media" | "email_marketing" | "ads" | "others" {
+    const source = rec.kind === "scheduled" ? rec.contentTypeName : rec.type;
+    const key = normalizeTypeName(source);
+    if (key.includes("blog")) return "blog";
+    if (key.includes("email")) return "email_marketing";
+    if (key.includes("ads")) return "ads";
+    if (key.includes("social")) return "social_media";
+    // gmb_posts or unknown
+    return "others";
+  }
+
+  function mapPlatformToEnum(raw: string | null | undefined): "facebook" | "instagram" | "x" | "threads" | "linkedin" | null {
+    const key = normalizeTypeName(raw ?? "");
+    if (!key) return null;
+    if (key.includes("facebook")) return "facebook";
+    if (key.includes("instagram")) return "instagram";
+    if (key === "x" || key.includes("twitter")) return "x";
+    if (key.includes("threads")) return "threads";
+    if (key.includes("linkedin")) return "linkedin";
+    return null;
+  }
+
+  const handlePost = (rec: Recommendation) => {
+    setPostTarget(rec);
+    setPostAssignee("none");
+    setPostOpen(true);
+  };
+
+  const handleSubmitPost = async () => {
+    if (!user || !postTarget) return;
+
+    const selectedAssignee = postAssignee && postAssignee !== "none" ? postAssignee : null;
+    const nextStatus = selectedAssignee ? "assigned" : "pending";
+
+    setPosting(true);
+    try {
+      const { data: latestTask, error: latestErr } = await supabase
+        .from("tasks")
+        .select("task_number")
+        .eq("user_id", user.id)
+        .order("task_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestErr) throw latestErr;
+
+      const nextTaskNumber = Math.max(((latestTask as any)?.task_number ?? 100) + 1, 101);
+
+      const taskType = mapRecommendationToTaskType(postTarget);
+      const platformEnum =
+        taskType === "social_media" && postTarget.kind === "scheduled"
+          ? mapPlatformToEnum(postTarget.platform)
+          : null;
+
+      const description = postTarget.kind === "idea" ? postTarget.notes : null;
+
+      const { error } = await supabase.from("tasks").insert({
+        user_id: user.id,
+        task_number: nextTaskNumber,
+        title: postTarget.title,
+        description,
+        type: taskType as any,
+        platform: platformEnum as any,
+        assigned_to: selectedAssignee,
+        status: nextStatus as any,
+        notes: null,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sent to Tasks",
+        description: "Item has been added to your task list.",
+      });
+
+      setPostOpen(false);
+      setPostTarget(null);
+      setPostAssignee("none");
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to create task",
+        description: e?.message ?? "Unknown error",
+      });
+    } finally {
+      setPosting(false);
+    }
   };
 
   useEffect(() => {
@@ -699,7 +763,12 @@ export default function ContentPlanner() {
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">View</span>
                           </Button>
-                          <Button type="button" variant="secondary" size="sm" onClick={handlePost}>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handlePost(rec)}
+                          >
                             <Send className="h-4 w-4" />
                             <span className="sr-only">Post</span>
                           </Button>
@@ -714,7 +783,66 @@ export default function ContentPlanner() {
         </Card>
       </section>
 
+
+      <Dialog
+        open={postOpen}
+        onOpenChange={(open) => {
+          setPostOpen(open);
+          if (!open) {
+            setPostTarget(null);
+            setPostAssignee("none");
+          }
+        }}
+      >
+        <DialogContent className="w-[95vw] max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send to Tasks</DialogTitle>
+            <DialogDescription>
+              Choose an assignee (optional) then submit to create a task.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="text-sm">
+              <span className="font-medium">Item:</span> {postTarget?.title ?? ""}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="post-assignee">Assignee</Label>
+              <Select value={postAssignee} onValueChange={setPostAssignee}>
+                <SelectTrigger id="post-assignee">
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {assists.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPostOpen(false)}
+              disabled={posting}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSubmitPost} disabled={posting || !postTarget}>
+              {posting ? "Submitting…" : "Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {editInitialValues && user ? (
+
         <ScheduledContentEditDialog
           open={editOpen}
           onOpenChange={(open) => {
@@ -751,7 +879,7 @@ export default function ContentPlanner() {
               </div>
 
               <div className="pt-2">
-                <Button type="button" className="w-full" onClick={handlePost}>
+                <Button type="button" className="w-full" onClick={() => handlePost(viewItem)}>
                   Post
                 </Button>
               </div>
