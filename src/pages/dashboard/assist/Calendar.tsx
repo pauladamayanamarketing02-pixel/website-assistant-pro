@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
+import PlatformDropdown from "@/pages/dashboard/assist/content-creation/PlatformDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -116,6 +117,17 @@ export default function AssistCalendar() {
   const [editImagePrimary, setEditImagePrimary] = useState<string>("");
   const [editImageSecond, setEditImageSecond] = useState<string>("");
   const [editImageThird, setEditImageThird] = useState<string>("");
+
+  const editContentTypeName = useMemo(() => {
+    return contentTypes.find((t) => t.id === editContentTypeId)?.name ?? "";
+  }, [contentTypes, editContentTypeId]);
+
+  useEffect(() => {
+    const needsPlatform = editContentTypeName === "Social Media Posts" || editContentTypeName === "Ads Marketing";
+    if (!needsPlatform && editPlatform) {
+      setEditPlatform("");
+    }
+  }, [editContentTypeName, editPlatform]);
 
   useEffect(() => {
     let cancelled = false;
@@ -608,7 +620,10 @@ export default function AssistCalendar() {
                       <Label htmlFor="sc-type">Type Content</Label>
                       <Select
                         value={editContentTypeId}
-                        onValueChange={setEditContentTypeId}
+                        onValueChange={(next) => {
+                          setEditContentTypeId(next);
+                          setEditPlatform("");
+                        }}
                         disabled={!isEditing || saving}
                       >
                         <SelectTrigger id="sc-type">
@@ -638,12 +653,10 @@ export default function AssistCalendar() {
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="sc-platform">Platform</Label>
-                      <Input
-                        id="sc-platform"
+                      <PlatformDropdown
+                        contentType={editContentTypeName}
                         value={editPlatform}
-                        onChange={(e) => setEditPlatform(e.target.value)}
-                        placeholder="e.g. instagram"
+                        onChange={setEditPlatform}
                         disabled={!isEditing || saving}
                       />
                     </div>
