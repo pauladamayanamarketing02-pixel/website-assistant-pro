@@ -195,6 +195,10 @@ export default function ContentPlanner() {
   const [postAssignee, setPostAssignee] = useState<string>("none");
   const [posting, setPosting] = useState(false);
 
+  // Keep track of which scheduled content items have already been "posted" to Tasks
+  // so we can show status "Post" and disable buttons.
+  const [postedScheduledIds, setPostedScheduledIds] = useState<Set<string>>(() => new Set());
+
   const [editOpen, setEditOpen] = useState(false);
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [editBusinessId, setEditBusinessId] = useState<string | null>(null);
@@ -394,7 +398,63 @@ export default function ContentPlanner() {
     };
   }, [businesses, month, selectedBusinessId, toast, user]);
 
+  // Determine which scheduled items have already been sent to Tasks (persisted via task.description URL).
+  useEffect(() => {
+    if (!user) return;
+    if (scheduledItems.length === 0) {
+      setPostedScheduledIds(new Set());
+      return;
+    }
 
+    let cancelled = false;
+
+    const loadPostedFlags = async () => {
+      try {
+        // We store a deep-link to the content planner in task.description.
+        // Fetch only tasks for this user, then parse `item=<id>` from the URL.
+        const { data, error } = await supabase
+          .from("tasks")
+          .select("description")
+          .eq("user_id", user.id)
+          .not("description", "is", null)
+          .ilike("description", "%/dashboard/user/content-planner%")
+          .limit(1000);
+
+        if (cancelled) return;
+        if (error) throw error;
+
+        const scheduledIdSet = new Set(scheduledItems.map((s) => s.id));
+        const posted = new Set<string>();
+
+        for (const row of (data ?? []) as any[]) {
+          const desc = String(row?.description ?? "");
+          const idx = desc.indexOf("http");
+          const maybeUrl = idx >= 0 ? desc.slice(idx).trim() : "";
+
+          // Fallback: sometimes description might be just the URL (no prefix)
+          const candidate = maybeUrl || desc;
+          try {
+            const url = new URL(candidate);
+            const itemId = url.searchParams.get("item");
+            if (itemId && scheduledIdSet.has(itemId)) posted.add(itemId);
+          } catch {
+            // ignore non-url descriptions
+          }
+        }
+
+        setPostedScheduledIds(posted);
+      } catch {
+        // non-fatal; just don't disable anything
+        setPostedScheduledIds(new Set());
+      }
+    };
+
+    void loadPostedFlags();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scheduledItems, user]);
   const dayToScheduled = useMemo(() => {
     const map = new Map<string, ScheduledContentItem[]>();
     for (const it of scheduledItems) {
@@ -542,6 +602,15 @@ export default function ContentPlanner() {
         title: "Sent to Tasks",
         description: "Item has been added to your task list.",
       });
+
+      // Mark as posted so UI shows "Post" and disables Post/View.
+      if (postTarget.kind === "scheduled") {
+        setPostedScheduledIds((prev) => {
+          const next = new Set(prev);
+          next.add(postTarget.id);
+          return next;
+        });
+      }
 
       setPostOpen(false);
       setPostTarget(null);
@@ -810,6 +879,10 @@ export default function ContentPlanner() {
                             ) : (
                               <div className="mt-1 text-sm text-muted-foreground">{rec.notes}</div>
                             )}
+
+                            {rec.kind === "scheduled" && postedScheduledIds.has(rec.id) ? (
+                              <div className="mt-2 text-xs font-medium text-primary">Post</div>
+                            ) : null}
                           </div>
                         </div>
 
@@ -818,6 +891,7 @@ export default function ContentPlanner() {
                             type="button"
                             variant="outline"
                             size="sm"
+                            disabled={rec.kind === "scheduled" && postedScheduledIds.has(rec.id)}
                             onClick={() => {
                               if (rec.kind === "scheduled") {
                                 setEditItemId(rec.id);
@@ -835,6 +909,7 @@ export default function ContentPlanner() {
                             type="button"
                             variant="secondary"
                             size="sm"
+                            disabled={rec.kind === "scheduled" && postedScheduledIds.has(rec.id)}
                             onClick={() => handlePost(rec)}
                           >
                             <Send className="h-4 w-4" />
