@@ -69,6 +69,7 @@ export default function MyBusiness() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingKB, setSavingKB] = useState(false);
+  const [savingMarketingSetup, setSavingMarketingSetup] = useState(false);
   const [currentView, setCurrentView] = useState<'details' | 'knowledge-base'>('details');
   const [isEditing, setIsEditing] = useState(false);
   const [showEmailSecondary, setShowEmailSecondary] = useState(false);
@@ -145,27 +146,17 @@ export default function MyBusiness() {
     }
   }, [isEditing, formData.email_secondary, formData.phoneSecondaryNumber]);
 
-  // Load draft from localStorage on mount
+  // Load KB draft from localStorage on mount
   useEffect(() => {
-    if (user) {
-      const savedDraft = localStorage.getItem(`${DRAFT_STORAGE_KEY}_${user.id}`);
-      if (savedDraft) {
-        try {
-          const parsed = JSON.parse(savedDraft);
-          setFormData(prev => ({ ...prev, ...parsed }));
-        } catch (e) {
-          console.error('Failed to parse draft');
-        }
-      }
-      
-      const savedKbDraft = localStorage.getItem(`${KB_DRAFT_STORAGE_KEY}_${user.id}`);
-      if (savedKbDraft) {
-        try {
-          const parsed = JSON.parse(savedKbDraft);
-          setKbData(prev => ({ ...prev, ...parsed }));
-        } catch (e) {
-          console.error('Failed to parse KB draft');
-        }
+    if (!user) return;
+
+    const savedKbDraft = localStorage.getItem(`${KB_DRAFT_STORAGE_KEY}_${user.id}`);
+    if (savedKbDraft) {
+      try {
+        const parsed = JSON.parse(savedKbDraft);
+        setKbData((prev) => ({ ...prev, ...parsed }));
+      } catch (e) {
+        console.error('Failed to parse KB draft');
       }
     }
   }, [user]);
@@ -469,6 +460,105 @@ export default function MyBusiness() {
     }
   };
 
+  const loadMarketingSetupFromDb = async (ensuredId: string) => {
+    const { data, error } = await supabase
+      .from('businesses')
+      .select(
+        'marketing_goal_type, marketing_goal_text, primary_service, secondary_services, service_short_description, service_area'
+      )
+      .eq('id', ensuredId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const secondaryRaw = (data as any)?.secondary_services;
+    const secondaryParsed = Array.isArray(secondaryRaw)
+      ? (secondaryRaw as any[]).map((v) => String(v ?? '')).filter((v) => v.trim() !== '')
+      : [];
+
+    setMarketingSetup({
+      marketingGoalType: (((data as any)?.marketing_goal_type as any) || 'calls') as 'calls' | 'leads' | 'booking',
+      marketingGoalText: (data as any)?.marketing_goal_text || '',
+      primaryService: (data as any)?.primary_service || '',
+      secondaryServices: secondaryParsed.length ? secondaryParsed : [''],
+      shortDescription: (data as any)?.service_short_description || '',
+      serviceArea: (data as any)?.service_area || '',
+    });
+  };
+
+  const handleOpenMarketingSetup = async () => {
+    if (!user) return;
+
+    try {
+      const ensuredId = await ensureBusinessRow();
+      if (!ensuredId) throw new Error('No user session');
+
+      await loadMarketingSetupFromDb(ensuredId);
+      setMarketingSetupOpen(true);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to open Marketing Setup.',
+      });
+    }
+  };
+
+  const handleSaveMarketingSetup = async () => {
+    if (!user) return;
+
+    const primary = marketingSetup.primaryService.trim();
+    if (!primary) {
+      toast({
+        variant: 'destructive',
+        title: 'Primary Service is required',
+        description: 'Please fill Primary Service before saving.',
+      });
+      return;
+    }
+
+    setSavingMarketingSetup(true);
+    try {
+      const ensuredId = await ensureBusinessRow();
+      if (!ensuredId) throw new Error('No user session');
+
+      const cleanedSecondary = marketingSetup.secondaryServices
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      const { error } = await supabase
+        .from('businesses')
+        .update({
+          marketing_goal_type: marketingSetup.marketingGoalType,
+          marketing_goal_text: marketingSetup.marketingGoalText || null,
+          primary_service: primary,
+          secondary_services: cleanedSecondary as any,
+          service_short_description: marketingSetup.shortDescription || null,
+          service_area: marketingSetup.serviceArea || null,
+        })
+        .eq('id', ensuredId);
+
+      if (error) throw error;
+
+      // Ensure next time you open this page, you see DB state
+      await loadMarketingSetupFromDb(ensuredId);
+      setMarketingSetupOpen(false);
+
+      toast({
+        title: 'Saved!',
+        description: 'Marketing setup has been updated.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to save marketing setup.',
+      });
+    } finally {
+      setSavingMarketingSetup(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
@@ -738,7 +828,7 @@ export default function MyBusiness() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setMarketingSetupOpen(true)}
+                  onClick={handleOpenMarketingSetup}
                   className="flex items-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
@@ -1391,12 +1481,10 @@ export default function MyBusiness() {
                         <Button
                           type="button"
                           className="w-full"
-                          onClick={() => {
-                            toast({ title: 'Saved', description: 'Marketing setup saved locally.' });
-                            setMarketingSetupOpen(false);
-                          }}
+                          onClick={handleSaveMarketingSetup}
+                          disabled={savingMarketingSetup}
                         >
-                          Save
+                          {savingMarketingSetup ? 'Saving...' : 'Save'}
                         </Button>
                       </div>
                     </CardContent>
