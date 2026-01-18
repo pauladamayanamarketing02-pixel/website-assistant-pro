@@ -551,7 +551,7 @@ export default function AssistCalendar() {
             }
           }}
         >
-          <DialogContent>
+          <DialogContent className="w-[95vw] max-w-6xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Scheduled Content</DialogTitle>
               <DialogDescription>
