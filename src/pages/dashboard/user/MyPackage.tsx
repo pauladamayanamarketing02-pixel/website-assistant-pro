@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { BillingContent } from "./components/BillingContent";
 
 interface UserPackage {
   id: string;
@@ -318,19 +317,6 @@ export default function MyPackage() {
         </div>
       </div>
 
-      {/* Billing moved here */}
-      <section className="pt-2">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Billing</h2>
-            <p className="text-muted-foreground">Manage your subscription and payments</p>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <BillingContent showTitle={false} />
-        </div>
-      </section>
     </div>
   );
 }

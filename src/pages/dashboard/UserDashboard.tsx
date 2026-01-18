@@ -8,7 +8,6 @@ import {
   CheckSquare,
   MessageCircle,
   Package,
-  CreditCard,
   BarChart3,
   Settings,
   CalendarDays,
@@ -26,7 +25,6 @@ import MyGallery from './user/MyGallery';
 import TasksProgress from './user/TasksProgress';
 import Messages from './user/Messages';
 import MyPackage from './user/MyPackage';
-import Billing from './user/Billing';
 import Reporting from './user/Reporting';
 import UserSettings from './user/Settings';
 
@@ -40,7 +38,6 @@ const menuItems: UserNavItem[] = [
   { title: 'Reporting & Visibility', url: '/dashboard/user/reporting', icon: BarChart3 },
   { title: 'Messages', url: '/dashboard/user/messages', icon: MessageCircle },
   { title: 'My Package', url: '/dashboard/user/package', icon: Package },
-  { title: 'Billing', url: '/dashboard/user/billing', icon: CreditCard },
   { title: 'Settings', url: '/dashboard/user/settings', icon: Settings },
 ];
 
@@ -110,7 +107,6 @@ export default function UserDashboard() {
               <Route path="gallery" element={<MyGallery />} />
               <Route path="messages" element={<Messages />} />
               <Route path="package" element={<MyPackage />} />
-              <Route path="billing" element={<Billing />} />
               <Route path="reporting" element={<Reporting />} />
               <Route path="settings" element={<UserSettings />} />
             </Routes>
