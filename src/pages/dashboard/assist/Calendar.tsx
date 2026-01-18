@@ -26,6 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,6 +60,23 @@ function getTypeIcon(typeName: string) {
   return CalendarDays;
 }
 
+function toDateTimeLocalValue(iso: string) {
+  // Convert ISO to yyyy-MM-ddTHH:mm for <input type="datetime-local" />
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+function fromDateTimeLocalValue(v: string) {
+  // Treat as local time and convert to ISO
+  return new Date(v).toISOString();
+}
+
 export default function AssistCalendar() {
   const { toast } = useToast();
 
@@ -70,6 +89,12 @@ export default function AssistCalendar() {
   const [items, setItems] = useState<ScheduledContentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewItem, setViewItem] = useState<ScheduledContentItem | null>(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editScheduledAt, setEditScheduledAt] = useState("");
+  const [editPlatform, setEditPlatform] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -211,6 +236,70 @@ export default function AssistCalendar() {
     }
     return Array.from(groups.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [monthItemsSorted]);
+
+  useEffect(() => {
+    if (!viewItem) return;
+    setIsEditing(false);
+    setEditTitle(viewItem.title ?? "");
+    setEditScheduledAt(toDateTimeLocalValue(viewItem.scheduledAt));
+    setEditPlatform(viewItem.platform ?? "");
+  }, [viewItem]);
+
+  const handleSave = async () => {
+    if (!viewItem) return;
+
+    setSaving(true);
+    try {
+      const nextScheduledAt = editScheduledAt ? fromDateTimeLocalValue(editScheduledAt) : viewItem.scheduledAt;
+
+      const { error } = await supabase
+        .from("content_items")
+        .update({
+          title: editTitle,
+          scheduled_at: nextScheduledAt,
+          platform: editPlatform ? editPlatform : null,
+        })
+        .eq("id", viewItem.id);
+
+      if (error) throw error;
+
+      // Update local state so the UI refreshes immediately
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === viewItem.id
+            ? {
+                ...it,
+                title: editTitle,
+                scheduledAt: nextScheduledAt,
+                platform: editPlatform ? editPlatform : null,
+              }
+            : it,
+        ),
+      );
+
+      setViewItem((prev) =>
+        prev
+          ? {
+              ...prev,
+              title: editTitle,
+              scheduledAt: nextScheduledAt,
+              platform: editPlatform ? editPlatform : null,
+            }
+          : prev,
+      );
+
+      toast({ title: "Saved", description: "Scheduled content updated." });
+      setIsEditing(false);
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to save",
+        description: e?.message ?? "Unknown error",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -359,7 +448,15 @@ export default function AssistCalendar() {
           </CardContent>
         </Card>
 
-        <Dialog open={!!viewItem} onOpenChange={(open) => !open && setViewItem(null)}>
+        <Dialog
+          open={!!viewItem}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsEditing(false);
+              setViewItem(null);
+            }
+          }}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Scheduled Content</DialogTitle>
@@ -369,18 +466,81 @@ export default function AssistCalendar() {
             </DialogHeader>
 
             {viewItem ? (
-              <div className="space-y-2">
-                <div className="text-sm">
-                  <span className="font-medium">Title:</span> {viewItem.title}
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="sc-title">Title</Label>
+                    <Input
+                      id="sc-title"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      disabled={!isEditing || saving}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="sc-scheduled">Scheduled At</Label>
+                    <Input
+                      id="sc-scheduled"
+                      type="datetime-local"
+                      value={editScheduledAt}
+                      onChange={(e) => setEditScheduledAt(e.target.value)}
+                      disabled={!isEditing || saving}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="sc-platform">Platform</Label>
+                    <Input
+                      id="sc-platform"
+                      value={editPlatform}
+                      onChange={(e) => setEditPlatform(e.target.value)}
+                      placeholder="e.g. instagram"
+                      disabled={!isEditing || saving}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-md border border-border p-3">
+                      <div className="text-xs text-muted-foreground">Business</div>
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {viewItem.businessName ?? "-"}
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-border p-3">
+                      <div className="text-xs text-muted-foreground">Type</div>
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {viewItem.contentTypeName || "-"}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm">
-                  <span className="font-medium">Business:</span> {viewItem.businessName ?? "-"}
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Type:</span> {viewItem.contentTypeName || "-"}
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Platform:</span> {viewItem.platform ?? "-"}
+
+                <div className="flex items-center justify-end gap-2">
+                  {!isEditing ? (
+                    <Button type="button" variant="secondary" onClick={() => setIsEditing(true)}>
+                      Edit
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditTitle(viewItem.title ?? "");
+                          setEditScheduledAt(toDateTimeLocalValue(viewItem.scheduledAt));
+                          setEditPlatform(viewItem.platform ?? "");
+                        }}
+                        disabled={saving}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="button" onClick={handleSave} disabled={saving}>
+                        {saving ? "Saving…" : "Save"}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ) : null}
