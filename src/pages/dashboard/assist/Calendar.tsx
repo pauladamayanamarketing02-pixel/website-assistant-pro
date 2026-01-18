@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, isSameDay, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import {
   CalendarDays,
   FileText,
@@ -11,8 +11,20 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+type BusinessOption = {
+  id: string;
+  name: string;
+};
 
 type ScheduledContentItem = {
   id: string;
@@ -21,6 +33,7 @@ type ScheduledContentItem = {
   contentTypeName: string;
   platform: string | null;
   businessName: string | null;
+  businessId: string;
 };
 
 function normalizeTypeName(name: string) {
@@ -43,8 +56,44 @@ export default function AssistCalendar() {
   const [month, setMonth] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
 
+  const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string>("all");
+
   const [items, setItems] = useState<ScheduledContentItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBusinesses = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("businesses")
+          .select("id, business_name")
+          .order("business_name", { ascending: true });
+
+        if (cancelled) return;
+        if (error) throw error;
+
+        const mapped: BusinessOption[] = (data ?? []).map((b: any) => ({
+          id: b.id as string,
+          name: (b.business_name ?? "Unnamed Business") as string,
+        }));
+
+        setBusinesses(mapped);
+      } catch (e: any) {
+        // Keep the calendar usable even if the filter list fails
+        console.error("Failed to load businesses", e);
+        setBusinesses([]);
+      }
+    };
+
+    void loadBusinesses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,16 +104,22 @@ export default function AssistCalendar() {
         const from = startOfMonth(month).toISOString();
         const to = endOfMonth(month).toISOString();
 
-        const { data, error } = await supabase
+        let query = supabase
           .from("content_items")
           .select(
-            "id, title, scheduled_at, platform, businesses(business_name), content_types(name)",
+            "id, title, business_id, scheduled_at, platform, businesses(business_name), content_types(name)",
           )
           .not("scheduled_at", "is", null)
           .is("deleted_at", null)
           .gte("scheduled_at", from)
           .lte("scheduled_at", to)
           .order("scheduled_at", { ascending: true });
+
+        if (selectedBusinessId !== "all") {
+          query = query.eq("business_id", selectedBusinessId);
+        }
+
+        const { data, error } = await query;
 
         if (cancelled) return;
         if (error) throw error;
@@ -78,13 +133,14 @@ export default function AssistCalendar() {
             contentTypeName: (d.content_types?.name ?? "") as string,
             platform: (d.platform ?? null) as string | null,
             businessName: (d.businesses?.business_name ?? null) as string | null,
+            businessId: d.business_id as string,
           }));
 
         setItems(mapped);
       } catch (e: any) {
         toast({
           variant: "destructive",
-          title: "Gagal memuat kalender",
+          title: "Failed to load calendar",
           description: e?.message ?? "Unknown error",
         });
         setItems([]);
@@ -98,7 +154,7 @@ export default function AssistCalendar() {
     return () => {
       cancelled = true;
     };
-  }, [month, toast]);
+  }, [month, selectedBusinessId, toast]);
 
   const dayToItems = useMemo(() => {
     const map = new Map<string, ScheduledContentItem[]>();
@@ -124,6 +180,15 @@ export default function AssistCalendar() {
     return dayToItems.get(key) ?? [];
   }, [dayToItems, selectedDay]);
 
+  const selectedItemsSorted = useMemo(() => {
+    return [...selectedItems].sort((a, b) => {
+      const nameA = (a.businessName ?? "").toLowerCase();
+      const nameB = (b.businessName ?? "").toLowerCase();
+      if (nameA !== nameB) return nameA.localeCompare(nameB);
+      return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+    });
+  }, [selectedItems]);
+
   return (
     <div className="space-y-6">
       <header className="space-y-1">
@@ -132,19 +197,36 @@ export default function AssistCalendar() {
           Calendar
         </h1>
         <p className="text-muted-foreground">
-          Menampilkan jadwal konten dari <span className="font-medium">Content Creation</span>.
+          Shows scheduled content from <span className="font-medium">Content Creation</span>.
         </p>
       </header>
 
       <section className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between gap-3">
-              <span>Monthly Calendar</span>
-              <span className="text-sm font-medium text-muted-foreground">{format(month, "MMMM yyyy")}</span>
-            </CardTitle>
+          <CardHeader className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="flex items-center justify-between gap-3">
+                <span>Monthly Calendar</span>
+                <span className="text-sm font-medium text-muted-foreground">{format(month, "MMMM yyyy")}</span>
+              </CardTitle>
+
+              <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId}>
+                <SelectTrigger className="w-full sm:w-[280px]">
+                  <SelectValue placeholder="Filter by business name" />
+                </SelectTrigger>
+                <SelectContent className="z-50">
+                  <SelectItem value="all">All Businesses</SelectItem>
+                  {businesses.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <CardDescription>
-              Pilih tanggal untuk melihat konten terjadwal. {loading ? "Memuat…" : ""}
+              Select a date to view scheduled content. {loading ? "Loading…" : ""}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,12 +285,12 @@ export default function AssistCalendar() {
             <CardDescription>{format(selectedDay, "EEEE, dd MMM yyyy")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {selectedItems.length === 0 ? (
+            {selectedItemsSorted.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Tidak ada konten terjadwal pada tanggal ini.
+                No scheduled content on this date.
               </p>
             ) : (
-              selectedItems.map((it) => {
+              selectedItemsSorted.map((it) => {
                 const Icon = getTypeIcon(it.contentTypeName);
                 const time = format(new Date(it.scheduledAt), "HH:mm");
 
@@ -226,7 +308,7 @@ export default function AssistCalendar() {
                         </div>
                         {it.businessName ? (
                           <div className="mt-1 text-xs text-muted-foreground truncate">
-                            Client: {it.businessName}
+                            Business: {it.businessName}
                           </div>
                         ) : null}
                       </div>
