@@ -472,11 +472,11 @@ export default function ContentPlanner() {
     try {
       const getNextTaskNumber = async () => {
         // Task IDs should start at T00100 (numeric 100) and always increment.
+        // IMPORTANT: This is GLOBAL across the whole tasks table (not per-user).
         // Ignore rows that have NULL task_number (legacy/manual tasks).
         const { data: latestTask, error: latestErr } = await supabase
           .from("tasks")
           .select("task_number")
-          .eq("user_id", user.id)
           .not("task_number", "is", null)
           .order("task_number", { ascending: false })
           .limit(1)
@@ -485,7 +485,8 @@ export default function ContentPlanner() {
         if (latestErr) throw latestErr;
 
         const latestNum = (latestTask as any)?.task_number as number | null | undefined;
-        return typeof latestNum === "number" && Number.isFinite(latestNum) ? latestNum + 1 : 100;
+        const next = typeof latestNum === "number" && Number.isFinite(latestNum) ? latestNum + 1 : 100;
+        return Math.max(next, 100);
       };
 
       let nextTaskNumber = await getNextTaskNumber();
@@ -506,7 +507,7 @@ export default function ContentPlanner() {
       const taskTitle = `Content Post - ${postTarget.title}`;
 
       // Retry a few times to avoid duplicates if multiple tasks are created quickly.
-      // (If your DB has a unique constraint on (user_id, task_number), this will naturally protect you.)
+      // (Best practice: add a DB unique constraint on task_number to fully prevent race-condition duplicates.)
       let inserted = false;
       for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
         const { error } = await supabase.from("tasks").insert({
