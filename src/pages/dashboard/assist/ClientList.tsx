@@ -733,6 +733,20 @@ export default function ClientList() {
 
     setSavingMarketingSetup(true);
     try {
+      // Ensure the client has a businesses row (some accounts may not have one yet)
+      const { data: existingBusiness, error: existingError } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', selectedClient.id)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+
+      if (!existingBusiness?.id) {
+        const { error: insertError } = await supabase.from('businesses').insert({ user_id: selectedClient.id });
+        if (insertError) throw insertError;
+      }
+
       const cleanedSecondary = marketingSetup.secondaryServices
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
@@ -750,6 +764,9 @@ export default function ClientList() {
         .eq('user_id', selectedClient.id);
 
       if (error) throw error;
+
+      // Refresh from DB so when you navigate away and come back it's already up-to-date
+      await fetchClientData(selectedClient);
 
       toast({
         title: 'Saved!',
