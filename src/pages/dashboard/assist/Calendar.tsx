@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import ImageFieldCard from "@/components/dashboard/ImageFieldCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,11 +41,19 @@ type BusinessOption = {
 type ScheduledContentItem = {
   id: string;
   title: string;
+  description: string | null;
   scheduledAt: string; // ISO
+  contentTypeId: string;
   contentTypeName: string;
+  categoryId: string;
+  categoryName: string;
   platform: string | null;
   businessName: string | null;
   businessId: string;
+  businessUserId: string; // owner of business (client)
+  imagePrimaryUrl: string;
+  imageSecondUrl: string;
+  imageThirdUrl: string;
 };
 
 function normalizeTypeName(name: string) {
@@ -90,11 +100,22 @@ export default function AssistCalendar() {
   const [loading, setLoading] = useState(false);
   const [viewItem, setViewItem] = useState<ScheduledContentItem | null>(null);
 
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [contentTypes, setContentTypes] = useState<Array<{ id: string; name: string }>>([]);
+
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+
   const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [editScheduledAt, setEditScheduledAt] = useState("");
   const [editPlatform, setEditPlatform] = useState<string>("");
+  const [editCategoryId, setEditCategoryId] = useState<string>("");
+  const [editContentTypeId, setEditContentTypeId] = useState<string>("");
+
+  const [editImagePrimary, setEditImagePrimary] = useState<string>("");
+  const [editImageSecond, setEditImageSecond] = useState<string>("");
+  const [editImageThird, setEditImageThird] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +153,38 @@ export default function AssistCalendar() {
   useEffect(() => {
     let cancelled = false;
 
+    const loadMeta = async () => {
+      try {
+        const [{ data: catData, error: catErr }, { data: typeData, error: typeErr }] = await Promise.all([
+          supabase.from("content_categories").select("id, name").order("name", { ascending: true }),
+          supabase.from("content_types").select("id, name").order("name", { ascending: true }),
+        ]);
+
+        if (cancelled) return;
+        if (catErr) throw catErr;
+        if (typeErr) throw typeErr;
+
+        setCategories((catData ?? []).map((c: any) => ({ id: c.id as string, name: c.name as string })));
+        setContentTypes((typeData ?? []).map((t: any) => ({ id: t.id as string, name: t.name as string })));
+      } catch (e) {
+        // Meta is optional; editing will still work with raw IDs
+        if (!cancelled) {
+          setCategories([]);
+          setContentTypes([]);
+        }
+      }
+    };
+
+    void loadMeta();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
       setLoading(true);
       try {
@@ -141,7 +194,7 @@ export default function AssistCalendar() {
         let query = supabase
           .from("content_items")
           .select(
-            "id, title, business_id, scheduled_at, platform, businesses(business_name), content_types(name)",
+            "id, title, description, business_id, category_id, content_type_id, image_primary_url, image_second_url, image_third_url, scheduled_at, platform, businesses(business_name, user_id), content_types(name), content_categories(name)",
           )
           .not("scheduled_at", "is", null)
           .is("deleted_at", null)
@@ -163,11 +216,19 @@ export default function AssistCalendar() {
           .map((d) => ({
             id: d.id as string,
             title: (d.title ?? "Untitled") as string,
+            description: (d.description ?? null) as string | null,
             scheduledAt: d.scheduled_at as string,
+            contentTypeId: d.content_type_id as string,
             contentTypeName: (d.content_types?.name ?? "") as string,
+            categoryId: d.category_id as string,
+            categoryName: (d.content_categories?.name ?? "") as string,
             platform: (d.platform ?? null) as string | null,
             businessName: (d.businesses?.business_name ?? null) as string | null,
             businessId: d.business_id as string,
+            businessUserId: d.businesses?.user_id as string,
+            imagePrimaryUrl: (d.image_primary_url ?? "") as string,
+            imageSecondUrl: (d.image_second_url ?? "") as string,
+            imageThirdUrl: (d.image_third_url ?? "") as string,
           }));
 
         setItems(mapped);
@@ -240,9 +301,17 @@ export default function AssistCalendar() {
   useEffect(() => {
     if (!viewItem) return;
     setIsEditing(false);
+
     setEditTitle(viewItem.title ?? "");
+    setEditDescription(viewItem.description ?? "");
     setEditScheduledAt(toDateTimeLocalValue(viewItem.scheduledAt));
     setEditPlatform(viewItem.platform ?? "");
+    setEditCategoryId(viewItem.categoryId ?? "");
+    setEditContentTypeId(viewItem.contentTypeId ?? "");
+
+    setEditImagePrimary(viewItem.imagePrimaryUrl ?? "");
+    setEditImageSecond(viewItem.imageSecondUrl ?? "");
+    setEditImageThird(viewItem.imageThirdUrl ?? "");
   }, [viewItem]);
 
   const handleSave = async () => {
@@ -250,18 +319,27 @@ export default function AssistCalendar() {
 
     setSaving(true);
     try {
-      const nextScheduledAt = editScheduledAt ? fromDateTimeLocalValue(editScheduledAt) : viewItem.scheduledAt;
+      const nextScheduledAt = editScheduledAt
+        ? fromDateTimeLocalValue(editScheduledAt)
+        : viewItem.scheduledAt;
 
-      const { error } = await supabase
-        .from("content_items")
-        .update({
-          title: editTitle,
-          scheduled_at: nextScheduledAt,
-          platform: editPlatform ? editPlatform : null,
-        })
-        .eq("id", viewItem.id);
+      const next = {
+        title: editTitle,
+        description: editDescription.trim() ? editDescription.trim() : null,
+        scheduled_at: nextScheduledAt,
+        platform: editPlatform.trim() ? editPlatform.trim() : null,
+        category_id: editCategoryId,
+        content_type_id: editContentTypeId,
+        image_primary_url: editImagePrimary.trim() ? editImagePrimary.trim() : null,
+        image_second_url: editImageSecond.trim() ? editImageSecond.trim() : null,
+        image_third_url: editImageThird.trim() ? editImageThird.trim() : null,
+      } as const;
 
+      const { error } = await supabase.from("content_items").update(next).eq("id", viewItem.id);
       if (error) throw error;
+
+      const nextCategoryName = categories.find((c) => c.id === editCategoryId)?.name ?? viewItem.categoryName;
+      const nextContentTypeName = contentTypes.find((t) => t.id === editContentTypeId)?.name ?? viewItem.contentTypeName;
 
       // Update local state so the UI refreshes immediately
       setItems((prev) =>
@@ -270,8 +348,16 @@ export default function AssistCalendar() {
             ? {
                 ...it,
                 title: editTitle,
+                description: editDescription.trim() ? editDescription.trim() : null,
                 scheduledAt: nextScheduledAt,
-                platform: editPlatform ? editPlatform : null,
+                platform: editPlatform.trim() ? editPlatform.trim() : null,
+                categoryId: editCategoryId,
+                categoryName: nextCategoryName,
+                contentTypeId: editContentTypeId,
+                contentTypeName: nextContentTypeName,
+                imagePrimaryUrl: editImagePrimary.trim(),
+                imageSecondUrl: editImageSecond.trim(),
+                imageThirdUrl: editImageThird.trim(),
               }
             : it,
         ),
@@ -282,8 +368,16 @@ export default function AssistCalendar() {
           ? {
               ...prev,
               title: editTitle,
+              description: editDescription.trim() ? editDescription.trim() : null,
               scheduledAt: nextScheduledAt,
-              platform: editPlatform ? editPlatform : null,
+              platform: editPlatform.trim() ? editPlatform.trim() : null,
+              categoryId: editCategoryId,
+              categoryName: nextCategoryName,
+              contentTypeId: editContentTypeId,
+              contentTypeName: nextContentTypeName,
+              imagePrimaryUrl: editImagePrimary.trim(),
+              imageSecondUrl: editImageSecond.trim(),
+              imageThirdUrl: editImageThird.trim(),
             }
           : prev,
       );
@@ -467,7 +561,7 @@ export default function AssistCalendar() {
 
             {viewItem ? (
               <div className="space-y-4">
-                <div className="space-y-3">
+                <div className="grid gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="sc-title">Title</Label>
                     <Input
@@ -479,28 +573,83 @@ export default function AssistCalendar() {
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="sc-scheduled">Scheduled At</Label>
-                    <Input
-                      id="sc-scheduled"
-                      type="datetime-local"
-                      value={editScheduledAt}
-                      onChange={(e) => setEditScheduledAt(e.target.value)}
+                    <Label htmlFor="sc-description">Description</Label>
+                    <Textarea
+                      id="sc-description"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
                       disabled={!isEditing || saving}
+                      rows={4}
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="sc-platform">Platform</Label>
-                    <Input
-                      id="sc-platform"
-                      value={editPlatform}
-                      onChange={(e) => setEditPlatform(e.target.value)}
-                      placeholder="e.g. instagram"
-                      disabled={!isEditing || saving}
-                    />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="sc-category">Category</Label>
+                      <Select
+                        value={editCategoryId}
+                        onValueChange={setEditCategoryId}
+                        disabled={!isEditing || saving}
+                      >
+                        <SelectTrigger id="sc-category">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent className="z-50">
+                          {categories.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="sc-type">Type Content</Label>
+                      <Select
+                        value={editContentTypeId}
+                        onValueChange={setEditContentTypeId}
+                        disabled={!isEditing || saving}
+                      >
+                        <SelectTrigger id="sc-type">
+                          <SelectValue placeholder="Select a content type" />
+                        </SelectTrigger>
+                        <SelectContent className="z-50">
+                          {contentTypes.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="sc-scheduled">Scheduled At</Label>
+                      <Input
+                        id="sc-scheduled"
+                        type="datetime-local"
+                        value={editScheduledAt}
+                        onChange={(e) => setEditScheduledAt(e.target.value)}
+                        disabled={!isEditing || saving}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="sc-platform">Platform</Label>
+                      <Input
+                        id="sc-platform"
+                        value={editPlatform}
+                        onChange={(e) => setEditPlatform(e.target.value)}
+                        placeholder="e.g. instagram"
+                        disabled={!isEditing || saving}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-md border border-border p-3">
                       <div className="text-xs text-muted-foreground">Business</div>
                       <div className="text-sm font-medium text-foreground truncate">
@@ -508,10 +657,43 @@ export default function AssistCalendar() {
                       </div>
                     </div>
                     <div className="rounded-md border border-border p-3">
-                      <div className="text-xs text-muted-foreground">Type</div>
+                      <div className="text-xs text-muted-foreground">Current Type</div>
                       <div className="text-sm font-medium text-foreground truncate">
                         {viewItem.contentTypeName || "-"}
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-foreground">Images</div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <ImageFieldCard
+                        label="Primary"
+                        value={editImagePrimary}
+                        originalValue={viewItem.imagePrimaryUrl}
+                        onChange={({ url }) => setEditImagePrimary(url)}
+                        variant="compact"
+                        disabled={!isEditing || saving}
+                        mediaPicker={{ userId: viewItem.businessUserId, businessId: viewItem.businessId }}
+                      />
+                      <ImageFieldCard
+                        label="Second"
+                        value={editImageSecond}
+                        originalValue={viewItem.imageSecondUrl}
+                        onChange={({ url }) => setEditImageSecond(url)}
+                        variant="compact"
+                        disabled={!isEditing || saving}
+                        mediaPicker={{ userId: viewItem.businessUserId, businessId: viewItem.businessId }}
+                      />
+                      <ImageFieldCard
+                        label="Third"
+                        value={editImageThird}
+                        originalValue={viewItem.imageThirdUrl}
+                        onChange={({ url }) => setEditImageThird(url)}
+                        variant="compact"
+                        disabled={!isEditing || saving}
+                        mediaPicker={{ userId: viewItem.businessUserId, businessId: viewItem.businessId }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -529,8 +711,14 @@ export default function AssistCalendar() {
                         onClick={() => {
                           setIsEditing(false);
                           setEditTitle(viewItem.title ?? "");
+                          setEditDescription(viewItem.description ?? "");
                           setEditScheduledAt(toDateTimeLocalValue(viewItem.scheduledAt));
                           setEditPlatform(viewItem.platform ?? "");
+                          setEditCategoryId(viewItem.categoryId ?? "");
+                          setEditContentTypeId(viewItem.contentTypeId ?? "");
+                          setEditImagePrimary(viewItem.imagePrimaryUrl ?? "");
+                          setEditImageSecond(viewItem.imageSecondUrl ?? "");
+                          setEditImageThird(viewItem.imageThirdUrl ?? "");
                         }}
                         disabled={saving}
                       >
