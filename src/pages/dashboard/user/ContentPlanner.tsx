@@ -231,8 +231,10 @@ export default function ContentPlanner() {
         let query = supabase
           .from("content_items")
           .select(
-            "id, title, business_id, scheduled_at, platform, businesses(business_name), content_types(name)",
+            "id, title, business_id, scheduled_at, platform, businesses!inner(business_name, user_id), content_types(name)",
           )
+          // Hard guarantee: only show scheduled content for the logged-in user's businesses
+          .eq("businesses.user_id", user.id)
           .not("scheduled_at", "is", null)
           .is("deleted_at", null)
           .gte("scheduled_at", from)
