@@ -38,6 +38,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import ScheduledContentEditDialog, {
+  type ScheduledContentEditValues,
+} from "@/pages/dashboard/user/content-planner/ScheduledContentEditDialog";
+
 
 type ContentFilter = "all" | "blog" | "email_marketing" | "social_media" | "gmb_posts";
 
@@ -68,6 +72,7 @@ type Recommendation =
   | {
       kind: "scheduled";
       id: string;
+      businessId: string;
       type: Exclude<ContentFilter, "all">;
       title: string;
       scheduledAt: string;
@@ -173,6 +178,16 @@ export default function ContentPlanner() {
 
   const [viewItem, setViewItem] = useState<Recommendation | null>(null);
 
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [contentTypes, setContentTypes] = useState<{ id: string; name: string }[]>([]);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [editBusinessId, setEditBusinessId] = useState<string | null>(null);
+  const [editInitialValues, setEditInitialValues] = useState<ScheduledContentEditValues | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+
   useEffect(() => {
     let cancelled = false;
 
@@ -215,6 +230,80 @@ export default function ContentPlanner() {
       cancelled = true;
     };
   }, [selectedBusinessId, toast, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBusinesses = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from("businesses")
+          .select("id, business_name")
+          .eq("user_id", user.id)
+          .order("business_name", { ascending: true });
+
+        if (cancelled) return;
+        if (error) throw error;
+
+        const mapped: BusinessOption[] = (data ?? []).map((b: any) => ({
+          id: b.id as string,
+          name: (b.business_name ?? "Unnamed Business") as string,
+        }));
+
+        setBusinesses(mapped);
+
+        // Default to the first business so users never see an "All Businesses" view.
+        if (!selectedBusinessId && mapped.length > 0) {
+          setSelectedBusinessId(mapped[0].id);
+        }
+      } catch (e: any) {
+        toast({
+          variant: "destructive",
+          title: "Failed to load businesses",
+          description: e?.message ?? "Unknown error",
+        });
+        setBusinesses([]);
+      }
+    };
+
+    void loadBusinesses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBusinessId, toast, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMeta = async () => {
+      if (!user) return;
+      try {
+        const [{ data: catData, error: catErr }, { data: typeData, error: typeErr }] = await Promise.all([
+          supabase.from("content_categories").select("id, name").order("name", { ascending: true }),
+          supabase.from("content_types").select("id, name").order("name", { ascending: true }),
+        ]);
+
+        if (cancelled) return;
+        if (catErr) throw catErr;
+        if (typeErr) throw typeErr;
+
+        setCategories((catData ?? []).map((c: any) => ({ id: c.id as string, name: c.name as string })));
+        setContentTypes((typeData ?? []).map((t: any) => ({ id: t.id as string, name: t.name as string })));
+      } catch (e: any) {
+        // not fatal for the page; only affects edit dialog
+        setCategories([]);
+        setContentTypes([]);
+      }
+    };
+
+    void loadMeta();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -288,6 +377,7 @@ export default function ContentPlanner() {
     };
   }, [businesses, month, selectedBusinessId, toast, user]);
 
+
   const dayToScheduled = useMemo(() => {
     const map = new Map<string, ScheduledContentItem[]>();
     for (const it of scheduledItems) {
@@ -307,6 +397,7 @@ export default function ContentPlanner() {
     const scheduled: Recommendation[] = scheduledItems.map((it) => ({
       kind: "scheduled",
       id: it.id,
+      businessId: it.businessId,
       type: mapTypeToFilter(it.contentTypeName),
       title: it.title,
       scheduledAt: it.scheduledAt,
@@ -332,6 +423,112 @@ export default function ContentPlanner() {
       title: "Post",
       description: "Post action is not configured yet.",
     });
+  };
+
+  useEffect(() => {
+    if (!editOpen || !editItemId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("content_items")
+          .select(
+            "id, title, description, platform, business_id, category_id, content_type_id, image_primary_url, image_second_url, image_third_url, content_categories(name), content_types(name)",
+          )
+          .eq("id", editItemId)
+          .single();
+
+        if (cancelled) return;
+        if (error) throw error;
+
+        setEditBusinessId((data as any).business_id as string);
+        setEditInitialValues({
+          title: ((data as any).title ?? "") as string,
+          description: ((data as any).description ?? "") as string,
+          categoryName: ((data as any).content_categories?.name ?? "") as string,
+          contentTypeName: ((data as any).content_types?.name ?? "") as string,
+          platform: (((data as any).platform ?? "") as string) || "",
+          primaryImageUrl: (((data as any).image_primary_url ?? "") as string) || "",
+          secondaryImageUrl: (((data as any).image_second_url ?? "") as string) || "",
+          thirdImageUrl: (((data as any).image_third_url ?? "") as string) || "",
+        });
+      } catch (e: any) {
+        toast({
+          variant: "destructive",
+          title: "Failed to load content",
+          description: e?.message ?? "Unknown error",
+        });
+        setEditOpen(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editItemId, editOpen, toast]);
+
+  const handleSaveEdit = async (values: ScheduledContentEditValues) => {
+    if (!editItemId) return;
+
+    const categoryId = categories.find((c) => c.name === values.categoryName)?.id;
+    const contentTypeId = contentTypes.find((t) => t.name === values.contentTypeName)?.id;
+
+    if (!categoryId || !contentTypeId) {
+      toast({
+        variant: "destructive",
+        title: "Missing selection",
+        description: "Please select Category and Type Content.",
+      });
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from("content_items")
+        .update({
+          title: values.title,
+          description: values.description,
+          platform: values.platform || null,
+          category_id: categoryId,
+          content_type_id: contentTypeId,
+          image_primary_url: values.primaryImageUrl || null,
+          image_second_url: values.secondaryImageUrl || null,
+          image_third_url: values.thirdImageUrl || null,
+        })
+        .eq("id", editItemId);
+
+      if (error) throw error;
+
+      // Update local scheduled list so UI reflects instantly
+      setScheduledItems((prev) =>
+        prev.map((it) =>
+          it.id === editItemId
+            ? {
+                ...it,
+                title: values.title,
+                platform: values.platform || null,
+                contentTypeName: values.contentTypeName,
+              }
+            : it,
+        ),
+      );
+
+      toast({ title: "Saved", description: "Scheduled content updated." });
+      setEditOpen(false);
+      setEditItemId(null);
+      setEditBusinessId(null);
+      setEditInitialValues(null);
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Save failed",
+        description: e?.message ?? "Unknown error",
+      });
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   return (
@@ -485,7 +682,20 @@ export default function ContentPlanner() {
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <Button type="button" variant="outline" size="sm" onClick={() => setViewItem(rec)}>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (rec.kind === "scheduled") {
+                                setEditItemId(rec.id);
+                                setEditBusinessId(rec.businessId);
+                                setEditOpen(true);
+                                return;
+                              }
+                              setViewItem(rec);
+                            }}
+                          >
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">View</span>
                           </Button>
@@ -504,40 +714,41 @@ export default function ContentPlanner() {
         </Card>
       </section>
 
+      {editInitialValues && user ? (
+        <ScheduledContentEditDialog
+          open={editOpen}
+          onOpenChange={(open) => {
+            setEditOpen(open);
+            if (!open) {
+              setEditItemId(null);
+              setEditBusinessId(null);
+              setEditInitialValues(null);
+            }
+          }}
+          categories={categories.map((c) => c.name)}
+          contentTypes={contentTypes.map((t) => t.name)}
+          initialValues={editInitialValues}
+          saving={savingEdit}
+          onSave={handleSaveEdit}
+          mediaPicker={editBusinessId ? { userId: user.id, businessId: editBusinessId } : null}
+        />
+      ) : null}
+
       <Dialog open={!!viewItem} onOpenChange={(open) => !open && setViewItem(null)}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-2xl">
           <DialogHeader>
             <DialogTitle>View Content</DialogTitle>
             <DialogDescription>Details for the selected item.</DialogDescription>
           </DialogHeader>
 
-          {viewItem ? (
+          {viewItem && viewItem.kind === "idea" ? (
             <div className="space-y-2">
               <div className="text-sm">
                 <span className="font-medium">Title:</span> {viewItem.title}
               </div>
-
-              {viewItem.kind === "scheduled" ? (
-                <>
-                  <div className="text-sm">
-                    <span className="font-medium">Scheduled:</span>{" "}
-                    {format(new Date(viewItem.scheduledAt), "EEEE, dd MMM yyyy • HH:mm")}
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium">Business:</span> {viewItem.businessName ?? "-"}
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium">Type:</span> {viewItem.contentTypeName || "-"}
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium">Platform:</span> {viewItem.platform ?? "-"}
-                  </div>
-                </>
-              ) : (
-                <div className="text-sm">
-                  <span className="font-medium">Notes:</span> {viewItem.notes}
-                </div>
-              )}
+              <div className="text-sm">
+                <span className="font-medium">Notes:</span> {viewItem.notes}
+              </div>
 
               <div className="pt-2">
                 <Button type="button" className="w-full" onClick={handlePost}>
