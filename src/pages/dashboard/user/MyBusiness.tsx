@@ -400,6 +400,63 @@ export default function MyBusiness() {
     return inserted.id;
   };
 
+  const loadKbFromDb = async (ensuredId: string) => {
+    const { data, error } = await supabase
+      .from('businesses')
+      .select(
+        'bkb_content, brand_expert_content, persona1_content, persona2_content, persona3_content, persona1_title, persona2_title, persona3_title'
+      )
+      .eq('id', ensuredId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const dbKbData: KnowledgeBaseData = {
+      bkb: (data as any)?.bkb_content || '',
+      brandExpert: (data as any)?.brand_expert_content || '',
+      persona1: (data as any)?.persona1_content || '',
+      persona2: (data as any)?.persona2_content || '',
+      persona3: (data as any)?.persona3_content || '',
+      persona1Title: (data as any)?.persona1_title || 'My Persona 1',
+      persona2Title: (data as any)?.persona2_title || 'My Persona 2',
+      persona3Title: (data as any)?.persona3_title || 'My Persona 3',
+    };
+
+    setKbData(dbKbData);
+    setOriginalKbData(dbKbData);
+
+    const hasData = Object.values(dbKbData).some((val: any) => val && val.length > 0);
+    if (hasData) {
+      setKbEditingState({
+        bkb: !dbKbData.bkb,
+        brandExpert: !dbKbData.brandExpert,
+        persona1: !dbKbData.persona1,
+        persona2: !dbKbData.persona2,
+        persona3: !dbKbData.persona3,
+      });
+    }
+  };
+
+  const handleOpenKnowledgeBase = async () => {
+    if (!user) return;
+    try {
+      const ensuredId = await ensureBusinessRow();
+      if (!ensuredId) throw new Error('No user session');
+
+      // Force the KB view to reflect what is saved in DB (ignore any stale drafts).
+      localStorage.removeItem(`${KB_DRAFT_STORAGE_KEY}_${user.id}`);
+      await loadKbFromDb(ensuredId);
+
+      setCurrentView('knowledge-base');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to open Knowledge Base.',
+      });
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
@@ -517,27 +574,16 @@ export default function MyBusiness() {
         .eq('id', ensuredId);
 
       if (error) throw error;
-      
-      // Update original KB data
-      setOriginalKbData(prev => prev ? { ...prev, [field]: kbData[field] } : null);
-      
-      // Clear KB draft for this field
-      const draftData = localStorage.getItem(`${KB_DRAFT_STORAGE_KEY}_${user.id}`);
-      if (draftData) {
-        const draftParsed = JSON.parse(draftData);
-        delete draftParsed[field];
-        if (Object.keys(draftParsed).length === 0) {
-          localStorage.removeItem(`${KB_DRAFT_STORAGE_KEY}_${user.id}`);
-        } else {
-          localStorage.setItem(`${KB_DRAFT_STORAGE_KEY}_${user.id}`, JSON.stringify(draftParsed));
-        }
-      }
-      
+
+      // After saving: reflect DB as source of truth in UI
+      localStorage.removeItem(`${KB_DRAFT_STORAGE_KEY}_${user.id}`);
+      await loadKbFromDb(ensuredId);
+
       // After saving, disable editing for content fields
       if (['bkb', 'brandExpert', 'persona1', 'persona2', 'persona3'].includes(field)) {
         setKbEditingState(prev => ({ ...prev, [field]: false }));
       }
-      
+
       toast({
         title: 'Saved!',
         description: 'Knowledge base content has been saved.',
@@ -579,11 +625,13 @@ export default function MyBusiness() {
         .from('businesses')
         .update({ [columnName]: value })
         .eq('id', ensuredId);
-      
+
       if (error) throw error;
-      
-      setOriginalKbData(prev => prev ? { ...prev, [field]: value } : null);
-      
+
+      // Keep UI aligned with DB after title update
+      localStorage.removeItem(`${KB_DRAFT_STORAGE_KEY}_${user.id}`);
+      await loadKbFromDb(ensuredId);
+
       toast({
         title: 'Title Updated!',
         description: 'Persona title has been saved.',
@@ -673,14 +721,14 @@ export default function MyBusiness() {
                     Edit
                   </Button>
                 )}
-                <Button 
-                  variant="outline" 
-                  onClick={() => setCurrentView('knowledge-base')}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  View Details
-                </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleOpenKnowledgeBase}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    View Details
+                  </Button>
               </div>
             </div>
           </CardHeader>
