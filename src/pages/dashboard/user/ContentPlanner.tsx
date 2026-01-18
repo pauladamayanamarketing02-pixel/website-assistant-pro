@@ -470,17 +470,25 @@ export default function ContentPlanner() {
 
     setPosting(true);
     try {
-      const { data: latestTask, error: latestErr } = await supabase
-        .from("tasks")
-        .select("task_number")
-        .eq("user_id", user.id)
-        .order("task_number", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const getNextTaskNumber = async () => {
+        // Task IDs should start at T00100 (numeric 100) and always increment.
+        // Ignore rows that have NULL task_number (legacy/manual tasks).
+        const { data: latestTask, error: latestErr } = await supabase
+          .from("tasks")
+          .select("task_number")
+          .eq("user_id", user.id)
+          .not("task_number", "is", null)
+          .order("task_number", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (latestErr) throw latestErr;
+        if (latestErr) throw latestErr;
 
-      const nextTaskNumber = Math.max(((latestTask as any)?.task_number ?? 100) + 1, 101);
+        const latestNum = (latestTask as any)?.task_number as number | null | undefined;
+        return typeof latestNum === "number" && Number.isFinite(latestNum) ? latestNum + 1 : 100;
+      };
+
+      let nextTaskNumber = await getNextTaskNumber();
 
       const taskType = mapRecommendationToTaskType(postTarget);
       const platformEnum =
@@ -497,20 +505,37 @@ export default function ContentPlanner() {
 
       const taskTitle = `Content Post - ${postTarget.title}`;
 
-      const { error } = await supabase.from("tasks").insert({
-        user_id: user.id,
-        task_number: nextTaskNumber,
-        title: taskTitle,
-        deadline,
-        description,
-        type: taskType as any,
-        platform: platformEnum as any,
-        assigned_to: selectedAssignee,
-        status: nextStatus as any,
-        notes: null,
-      });
+      // Retry a few times to avoid duplicates if multiple tasks are created quickly.
+      // (If your DB has a unique constraint on (user_id, task_number), this will naturally protect you.)
+      let inserted = false;
+      for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
+        const { error } = await supabase.from("tasks").insert({
+          user_id: user.id,
+          task_number: nextTaskNumber,
+          title: taskTitle,
+          deadline,
+          description,
+          type: taskType as any,
+          platform: platformEnum as any,
+          assigned_to: selectedAssignee,
+          status: nextStatus as any,
+          notes: null,
+        });
 
-      if (error) throw error;
+        if (!error) {
+          inserted = true;
+          break;
+        }
+
+        const msg = String((error as any)?.message ?? "");
+        const isDuplicate = msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique");
+        if (!isDuplicate) throw error;
+
+        // fetch a fresh number and try again
+        nextTaskNumber = await getNextTaskNumber();
+      }
+
+      if (!inserted) throw new Error("Failed to generate a unique task number. Please try again.");
 
       toast({
         title: "Sent to Tasks",
