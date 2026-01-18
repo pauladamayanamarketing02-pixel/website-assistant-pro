@@ -26,6 +26,7 @@ import TaskManager from './assist/TaskManager';
 import ContentCreation from './assist/ContentCreation';
 import AssistMediaLibrary from './assist/MediaLibrary';
 import AssistCalendar from './assist/Calendar';
+import AssistScheduledContentView from './assist/calendar/ViewScheduledContent';
 import AIGenerator from './assist/AIGenerator';
 import AssistMessages from './assist/Messages';
 import Reports from './assist/Reports';
@@ -160,6 +161,7 @@ export default function AssistDashboard() {
               <Route path="content-creation" element={<ContentCreation />} />
               <Route path="media-library" element={<AssistMediaLibrary />} />
               <Route path="calendar" element={<AssistCalendar />} />
+              <Route path="calendar/view/:id" element={<AssistScheduledContentView />} />
               <Route path="ai-generator" element={<AIGenerator />} />
               <Route path="messages" element={<AssistMessages />} />
               <Route path="reports" element={<Reports />} />
