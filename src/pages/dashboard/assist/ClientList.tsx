@@ -176,6 +176,7 @@ export default function ClientList() {
     shortDescription: '',
     serviceArea: '',
   });
+  const [isEditingMarketingSetup, setIsEditingMarketingSetup] = useState(false);
   const [savingMarketingSetup, setSavingMarketingSetup] = useState(false);
 
   const [formData, setFormData] = useState<BusinessFormData>({
@@ -457,6 +458,7 @@ export default function ClientList() {
           shortDescription: (business as any).service_short_description || '',
           serviceArea: (business as any).service_area || '',
         });
+        setIsEditingMarketingSetup(false);
       } else {
         setBusinessData(null);
         setFormData({
@@ -493,6 +495,7 @@ export default function ClientList() {
           shortDescription: '',
           serviceArea: '',
         });
+        setIsEditingMarketingSetup(false);
 
         setShowEmailSecondary(false);
         setShowPhoneSecondary(Boolean((profileData as any)?.phone_secondary));
@@ -772,6 +775,7 @@ export default function ClientList() {
         title: 'Saved!',
         description: 'Marketing setup has been updated.',
       });
+      setIsEditingMarketingSetup(false);
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -1474,10 +1478,26 @@ export default function ClientList() {
                         <CardTitle>Marketing Setup</CardTitle>
                         <CardDescription>Services / offerings and marketing goal for this client.</CardDescription>
                       </div>
-                      <Button onClick={handleSaveMarketingSetup} disabled={savingMarketingSetup} className="sm:w-auto">
-                        <Save className="h-4 w-4 mr-2" />
-                        {savingMarketingSetup ? 'Saving...' : 'Save'}
-                      </Button>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsEditingMarketingSetup(true)}
+                          disabled={isEditingMarketingSetup}
+                          className="sm:w-auto"
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button
+                          onClick={handleSaveMarketingSetup}
+                          disabled={!isEditingMarketingSetup || savingMarketingSetup}
+                          className="sm:w-auto"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          {savingMarketingSetup ? 'Saving...' : 'Save'}
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -1500,6 +1520,7 @@ export default function ClientList() {
                                 }))
                               }
                               placeholder="e.g., Home Cleaning"
+                              disabled={!isEditingMarketingSetup}
                             />
                           </div>
 
@@ -1516,6 +1537,7 @@ export default function ClientList() {
                                     secondaryServices: [...prev.secondaryServices, ''],
                                   }))
                                 }
+                                disabled={!isEditingMarketingSetup}
                               >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add
@@ -1535,6 +1557,7 @@ export default function ClientList() {
                                       })
                                     }
                                     placeholder={index === 0 ? 'e.g., Deep Cleaning' : 'e.g., Move-out Cleaning'}
+                                    disabled={!isEditingMarketingSetup}
                                   />
                                   {marketingSetup.secondaryServices.length > 1 && (
                                     <Button
@@ -1548,6 +1571,7 @@ export default function ClientList() {
                                         }))
                                       }
                                       aria-label="Delete secondary service"
+                                      disabled={!isEditingMarketingSetup}
                                     >
                                       <X className="h-4 w-4" />
                                     </Button>
@@ -1569,6 +1593,7 @@ export default function ClientList() {
                                 }))
                               }
                               placeholder="Short, clear, benefit-focused description"
+                              disabled={!isEditingMarketingSetup}
                             />
                           </div>
 
@@ -1584,6 +1609,7 @@ export default function ClientList() {
                                 }))
                               }
                               placeholder="e.g., South Jakarta"
+                              disabled={!isEditingMarketingSetup}
                             />
                           </div>
                         </CardContent>
@@ -1597,29 +1623,31 @@ export default function ClientList() {
                         <CardContent className="space-y-4">
                           <div className="space-y-2">
                             <Label>Marketing Goal</Label>
-                            <RadioGroup
-                              value={marketingSetup.marketingGoalType}
-                              onValueChange={(value) =>
-                                setMarketingSetup((prev) => ({
-                                  ...prev,
-                                  marketingGoalType: value as 'calls' | 'leads' | 'booking',
-                                }))
-                              }
-                              className="grid gap-2"
-                            >
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id="assist_goal_calls" value="calls" />
-                                <Label htmlFor="assist_goal_calls">Calls</Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id="assist_goal_leads" value="leads" />
-                                <Label htmlFor="assist_goal_leads">Leads</Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id="assist_goal_booking" value="booking" />
-                                <Label htmlFor="assist_goal_booking">Bookings</Label>
-                              </div>
-                            </RadioGroup>
+                            <div className={!isEditingMarketingSetup ? 'pointer-events-none opacity-70' : undefined}>
+                              <RadioGroup
+                                value={marketingSetup.marketingGoalType}
+                                onValueChange={(value) =>
+                                  setMarketingSetup((prev) => ({
+                                    ...prev,
+                                    marketingGoalType: value as 'calls' | 'leads' | 'booking',
+                                  }))
+                                }
+                                className="grid gap-2"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <RadioGroupItem id="assist_goal_calls" value="calls" />
+                                  <Label htmlFor="assist_goal_calls">Calls</Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <RadioGroupItem id="assist_goal_leads" value="leads" />
+                                  <Label htmlFor="assist_goal_leads">Leads</Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <RadioGroupItem id="assist_goal_booking" value="booking" />
+                                  <Label htmlFor="assist_goal_booking">Bookings</Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
                           </div>
 
                           <div className="space-y-2">
@@ -1634,6 +1662,7 @@ export default function ClientList() {
                                 }))
                               }
                               placeholder="e.g., 30 bookings per month"
+                              disabled={!isEditingMarketingSetup}
                             />
                           </div>
 

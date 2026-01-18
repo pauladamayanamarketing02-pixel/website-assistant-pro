@@ -76,6 +76,7 @@ export default function MyBusiness() {
   const [showPhoneSecondary, setShowPhoneSecondary] = useState(false);
 
   const [marketingSetupOpen, setMarketingSetupOpen] = useState(false);
+  const [isEditingMarketingSetup, setIsEditingMarketingSetup] = useState(false);
   const [marketingSetup, setMarketingSetup] = useState({
     marketingGoalType: 'calls' as 'calls' | 'leads' | 'booking',
     marketingGoalText: '',
@@ -494,6 +495,7 @@ export default function MyBusiness() {
       if (!ensuredId) throw new Error('No user session');
 
       await loadMarketingSetupFromDb(ensuredId);
+      setIsEditingMarketingSetup(false);
       setMarketingSetupOpen(true);
     } catch (error: any) {
       toast({
@@ -1312,10 +1314,23 @@ export default function MyBusiness() {
           <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl p-0 sm:rounded-lg">
             <div className="flex max-h-[85vh] flex-col">
               <div className="border-b border-border px-6 py-4">
-                <DialogHeader className="space-y-0">
-                  <DialogTitle className="text-xl">Marketing Setup</DialogTitle>
-                  <p className="text-sm text-muted-foreground">Set marketing goal & services/offerings.</p>
-                </DialogHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <DialogHeader className="space-y-0">
+                    <DialogTitle className="text-xl">Marketing Setup</DialogTitle>
+                    <p className="text-sm text-muted-foreground">Set marketing goal & services/offerings.</p>
+                  </DialogHeader>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingMarketingSetup(true)}
+                    disabled={isEditingMarketingSetup}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-auto p-4 sm:p-6">
@@ -1339,6 +1354,7 @@ export default function MyBusiness() {
                             }))
                           }
                           placeholder="e.g., Home Cleaning"
+                          disabled={!isEditingMarketingSetup}
                         />
                       </div>
 
@@ -1355,6 +1371,7 @@ export default function MyBusiness() {
                                 secondaryServices: [...prev.secondaryServices, ''],
                               }))
                             }
+                            disabled={!isEditingMarketingSetup}
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             Add
@@ -1374,6 +1391,7 @@ export default function MyBusiness() {
                                   })
                                 }
                                 placeholder={index === 0 ? 'e.g., Deep Cleaning' : 'e.g., Move-out Cleaning'}
+                                disabled={!isEditingMarketingSetup}
                               />
                               {marketingSetup.secondaryServices.length > 1 && (
                                 <Button
@@ -1387,6 +1405,7 @@ export default function MyBusiness() {
                                     }))
                                   }
                                   aria-label="Delete secondary service"
+                                  disabled={!isEditingMarketingSetup}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -1408,6 +1427,7 @@ export default function MyBusiness() {
                             }))
                           }
                           placeholder="Short, clear, benefit-focused description"
+                          disabled={!isEditingMarketingSetup}
                         />
                       </div>
 
@@ -1423,6 +1443,7 @@ export default function MyBusiness() {
                             }))
                           }
                           placeholder="e.g., South Jakarta"
+                          disabled={!isEditingMarketingSetup}
                         />
                       </div>
                     </CardContent>
@@ -1437,29 +1458,31 @@ export default function MyBusiness() {
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
                         <Label>Marketing Goal</Label>
-                        <RadioGroup
-                          value={marketingSetup.marketingGoalType}
-                          onValueChange={(value) =>
-                            setMarketingSetup((prev) => ({
-                              ...prev,
-                              marketingGoalType: value as 'calls' | 'leads' | 'booking',
-                            }))
-                          }
-                          className="grid gap-2"
-                        >
-                          <div className="flex items-center gap-2">
-                            <RadioGroupItem id="goal_calls" value="calls" />
-                            <Label htmlFor="goal_calls">Calls</Label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <RadioGroupItem id="goal_leads" value="leads" />
-                            <Label htmlFor="goal_leads">Leads</Label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <RadioGroupItem id="goal_booking" value="booking" />
-                            <Label htmlFor="goal_booking">Bookings</Label>
-                          </div>
-                        </RadioGroup>
+                        <div className={!isEditingMarketingSetup ? 'pointer-events-none opacity-70' : undefined}>
+                          <RadioGroup
+                            value={marketingSetup.marketingGoalType}
+                            onValueChange={(value) =>
+                              setMarketingSetup((prev) => ({
+                                ...prev,
+                                marketingGoalType: value as 'calls' | 'leads' | 'booking',
+                              }))
+                            }
+                            className="grid gap-2"
+                          >
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem id="goal_calls" value="calls" />
+                              <Label htmlFor="goal_calls">Calls</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem id="goal_leads" value="leads" />
+                              <Label htmlFor="goal_leads">Leads</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem id="goal_booking" value="booking" />
+                              <Label htmlFor="goal_booking">Bookings</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -1474,6 +1497,7 @@ export default function MyBusiness() {
                             }))
                           }
                           placeholder="e.g., 30 bookings per month"
+                          disabled={!isEditingMarketingSetup}
                         />
                       </div>
 
@@ -1482,7 +1506,7 @@ export default function MyBusiness() {
                           type="button"
                           className="w-full"
                           onClick={handleSaveMarketingSetup}
-                          disabled={savingMarketingSetup}
+                          disabled={!isEditingMarketingSetup || savingMarketingSetup}
                         >
                           {savingMarketingSetup ? 'Saving...' : 'Save'}
                         </Button>
