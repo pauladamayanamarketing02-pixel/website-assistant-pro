@@ -11,6 +11,14 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -61,6 +69,7 @@ export default function AssistCalendar() {
 
   const [items, setItems] = useState<ScheduledContentItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [viewItem, setViewItem] = useState<ScheduledContentItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,19 +184,33 @@ export default function AssistCalendar() {
     return days;
   }, [items]);
 
-  const selectedItems = useMemo(() => {
-    const key = format(selectedDay, "yyyy-MM-dd");
-    return dayToItems.get(key) ?? [];
-  }, [dayToItems, selectedDay]);
 
-  const selectedItemsSorted = useMemo(() => {
-    return [...selectedItems].sort((a, b) => {
+  const monthItemsSorted = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const tA = new Date(a.scheduledAt).getTime();
+      const tB = new Date(b.scheduledAt).getTime();
+      if (tA !== tB) return tA - tB;
+
       const nameA = (a.businessName ?? "").toLowerCase();
       const nameB = (b.businessName ?? "").toLowerCase();
-      if (nameA !== nameB) return nameA.localeCompare(nameB);
-      return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+      return nameA.localeCompare(nameB);
     });
-  }, [selectedItems]);
+  }, [items]);
+
+  const monthGroups = useMemo(() => {
+    const groups = new Map<string, { date: Date; items: ScheduledContentItem[] }>();
+    for (const it of monthItemsSorted) {
+      const d = new Date(it.scheduledAt);
+      const key = format(d, "yyyy-MM-dd");
+      const existing = groups.get(key);
+      if (existing) {
+        existing.items.push(it);
+      } else {
+        groups.set(key, { date: d, items: [it] });
+      }
+    }
+    return Array.from(groups.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [monthItemsSorted]);
 
   return (
     <div className="space-y-6">
@@ -281,44 +304,88 @@ export default function AssistCalendar() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Schedule Detail</CardTitle>
-            <CardDescription>{format(selectedDay, "EEEE, dd MMM yyyy")}</CardDescription>
+            <CardTitle>Monthly Schedule</CardTitle>
+            <CardDescription>
+              {format(month, "MMMM yyyy")} • Sorted by date
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {selectedItemsSorted.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No scheduled content on this date.
-              </p>
+          <CardContent className="space-y-4">
+            {monthGroups.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No scheduled content this month.</p>
             ) : (
-              selectedItemsSorted.map((it) => {
-                const Icon = getTypeIcon(it.contentTypeName);
-                const time = format(new Date(it.scheduledAt), "HH:mm");
-
-                return (
-                  <div key={it.id} className="rounded-lg border border-border p-3">
-                    <div className="flex items-start gap-2">
-                      <Icon className="h-4 w-4 text-primary mt-0.5" />
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-foreground truncate">
-                          {it.title}
-                        </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {time} • {it.contentTypeName || "(No type)"}
-                          {it.platform ? ` • ${it.platform}` : ""}
-                        </div>
-                        {it.businessName ? (
-                          <div className="mt-1 text-xs text-muted-foreground truncate">
-                            Business: {it.businessName}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
+              monthGroups.map((group) => (
+                <div key={format(group.date, "yyyy-MM-dd")} className="space-y-2">
+                  <div className="text-sm font-semibold text-foreground">
+                    {format(group.date, "EEEE, dd MMM")}
                   </div>
-                );
-              })
+
+                  <div className="space-y-2">
+                    {group.items.map((it) => {
+                      const Icon = getTypeIcon(it.contentTypeName);
+                      const time = format(new Date(it.scheduledAt), "HH:mm");
+
+                      return (
+                        <div key={it.id} className="rounded-lg border border-border p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-2 min-w-0">
+                              <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold text-foreground truncate">
+                                  {it.title}
+                                </div>
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                  {time} • {it.contentTypeName || "(No type)"}
+                                  {it.platform ? ` • ${it.platform}` : ""}
+                                </div>
+                                {it.businessName ? (
+                                  <div className="mt-1 text-xs text-muted-foreground truncate">
+                                    Business: {it.businessName}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <Button type="button" variant="outline" size="sm" onClick={() => setViewItem(it)}>
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={!!viewItem} onOpenChange={(open) => !open && setViewItem(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Scheduled Content</DialogTitle>
+              <DialogDescription>
+                {viewItem ? format(new Date(viewItem.scheduledAt), "EEEE, dd MMM yyyy • HH:mm") : ""}
+              </DialogDescription>
+            </DialogHeader>
+
+            {viewItem ? (
+              <div className="space-y-2">
+                <div className="text-sm">
+                  <span className="font-medium">Title:</span> {viewItem.title}
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Business:</span> {viewItem.businessName ?? "-"}
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Type:</span> {viewItem.contentTypeName || "-"}
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Platform:</span> {viewItem.platform ?? "-"}
+                </div>
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </section>
     </div>
   );
