@@ -256,15 +256,35 @@ export default function MyGallery() {
           </div>
 
           <div className="rounded-lg border bg-card p-4 text-sm w-full">
-            <p className="font-medium text-foreground w-full">Please upload the following files (for reference):</p>
-            <ul className="mt-2 list-disc pl-5 text-muted-foreground space-y-1">
-              <li>Logo (example)</li>
-              <li>Brand Guidelines (PDF)</li>
-              <li>Product Images</li>
-              <li>Service Images</li>
-              <li>Office / Location Photos</li>
-              <li>Video Assets (if available)</li>
-            </ul>
+            <div className="flex flex-col gap-2">
+              <p className="font-medium text-foreground">Please upload the following files (for reference):</p>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-muted-foreground">
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden="true">•</span>
+                  <span>Logo (example)</span>
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden="true">•</span>
+                  <span>Brand Guidelines (PDF)</span>
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden="true">•</span>
+                  <span>Product Images</span>
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden="true">•</span>
+                  <span>Service Images</span>
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden="true">•</span>
+                  <span>Office / Location Photos</span>
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden="true">•</span>
+                  <span>Video Assets (if available)</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
