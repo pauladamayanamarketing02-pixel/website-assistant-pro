@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { endOfMonth, format, startOfMonth } from "date-fns";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   Eye,
@@ -171,6 +172,8 @@ function getMonthlyRecommendations(monthIndex: number): RecommendationIdea[] {
 export default function ContentPlanner() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [month, setMonth] = useState<Date>(new Date());
   const [filter, setFilter] = useState<ContentFilter>("all");
@@ -198,6 +201,37 @@ export default function ContentPlanner() {
   const [editInitialValues, setEditInitialValues] = useState<ScheduledContentEditValues | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  const buildScheduledContentDetailUrl = (opts: { itemId: string; businessId: string }) => {
+    const url = new URL(`${window.location.origin}/dashboard/user/content-planner`);
+    url.searchParams.set("item", opts.itemId);
+    url.searchParams.set("business", opts.businessId);
+    return url.toString();
+  };
+
+  // Deep-link support: opening Scheduled Content detail directly from a URL.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const itemId = params.get("item");
+    const businessId = params.get("business");
+
+    if (!itemId || !businessId) return;
+
+    setEditItemId(itemId);
+    setEditBusinessId(businessId);
+    setEditOpen(true);
+
+    // Clean URL so refreshing doesn't keep re-opening it.
+    params.delete("item");
+    params.delete("business");
+    const nextSearch = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true }
+    );
+  }, [location.pathname, location.search, navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -454,12 +488,20 @@ export default function ContentPlanner() {
           ? mapPlatformToEnum(postTarget.platform)
           : null;
 
-      const description = postTarget.kind === "idea" ? postTarget.notes : null;
+      const deadline = postTarget.kind === "scheduled" ? postTarget.scheduledAt : null;
+
+      const description =
+        postTarget.kind === "scheduled"
+          ? `View Detail Content: ${buildScheduledContentDetailUrl({ itemId: postTarget.id, businessId: postTarget.businessId })}`
+          : postTarget.notes;
+
+      const taskTitle = `Content Post - ${postTarget.title}`;
 
       const { error } = await supabase.from("tasks").insert({
         user_id: user.id,
         task_number: nextTaskNumber,
-        title: postTarget.title,
+        title: taskTitle,
+        deadline,
         description,
         type: taskType as any,
         platform: platformEnum as any,
