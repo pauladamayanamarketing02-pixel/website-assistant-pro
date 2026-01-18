@@ -248,27 +248,27 @@ export default function MyGallery() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-3 max-w-2xl">
           <div>
             <h1 className="text-3xl font-bold text-foreground">My Gallery</h1>
             <p className="text-muted-foreground">Manage your images, videos, and files</p>
           </div>
 
           <div className="rounded-lg border bg-card p-4 text-sm">
-            <p className="font-medium text-foreground">Silakan upload file berikut (sebagai referensi):</p>
+            <p className="font-medium text-foreground">Please upload the following files (for reference):</p>
             <ul className="mt-2 list-disc pl-5 text-muted-foreground space-y-1">
-              <li>Logo (contoh)</li>
+              <li>Logo (example)</li>
               <li>Brand Guidelines (PDF)</li>
               <li>Product Images</li>
               <li>Service Images</li>
               <li>Office / Location Photos</li>
-              <li>Video Assets (jika ada)</li>
+              <li>Video Assets (if available)</li>
             </ul>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:pt-1">
           <Button
             variant="outline"
             size="icon"
