@@ -7,6 +7,7 @@ import {
   Sparkles,
   MessageCircle,
   BarChart3,
+  Activity,
   Settings,
   User,
   PenLine,
@@ -28,6 +29,7 @@ import AssistCalendar from './assist/Calendar';
 import AIGenerator from './assist/AIGenerator';
 import AssistMessages from './assist/Messages';
 import Reports from './assist/Reports';
+import LogActivity from './assist/LogActivity';
 import AssistSettings from './assist/Settings';
 import AssistProfile from './assist/Profile';
 
@@ -42,6 +44,7 @@ const mainMenuItems: AssistNavItem[] = [
   { title: 'AI Generator', url: '/dashboard/assist/ai-generator', icon: Sparkles },
   { title: 'Messages', url: '/dashboard/assist/messages', icon: MessageCircle },
   { title: 'Reports', url: '/dashboard/assist/reports', icon: BarChart3 },
+  { title: 'Log Activity', url: '/dashboard/assist/log-activity', icon: Activity },
   { title: 'Settings', url: '/dashboard/assist/settings', icon: Settings },
 ];
 
@@ -160,6 +163,7 @@ export default function AssistDashboard() {
               <Route path="ai-generator" element={<AIGenerator />} />
               <Route path="messages" element={<AssistMessages />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="log-activity" element={<LogActivity />} />
               <Route path="settings" element={<AssistSettings />} />
             </Routes>
           </main>
