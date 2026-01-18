@@ -78,7 +78,8 @@ export default function MyBusiness() {
   const [marketingSetup, setMarketingSetup] = useState({
     marketingGoalType: 'calls' as 'calls' | 'leads' | 'booking',
     marketingGoalText: '',
-    serviceName: '',
+    primaryService: '',
+    secondaryServices: [''],
     shortDescription: '',
     serviceArea: '',
   });
@@ -1229,10 +1230,119 @@ export default function MyBusiness() {
 
               <div className="flex-1 overflow-auto p-6">
                 <div className="grid gap-6 md:grid-cols-2">
+                  {/* Services / Offerings (Left) */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Services / Offerings</CardTitle>
+                      <CardDescription>Describe what you sell and where you serve.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="primary_service">Primary Service*</Label>
+                        <Input
+                          id="primary_service"
+                          value={marketingSetup.primaryService}
+                          onChange={(e) =>
+                            setMarketingSetup((prev) => ({
+                              ...prev,
+                              primaryService: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g., Home Cleaning"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <Label>Secondary Service</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setMarketingSetup((prev) => ({
+                                ...prev,
+                                secondaryServices: [...prev.secondaryServices, ''],
+                              }))
+                            }
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add
+                          </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          {marketingSetup.secondaryServices.map((value, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <Input
+                                value={value}
+                                onChange={(e) =>
+                                  setMarketingSetup((prev) => {
+                                    const next = [...prev.secondaryServices];
+                                    next[index] = e.target.value;
+                                    return { ...prev, secondaryServices: next };
+                                  })
+                                }
+                                placeholder={index === 0 ? 'e.g., Deep Cleaning' : 'e.g., Move-out Cleaning'}
+                              />
+                              {marketingSetup.secondaryServices.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() =>
+                                    setMarketingSetup((prev) => ({
+                                      ...prev,
+                                      secondaryServices: prev.secondaryServices.filter((_, i) => i !== index),
+                                    }))
+                                  }
+                                  aria-label="Delete secondary service"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="service_short_desc">Short Description</Label>
+                        <Textarea
+                          id="service_short_desc"
+                          value={marketingSetup.shortDescription}
+                          onChange={(e) =>
+                            setMarketingSetup((prev) => ({
+                              ...prev,
+                              shortDescription: e.target.value,
+                            }))
+                          }
+                          placeholder="Short, clear, benefit-focused description"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="service_area">Service Area</Label>
+                        <Input
+                          id="service_area"
+                          value={marketingSetup.serviceArea}
+                          onChange={(e) =>
+                            setMarketingSetup((prev) => ({
+                              ...prev,
+                              serviceArea: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g., South Jakarta"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Marketing Goal (Right) */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Marketing Goal</CardTitle>
-                      <CardDescription>Pick your main outcome.</CardDescription>
+                      <CardDescription>Pick the main outcome you want.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
@@ -1257,7 +1367,7 @@ export default function MyBusiness() {
                           </div>
                           <div className="flex items-center gap-2">
                             <RadioGroupItem id="goal_booking" value="booking" />
-                            <Label htmlFor="goal_booking">Booking</Label>
+                            <Label htmlFor="goal_booking">Bookings</Label>
                           </div>
                         </RadioGroup>
                       </div>
@@ -1268,68 +1378,35 @@ export default function MyBusiness() {
                           id="marketing_goal_text"
                           value={marketingSetup.marketingGoalText}
                           onChange={(e) =>
-                            setMarketingSetup((prev) => ({ ...prev, marketingGoalText: e.target.value }))
+                            setMarketingSetup((prev) => ({
+                              ...prev,
+                              marketingGoalText: e.target.value,
+                            }))
                           }
-                          placeholder="Contoh: 30 booking per bulan"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Services / Offerings</CardTitle>
-                      <CardDescription>Describe your main service.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="service_name">Service Name</Label>
-                        <Input
-                          id="service_name"
-                          value={marketingSetup.serviceName}
-                          onChange={(e) => setMarketingSetup((prev) => ({ ...prev, serviceName: e.target.value }))}
-                          placeholder="Contoh: Home Cleaning"
+                          placeholder="e.g., 30 bookings per month"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="service_short_desc">Short Description</Label>
-                        <Textarea
-                          id="service_short_desc"
-                          value={marketingSetup.shortDescription}
-                          onChange={(e) =>
-                            setMarketingSetup((prev) => ({ ...prev, shortDescription: e.target.value }))
-                          }
-                          placeholder="Singkat, jelas, dan fokus pada benefit"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="service_area">Service Area</Label>
-                        <Input
-                          id="service_area"
-                          value={marketingSetup.serviceArea}
-                          onChange={(e) => setMarketingSetup((prev) => ({ ...prev, serviceArea: e.target.value }))}
-                          placeholder="Contoh: Jakarta Selatan"
-                        />
+                      <div className="pt-2">
+                        <Button
+                          type="button"
+                          className="w-full"
+                          onClick={() => {
+                            toast({ title: 'Saved', description: 'Marketing setup saved locally.' });
+                            setMarketingSetupOpen(false);
+                          }}
+                        >
+                          Save
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
               </div>
 
-              <div className="border-t border-border px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <div className="border-t border-border px-6 py-4 flex justify-end">
                 <Button type="button" variant="outline" onClick={() => setMarketingSetupOpen(false)}>
                   Close
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    toast({ title: 'Saved', description: 'Marketing setup saved locally.' });
-                    setMarketingSetupOpen(false);
-                  }}
-                >
-                  Save
                 </Button>
               </div>
             </div>
