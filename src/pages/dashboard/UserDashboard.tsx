@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Package,
   BarChart3,
+  Activity,
   Settings,
   CalendarDays,
 } from 'lucide-react';
@@ -26,6 +27,7 @@ import TasksProgress from './user/TasksProgress';
 import Messages from './user/Messages';
 import MyPackage from './user/MyPackage';
 import Reporting from './user/Reporting';
+import LogActivity from './user/LogActivity';
 import UserSettings from './user/Settings';
 
 const menuItems: UserNavItem[] = [
@@ -36,6 +38,7 @@ const menuItems: UserNavItem[] = [
   { title: 'AI Creation', url: '/dashboard/user/ai-creation', icon: Sparkles },
   { title: 'My Gallery', url: '/dashboard/user/gallery', icon: ImageIcon },
   { title: 'Reporting & Visibility', url: '/dashboard/user/reporting', icon: BarChart3 },
+  { title: 'Log Activity', url: '/dashboard/user/log-activity', icon: Activity },
   { title: 'Messages', url: '/dashboard/user/messages', icon: MessageCircle },
   { title: 'My Package', url: '/dashboard/user/package', icon: Package },
   { title: 'Settings', url: '/dashboard/user/settings', icon: Settings },
@@ -108,6 +111,7 @@ export default function UserDashboard() {
               <Route path="messages" element={<Messages />} />
               <Route path="package" element={<MyPackage />} />
               <Route path="reporting" element={<Reporting />} />
+              <Route path="log-activity" element={<LogActivity />} />
               <Route path="settings" element={<UserSettings />} />
             </Routes>
           </main>
