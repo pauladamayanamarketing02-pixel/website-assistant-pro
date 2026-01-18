@@ -71,11 +71,14 @@ export default function MyBusiness() {
   const [isEditing, setIsEditing] = useState(false);
   const [showEmailSecondary, setShowEmailSecondary] = useState(false);
   const [showPhoneSecondary, setShowPhoneSecondary] = useState(false);
-  
+
+  // Track the businesses row (some accounts may not have a row yet)
+  const [businessRowId, setBusinessRowId] = useState<string | null>(null);
+
   // Original data from database (to restore on cancel)
   const [originalFormData, setOriginalFormData] = useState<BusinessData | null>(null);
   const [originalKbData, setOriginalKbData] = useState<KnowledgeBaseData | null>(null);
-  
+
   const [formData, setFormData] = useState<BusinessData>({
     name: '',
     business_type: '',
@@ -98,7 +101,7 @@ export default function MyBusiness() {
     businessId: '',
     hours: [],
   });
-  
+
   const [newHour, setNewHour] = useState({ day: '', opensAt: '', closesAt: '' });
   const [kbData, setKbData] = useState<KnowledgeBaseData>({
     bkb: '',
@@ -198,6 +201,7 @@ export default function MyBusiness() {
         .maybeSingle();
 
       if (data) {
+        setBusinessRowId((data as any).id);
         // Parse social media links
         let socialLinks: SocialMediaLink[] = [];
         if (Array.isArray((data as any).social_links)) {
@@ -320,6 +324,7 @@ export default function MyBusiness() {
           });
         }
       } else {
+        setBusinessRowId(null);
         const defaultData: BusinessData = {
           ...formData,
           email: user.email || '',
@@ -365,11 +370,44 @@ export default function MyBusiness() {
     return 'facebook';
   };
 
+  const ensureBusinessRow = async (): Promise<string | null> => {
+    if (!user) return null;
+    if (businessRowId) return businessRowId;
+
+    // 1) Re-check from DB (in case it was created elsewhere)
+    const { data: existing, error: existingError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+    if (existing?.id) {
+      setBusinessRowId(existing.id);
+      return existing.id;
+    }
+
+    // 2) Create minimal row so subsequent updates (KB save) always persist
+    const { data: inserted, error: insertError } = await supabase
+      .from('businesses')
+      .insert({ user_id: user.id })
+      .select('id')
+      .single();
+
+    if (insertError) throw insertError;
+
+    setBusinessRowId(inserted.id);
+    return inserted.id;
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
     setSaving(true);
     try {
+      const ensuredId = await ensureBusinessRow();
+      if (!ensuredId) throw new Error('No user session');
+
       const location = formData.city && formData.country 
         ? `${formData.city}, ${formData.country}` 
         : formData.country || formData.city || null;
@@ -397,7 +435,7 @@ export default function MyBusiness() {
           social_links: validSocialLinks as any,
           hours: formData.hours as any,
         })
-        .eq('user_id', user.id);
+        .eq('id', ensuredId);
 
       if (error) throw error;
 
@@ -448,9 +486,12 @@ export default function MyBusiness() {
 
   const handleSaveKB = async (field: keyof KnowledgeBaseData) => {
     if (!user) return;
-    
+
     setSavingKB(true);
     try {
+      const ensuredId = await ensureBusinessRow();
+      if (!ensuredId) throw new Error('No user session');
+
       // Map field names to database columns
       const fieldToColumn: Record<string, string> = {
         bkb: 'bkb_content',
@@ -462,19 +503,19 @@ export default function MyBusiness() {
         persona2Title: 'persona2_title',
         persona3Title: 'persona3_title',
       };
-      
+
       const columnName = fieldToColumn[field];
       if (!columnName) return;
-      
-      const updateData: Record<string, string> = {
+
+      const updateData: Record<string, any> = {
         [columnName]: kbData[field],
       };
-      
+
       const { error } = await supabase
         .from('businesses')
         .update(updateData)
-        .eq('user_id', user.id);
-      
+        .eq('id', ensuredId);
+
       if (error) throw error;
       
       // Update original KB data
@@ -520,21 +561,24 @@ export default function MyBusiness() {
 
   const handleSaveKBTitle = async (field: string, value: string) => {
     if (!user) return;
-    
+
     try {
+      const ensuredId = await ensureBusinessRow();
+      if (!ensuredId) throw new Error('No user session');
+
       const fieldToColumn: Record<string, string> = {
         persona1Title: 'persona1_title',
         persona2Title: 'persona2_title',
         persona3Title: 'persona3_title',
       };
-      
+
       const columnName = fieldToColumn[field];
       if (!columnName) return;
-      
+
       const { error } = await supabase
         .from('businesses')
         .update({ [columnName]: value })
-        .eq('user_id', user.id);
+        .eq('id', ensuredId);
       
       if (error) throw error;
       
