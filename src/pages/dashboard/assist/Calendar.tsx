@@ -711,37 +711,56 @@ export default function AssistCalendar() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2">
-                  {!isEditing ? (
-                    <Button type="button" variant="secondary" onClick={() => setIsEditing(true)}>
-                      Edit
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsEditing(false);
-                          setEditTitle(viewItem.title ?? "");
-                          setEditDescription(viewItem.description ?? "");
-                          setEditScheduledAt(toDateTimeLocalValue(viewItem.scheduledAt));
-                          setEditPlatform(viewItem.platform ?? "");
-                          setEditCategoryId(viewItem.categoryId ?? "");
-                          setEditContentTypeId(viewItem.contentTypeId ?? "");
-                          setEditImagePrimary(viewItem.imagePrimaryUrl ?? "");
-                          setEditImageSecond(viewItem.imageSecondUrl ?? "");
-                          setEditImageThird(viewItem.imageThirdUrl ?? "");
-                        }}
-                        disabled={saving}
-                      >
-                        Cancel
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      const origin = window.location.origin;
+                      const url = `${origin}/dashboard/assist/calendar/view/${viewItem.id}`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast({ title: "Copied", description: "View Content URL copied." });
+                      } catch {
+                        toast({ variant: "destructive", title: "Copy failed", description: "Please copy manually." });
+                      }
+                    }}
+                  >
+                    Copy URL
+                  </Button>
+
+                  <div className="flex items-center gap-2">
+                    {!isEditing ? (
+                      <Button type="button" variant="secondary" onClick={() => setIsEditing(true)}>
+                        Edit
                       </Button>
-                      <Button type="button" onClick={handleSave} disabled={saving}>
-                        {saving ? "Saving…" : "Save"}
-                      </Button>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing(false);
+                            setEditTitle(viewItem.title ?? "");
+                            setEditDescription(viewItem.description ?? "");
+                            setEditScheduledAt(toDateTimeLocalValue(viewItem.scheduledAt));
+                            setEditPlatform(viewItem.platform ?? "");
+                            setEditCategoryId(viewItem.categoryId ?? "");
+                            setEditContentTypeId(viewItem.contentTypeId ?? "");
+                            setEditImagePrimary(viewItem.imagePrimaryUrl ?? "");
+                            setEditImageSecond(viewItem.imageSecondUrl ?? "");
+                            setEditImageThird(viewItem.imageThirdUrl ?? "");
+                          }}
+                          disabled={saving}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="button" onClick={handleSave} disabled={saving}>
+                          {saving ? "Saving…" : "Save"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : null}
