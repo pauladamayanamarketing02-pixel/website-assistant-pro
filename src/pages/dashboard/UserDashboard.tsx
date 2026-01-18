@@ -38,9 +38,9 @@ const menuItems: UserNavItem[] = [
   { title: 'AI Creation', url: '/dashboard/user/ai-creation', icon: Sparkles },
   { title: 'My Gallery', url: '/dashboard/user/gallery', icon: ImageIcon },
   { title: 'Reporting & Visibility', url: '/dashboard/user/reporting', icon: BarChart3 },
-  { title: 'Log Activity', url: '/dashboard/user/log-activity', icon: Activity },
   { title: 'Messages', url: '/dashboard/user/messages', icon: MessageCircle },
   { title: 'My Package', url: '/dashboard/user/package', icon: Package },
+  { title: 'Log Activity', url: '/dashboard/user/log-activity', icon: Activity },
   { title: 'Settings', url: '/dashboard/user/settings', icon: Settings },
 ];
 
