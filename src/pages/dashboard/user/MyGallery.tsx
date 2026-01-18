@@ -249,14 +249,14 @@ export default function MyGallery() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-3 max-w-2xl">
+        <div className="space-y-3 w-full md:flex-1">
           <div>
             <h1 className="text-3xl font-bold text-foreground">My Gallery</h1>
             <p className="text-muted-foreground">Manage your images, videos, and files</p>
           </div>
 
-          <div className="rounded-lg border bg-card p-4 text-sm">
-            <p className="font-medium text-foreground">Please upload the following files (for reference):</p>
+          <div className="rounded-lg border bg-card p-4 text-sm w-full">
+            <p className="font-medium text-foreground w-full">Please upload the following files (for reference):</p>
             <ul className="mt-2 list-disc pl-5 text-muted-foreground space-y-1">
               <li>Logo (example)</li>
               <li>Brand Guidelines (PDF)</li>
