@@ -146,6 +146,7 @@ export type Database = {
         Row: {
           allow_comments: boolean
           author_id: string
+          blog_author_id: string | null
           canonical_url: string | null
           content_html: string
           content_type: Database["public"]["Enums"]["blog_content_type"]
@@ -172,6 +173,7 @@ export type Database = {
         Insert: {
           allow_comments?: boolean
           author_id: string
+          blog_author_id?: string | null
           canonical_url?: string | null
           content_html: string
           content_type?: Database["public"]["Enums"]["blog_content_type"]
@@ -198,6 +200,7 @@ export type Database = {
         Update: {
           allow_comments?: boolean
           author_id?: string
+          blog_author_id?: string | null
           canonical_url?: string | null
           content_html?: string
           content_type?: Database["public"]["Enums"]["blog_content_type"]
@@ -221,7 +224,15 @@ export type Database = {
           updated_at?: string
           visibility?: Database["public"]["Enums"]["blog_visibility"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_blog_author_id_fkey"
+            columns: ["blog_author_id"]
+            isOneToOne: false
+            referencedRelation: "blog_authors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       blog_tags: {
         Row: {
