@@ -5,6 +5,8 @@ export type ContactItem = {
   title: string;
   detail: string;
   description: string;
+  /** Only used when key === "whatsapp" */
+  openingMessage?: string;
 };
 
 export const defaultItems: ContactItem[] = [
@@ -25,6 +27,7 @@ export const defaultItems: ContactItem[] = [
     title: "WhatsApp",
     detail: "+1 (555) 123-4567",
     description: "Quick responses for existing clients",
+    openingMessage: "",
   },
   {
     key: "location",
@@ -48,6 +51,7 @@ export function sanitizeItems(value: unknown): ContactItem[] {
       title: typeof obj.title === "string" ? obj.title : "",
       detail: typeof obj.detail === "string" ? obj.detail : "",
       description: typeof obj.description === "string" ? obj.description : "",
+      openingMessage: typeof obj.openingMessage === "string" ? obj.openingMessage : undefined,
     };
     byKey.set(item.key, item);
   }

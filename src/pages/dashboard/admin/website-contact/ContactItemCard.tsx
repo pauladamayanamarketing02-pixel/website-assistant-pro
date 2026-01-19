@@ -49,6 +49,20 @@ export function ContactItemCard({ item, icon: Icon, disabled, onChange }: Props)
           />
         </div>
 
+        {item.key === "whatsapp" ? (
+          <div className="space-y-2">
+            <Label htmlFor={`${item.key}-openingMessage`}>Whatsapp Opening Message</Label>
+            <Input
+              id={`${item.key}-openingMessage`}
+              value={item.openingMessage ?? ""}
+              disabled={disabled}
+              placeholder="Contoh: Halo, saya ingin bertanya tentang..."
+              onChange={(e) => onChange(item.key, { openingMessage: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">Teks ini bisa dipakai untuk chat pembuka WhatsApp.</p>
+          </div>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor={`${item.key}-desc`}>Description</Label>
           <Input
