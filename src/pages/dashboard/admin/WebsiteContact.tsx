@@ -57,35 +57,35 @@ export default function WebsiteContact() {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
   };
 
-  // Autosave (debounced) while editing
-  useEffect(() => {
-    if (!isEditing || loading) return;
 
-    const timer = window.setTimeout(async () => {
-      setSaving(true);
-      const payload = { key: SETTINGS_KEY, value: items };
+  const saveNow = async (nextItems: ContactItem[]) => {
+    setSaving(true);
+    const payload = { key: SETTINGS_KEY, value: nextItems };
 
-      const { error } = await (supabase as any)
-        .from("website_settings")
-        .upsert(payload, { onConflict: "key" });
+    const { error } = await (supabase as any)
+      .from("website_settings")
+      .upsert(payload, { onConflict: "key" });
 
-      if (error) {
-        toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
-      } else {
-        setLastSavedAt(new Date());
-      }
+    if (error) {
+      toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
       setSaving(false);
-    }, 700);
+      return false;
+    }
 
-    return () => window.clearTimeout(timer);
-  }, [items, isEditing, loading, toast]);
+    setLastSavedAt(new Date());
+    setSaving(false);
+    return true;
+  };
 
   const cancelEdit = () => {
     setItems(baselineItems);
     setIsEditing(false);
   };
 
-  const finishEdit = () => {
+  const finishEdit = async () => {
+    const ok = await saveNow(items);
+    if (!ok) return;
+
     setBaselineItems(items);
     setIsEditing(false);
   };
@@ -104,9 +104,9 @@ export default function WebsiteContact() {
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menyimpan...
               </span>
             ) : lastSavedAt ? (
-              <>Tersimpan {lastSavedAt.toLocaleTimeString()} (auto-save)</>
+              <>Tersimpan {lastSavedAt.toLocaleTimeString()}</>
             ) : (
-              "Auto-save aktif saat mode Edit."
+              "Klik Selesai untuk menyimpan perubahan."
             )}
           </div>
         </div>
@@ -146,7 +146,6 @@ export default function WebsiteContact() {
                     key={item.key}
                     item={item}
                     icon={Icon}
-                    // Keep fields editable while autosave runs to avoid cursor/focus loss.
                     disabled={!isEditing}
                     onChange={updateItem}
                   />
