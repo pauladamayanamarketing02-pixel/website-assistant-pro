@@ -85,7 +85,7 @@ export default function AdminAssistants() {
           <p className="text-sm text-muted-foreground">View and manage marketing assistant accounts.</p>
         </div>
 
-        <Button type="button" onClick={() => {}}>
+        <Button type="button" onClick={() => navigate("/dashboard/admin/assistants/new")}>
           <Plus className="h-4 w-4" />
           Add New Assistant
         </Button>
