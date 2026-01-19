@@ -166,9 +166,8 @@ export default function Blog() {
                       <p className="mt-1 text-xs text-muted-foreground">By {post.author}</p>
                     </CardHeader>
                     <CardContent className="pb-4">
-                      <p className="text-muted-foreground text-sm line-clamp-2">{post.excerpt ?? ""}</p>
                       {post.tags.length ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-1 flex flex-wrap gap-2">
                           {post.tags.slice(0, 6).map((t) => (
                             <Badge key={t} variant="outline" className="text-xs">
                               {t}

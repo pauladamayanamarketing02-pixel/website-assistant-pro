@@ -250,21 +250,6 @@ export default function BlogPost() {
                     ))}
                   </div>
                 ) : null}
-
-                {post.featured_image_url ? (
-                  <div className="mt-8 overflow-hidden rounded-xl border border-border shadow-soft">
-                    <img
-                      src={post.featured_image_url}
-                      alt={post.featured_image_alt ?? post.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : null}
-
-                {post.excerpt ? (
-                  <p className="mt-8 text-lg text-muted-foreground">{post.excerpt}</p>
-                ) : null}
               </header>
 
               <section className="container mt-10 md:mt-14">
