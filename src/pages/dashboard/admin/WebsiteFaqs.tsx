@@ -16,13 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -36,28 +29,18 @@ import type { Database } from "@/integrations/supabase/types";
 
 type FaqRow = Database["public"]["Tables"]["website_faqs"]["Row"];
 
-const pageOptions = [
-  { value: "services", label: "Services (/services)" },
-  { value: "packages", label: "Packages (/packages)" },
-  { value: "contact", label: "Contact (/contact)" },
-  { value: "home", label: "Home (/)" },
-  { value: "about", label: "About (/about)" },
-] as const;
-
-type PageKey = (typeof pageOptions)[number]["value"];
+const TARGET_PAGE = "packages" as const;
 
 type FormState = {
   id?: string;
-  page: PageKey;
   question: string;
   answer: string;
   sort_order: number;
   is_published: boolean;
 };
 
-function emptyForm(page: PageKey): FormState {
+function emptyForm(): FormState {
   return {
-    page,
     question: "",
     answer: "",
     sort_order: 0,
@@ -66,21 +49,20 @@ function emptyForm(page: PageKey): FormState {
 }
 
 export default function WebsiteFaqs() {
-  const [page, setPage] = useState<PageKey>("services");
   const [items, setItems] = useState<FaqRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<FormState>(emptyForm("services"));
+  const [form, setForm] = useState<FormState>(emptyForm());
 
-  const load = useCallback(async (p: PageKey) => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("website_faqs")
         .select("id,page,question,answer,sort_order,is_published,created_at,updated_at")
-        .eq("page", p)
+        .eq("page", TARGET_PAGE)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
 
@@ -89,7 +71,7 @@ export default function WebsiteFaqs() {
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal memuat FAQ",
+        title: "Gagal memuat Common Questions",
         description: e?.message || "Terjadi kesalahan.",
       });
       setItems([]);
@@ -99,18 +81,17 @@ export default function WebsiteFaqs() {
   }, []);
 
   useEffect(() => {
-    void load(page);
-  }, [load, page]);
+    void load();
+  }, [load]);
 
   const openCreate = () => {
-    setForm(emptyForm(page));
+    setForm(emptyForm());
     setOpen(true);
   };
 
   const openEdit = (row: FaqRow) => {
     setForm({
       id: row.id,
-      page: (row.page as PageKey) ?? page,
       question: row.question ?? "",
       answer: row.answer ?? "",
       sort_order: row.sort_order ?? 0,
@@ -132,7 +113,7 @@ export default function WebsiteFaqs() {
         const { error } = await supabase
           .from("website_faqs")
           .update({
-            page: form.page,
+            page: TARGET_PAGE,
             question: form.question.trim(),
             answer: form.answer.trim(),
             sort_order: Number.isFinite(form.sort_order) ? form.sort_order : 0,
@@ -142,7 +123,7 @@ export default function WebsiteFaqs() {
         if (error) throw error;
       } else {
         const { error } = await supabase.from("website_faqs").insert({
-          page: form.page,
+          page: TARGET_PAGE,
           question: form.question.trim(),
           answer: form.answer.trim(),
           sort_order: Number.isFinite(form.sort_order) ? form.sort_order : 0,
@@ -152,8 +133,8 @@ export default function WebsiteFaqs() {
       }
 
       setOpen(false);
-      await load(page);
-      toast({ title: "Tersimpan", description: "FAQ berhasil disimpan." });
+      await load();
+      toast({ title: "Tersimpan", description: "Common Questions (/packages) berhasil disimpan." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Gagal menyimpan", description: e?.message || "Terjadi kesalahan." });
     } finally {
@@ -162,7 +143,7 @@ export default function WebsiteFaqs() {
   };
 
   const handleDelete = async (row: FaqRow) => {
-    const ok = window.confirm("Hapus FAQ ini?");
+    const ok = window.confirm("Hapus pertanyaan ini dari Common Questions /packages?");
     if (!ok) return;
 
     try {
@@ -179,33 +160,20 @@ export default function WebsiteFaqs() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground">FAQs</h1>
-          <p className="text-sm text-muted-foreground">Kelola FAQ yang tampil di halaman publik (berdasarkan page).</p>
+          <h1 className="text-3xl font-bold text-foreground">Common Questions</h1>
+          <p className="text-sm text-muted-foreground">
+            Mengubah bagian <span className="font-medium text-foreground">Common Questions</span> di halaman publik /packages.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Select value={page} onValueChange={(v) => setPage(v as PageKey)}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {pageOptions.map((p) => (
-                <SelectItem key={p.value} value={p.value}>
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button type="button" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Add FAQ
-          </Button>
-        </div>
+        <Button type="button" onClick={openCreate}>
+          <Plus className="h-4 w-4" /> Add Question
+        </Button>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle>FAQ List</CardTitle>
+          <CardTitle>Questions</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -215,7 +183,7 @@ export default function WebsiteFaqs() {
               </span>
             </div>
           ) : items.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">Belum ada FAQ untuk page ini.</div>
+            <div className="py-10 text-center text-sm text-muted-foreground">Belum ada pertanyaan.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -262,26 +230,10 @@ export default function WebsiteFaqs() {
       <Dialog open={open} onOpenChange={(v) => (!saving ? setOpen(v) : null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{form.id ? "Edit FAQ" : "Add FAQ"}</DialogTitle>
+            <DialogTitle>{form.id ? "Edit Question" : "Add Question"}</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label>Page</Label>
-              <Select value={form.page} onValueChange={(v) => setForm((p) => ({ ...p, page: v as PageKey }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {pageOptions.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="grid gap-2">
               <Label>Question</Label>
               <Input
@@ -314,7 +266,7 @@ export default function WebsiteFaqs() {
               <div className="flex items-center justify-between rounded-md border border-border p-3">
                 <div>
                   <div className="text-sm font-medium text-foreground">Published</div>
-                  <div className="text-xs text-muted-foreground">Tampilkan di halaman publik</div>
+                  <div className="text-xs text-muted-foreground">Tampilkan di /packages</div>
                 </div>
                 <Switch checked={form.is_published} onCheckedChange={(v) => setForm((p) => ({ ...p, is_published: v }))} />
               </div>

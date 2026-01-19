@@ -1,9 +1,17 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, Check, Star } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { PublicLayout } from '@/components/layout/PublicLayout';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Check, Star } from "lucide-react";
+
+import { supabase } from "@/integrations/supabase/client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+
+import type { Database } from "@/integrations/supabase/types";
+
+type FaqRow = Database["public"]["Tables"]["website_faqs"]["Row"];
 
 const packages = [
   {
@@ -77,6 +85,22 @@ const packages = [
 ];
 
 export default function Packages() {
+  const [faqs, setFaqs] = useState<FaqRow[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("website_faqs")
+        .select("id,page,question,answer,sort_order,is_published,created_at,updated_at")
+        .eq("page", "packages")
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (!error) setFaqs((data ?? []) as FaqRow[]);
+    })();
+  }, []);
+
   return (
     <PublicLayout>
       {/* Hero */}
@@ -163,25 +187,32 @@ export default function Packages() {
             </h2>
           </div>
           <div className="mx-auto max-w-3xl space-y-6">
-            {[
-              {
-                q: 'Can I change packages later?',
-                a: 'Absolutely! You can upgrade or downgrade your package at any time. Changes take effect on your next billing cycle.',
-              },
-              {
-                q: 'Is there a long-term contract?',
-                a: 'No contracts! All our monthly packages are month-to-month. Cancel anytime with no penalties.',
-              },
-              {
-                q: 'How do I communicate with my assist?',
-                a: 'Depending on your package, you can communicate via email, our dashboard, or direct messaging apps like Slack or WhatsApp.',
-              },
-              {
-                q: 'What if I need something custom?',
-                a: 'We love custom requests! Contact us and we\'ll create a package that fits your unique needs.',
-              },
-            ].map((faq) => (
-              <Card key={faq.q} className="shadow-soft">
+            {(faqs.length
+              ? faqs.map((f) => ({ q: f.question, a: f.answer, id: f.id }))
+              : [
+                  {
+                    id: "fallback-1",
+                    q: "Can I change packages later?",
+                    a: "Absolutely! You can upgrade or downgrade your package at any time. Changes take effect on your next billing cycle.",
+                  },
+                  {
+                    id: "fallback-2",
+                    q: "Is there a long-term contract?",
+                    a: "No contracts! All our monthly packages are month-to-month. Cancel anytime with no penalties.",
+                  },
+                  {
+                    id: "fallback-3",
+                    q: "How do I communicate with my assist?",
+                    a: "Depending on your package, you can communicate via email, our dashboard, or direct messaging apps like Slack or WhatsApp.",
+                  },
+                  {
+                    id: "fallback-4",
+                    q: "What if I need something custom?",
+                    a: "We love custom requests! Contact us and we'll create a package that fits your unique needs.",
+                  },
+                ]
+            ).map((faq) => (
+              <Card key={faq.id} className="shadow-soft">
                 <CardContent className="pt-6">
                   <h3 className="font-semibold text-foreground mb-2">{faq.q}</h3>
                   <p className="text-muted-foreground">{faq.a}</p>
