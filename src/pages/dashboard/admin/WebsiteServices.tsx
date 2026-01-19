@@ -97,35 +97,35 @@ export default function WebsiteServices() {
     })();
   }, []);
 
-  // Autosave (debounced) while editing
-  useEffect(() => {
-    if (!isEditing || loading) return;
 
-    const timer = window.setTimeout(async () => {
-      setSaving(true);
-      const payload = { key: SETTINGS_KEY, value: settings };
+  const saveNow = async (nextSettings: ServicesPageSettings) => {
+    setSaving(true);
+    const payload = { key: SETTINGS_KEY, value: nextSettings };
 
-      const { error } = await (supabase as any)
-        .from("website_settings")
-        .upsert(payload, { onConflict: "key" });
+    const { error } = await (supabase as any)
+      .from("website_settings")
+      .upsert(payload, { onConflict: "key" });
 
-      if (error) {
-        toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
-      } else {
-        setLastSavedAt(new Date());
-      }
+    if (error) {
+      toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
       setSaving(false);
-    }, 700);
+      return false;
+    }
 
-    return () => window.clearTimeout(timer);
-  }, [settings, isEditing, loading, toast]);
+    setLastSavedAt(new Date());
+    setSaving(false);
+    return true;
+  };
 
   const cancelEdit = () => {
     setSettings(baseline);
     setIsEditing(false);
   };
 
-  const finishEdit = () => {
+  const finishEdit = async () => {
+    const ok = await saveNow(settings);
+    if (!ok) return;
+
     setBaseline(settings);
     setIsEditing(false);
   };
@@ -170,7 +170,7 @@ export default function WebsiteServices() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Services Page</h1>
-          <p className="text-sm text-muted-foreground">Edit konten halaman publik /services (auto-save saat mode Edit).</p>
+          <p className="text-sm text-muted-foreground">Edit konten halaman publik /services.</p>
           <div className="mt-2 text-xs text-muted-foreground">
             {loading ? (
               "Loading..."
@@ -179,9 +179,9 @@ export default function WebsiteServices() {
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menyimpan...
               </span>
             ) : lastSavedAt ? (
-              <>Tersimpan {lastSavedAt.toLocaleTimeString()} (auto-save)</>
+              <>Tersimpan {lastSavedAt.toLocaleTimeString()}</>
             ) : (
-              "Auto-save aktif saat mode Edit."
+              "Klik Selesai untuk menyimpan perubahan."
             )}
           </div>
         </div>
@@ -380,7 +380,7 @@ export default function WebsiteServices() {
 
           {isEditing && !loading && (
             <div className="text-xs text-muted-foreground">
-              {hasChanges ? "Perubahan belum disimpan? Tenang, auto-save berjalan." : "Tidak ada perubahan."}
+              {hasChanges ? "Perubahan belum disimpan." : "Tidak ada perubahan."}
             </div>
           )}
         </CardContent>
