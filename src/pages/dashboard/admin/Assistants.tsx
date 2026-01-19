@@ -20,6 +20,7 @@ type AssistantRow = {
   email: string;
   phone: string | null;
   country: string | null;
+  status: string | null;
   assistId: string;
 };
 
@@ -57,7 +58,7 @@ export default function AdminAssistants() {
 
       const { data: profiles, error: profilesError } = await (supabase as any)
         .from("profiles")
-        .select("id, name, email, phone, country")
+        .select("id, name, email, phone, country, status")
         .in("id", assistIds)
         .order("created_at", { ascending: false });
 
@@ -111,16 +112,17 @@ export default function AdminAssistants() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Country</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No assistants found.
-                    </TableCell>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No assistants found.
+                      </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((row) => (
@@ -130,8 +132,9 @@ export default function AdminAssistants() {
                       <TableCell className="text-muted-foreground">{row.email}</TableCell>
                       <TableCell className="text-muted-foreground">{row.phone ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{row.country ?? "—"}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <TableCell className="text-muted-foreground">{row.status ?? "—"}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -175,7 +178,7 @@ export default function AdminAssistants() {
                             onClick={() => navigate(`/dashboard/admin/assistants/${row.id}`)}
                           >
                             <Eye className="h-4 w-4" />
-                            View Details
+                            View
                           </Button>
                         </div>
                       </TableCell>

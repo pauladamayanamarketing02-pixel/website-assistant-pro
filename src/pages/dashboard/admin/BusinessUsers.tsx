@@ -246,7 +246,7 @@ export default function AdminBusinessUsers() {
                     <TableHead className="min-w-[120px]">Contact</TableHead>
                     <TableHead className="min-w-[180px]">Email</TableHead>
                     <TableHead className="min-w-[100px]">Status</TableHead>
-                    <TableHead className="text-right min-w-[220px]">Action</TableHead>
+                    <TableHead className="text-center min-w-[220px]">Action</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -267,8 +267,8 @@ export default function AdminBusinessUsers() {
                         <TableCell>
                           <Badge variant="secondary">{statusLabel[row.status]}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
