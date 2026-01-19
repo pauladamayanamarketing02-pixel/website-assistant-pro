@@ -7,12 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
   TableBody,
   TableCell,
@@ -81,12 +75,8 @@ export default function AdminWebsiteBlog() {
     return posts.filter((p) => p.status === filter);
   }, [filter, posts]);
 
-  const handleAddNew = (type: "post" | "author" | "categories" | "tags") => {
-    if (type === "post") {
-      navigate("/dashboard/admin/website/blog/new");
-      return;
-    }
-    // TODO: routes for author/categories/tags management
+  const handleAddNewPost = () => {
+    navigate("/dashboard/admin/website/blog/new");
   };
 
   return (
@@ -97,20 +87,10 @@ export default function AdminWebsiteBlog() {
           <p className="text-sm text-muted-foreground">Manage blog posts: create, review, and publish.</p>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button">
-              <Plus className="h-4 w-4" />
-              Add New
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="z-50 bg-popover">
-            <DropdownMenuItem onClick={() => handleAddNew("post")}>Post</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleAddNew("author")}>Author</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleAddNew("categories")}>Categories</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleAddNew("tags")}>Tags</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button type="button" onClick={handleAddNewPost}>
+          <Plus className="h-4 w-4" />
+          Add New
+        </Button>
       </header>
 
       <Card>

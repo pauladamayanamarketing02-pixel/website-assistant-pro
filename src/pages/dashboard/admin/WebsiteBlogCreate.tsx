@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Eye, Save } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -17,16 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { RichTextEditor } from "@/components/dashboard/RichTextEditor";
 
 import type { Database } from "@/integrations/supabase/types";
 
 type BlogPostStatus = Database["public"]["Enums"]["blog_post_status"];
-
-type CategoryRow = Database["public"]["Tables"]["blog_categories"]["Row"];
-
-type TagRow = Database["public"]["Tables"]["blog_tags"]["Row"];
 
 const slugify = (input: string) =>
   input
@@ -54,9 +49,6 @@ export default function AdminWebsiteBlogCreate() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [categories, setCategories] = useState<CategoryRow[]>([]);
-  const [tags, setTags] = useState<TagRow[]>([]);
-
   const [authorId, setAuthorId] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
@@ -72,11 +64,6 @@ export default function AdminWebsiteBlogCreate() {
 
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
-
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-
-  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     const next = slugify(title);
@@ -98,17 +85,6 @@ export default function AdminWebsiteBlogCreate() {
         const { data: userData, error: userErr } = await supabase.auth.getUser();
         if (userErr) throw userErr;
         setAuthorId(userData.user?.id ?? null);
-
-        const [{ data: catData, error: catErr }, { data: tagData, error: tagErr }] = await Promise.all([
-          supabase.from("blog_categories").select("id, name, slug, is_locked, created_at").order("name"),
-          supabase.from("blog_tags").select("id, name, slug, created_at").order("name"),
-        ]);
-
-        if (catErr) throw catErr;
-        if (tagErr) throw tagErr;
-
-        setCategories((catData ?? []) as any);
-        setTags((tagData ?? []) as any);
       } catch (e: any) {
         toast({
           variant: "destructive",
@@ -121,38 +97,6 @@ export default function AdminWebsiteBlogCreate() {
     })();
   }, [toast]);
 
-  const toggleId = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
-
-  const ensureTagsExistAndReturnIds = async (raw: string): Promise<string[]> => {
-    const names = raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (names.length === 0) return [];
-
-    const newIds: string[] = [];
-
-    for (const name of names) {
-      const existing = tags.find((t) => t.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        newIds.push(existing.id);
-        continue;
-      }
-
-      const newSlug = slugify(name);
-      const { data, error } = await supabase
-        .from("blog_tags")
-        .insert({ name, slug: newSlug })
-        .select("id, name, slug, created_at")
-        .single();
-
-      if (error) throw error;
-      setTags((prev) => [...prev, data as any].sort((a: any, b: any) => String(a.name).localeCompare(String(b.name))));
-      newIds.push((data as any).id);
-    }
-
-    return newIds;
-  };
 
   const validate = () => {
     if (!authorId) {
@@ -173,10 +117,6 @@ export default function AdminWebsiteBlogCreate() {
     }
     if (!excerpt.trim()) {
       toast({ variant: "destructive", title: "Excerpt wajib diisi" });
-      return false;
-    }
-    if (selectedCategoryIds.length < 1) {
-      toast({ variant: "destructive", title: "Minimal pilih 1 kategori" });
       return false;
     }
     if (!metaTitle.trim()) {
@@ -204,52 +144,30 @@ export default function AdminWebsiteBlogCreate() {
 
     setSaving(true);
     try {
-      // allow quick tag add via input before saving
-      const createdTagIds = await ensureTagsExistAndReturnIds(tagInput);
-      const finalTagIds = Array.from(new Set([...selectedTagIds, ...createdTagIds]));
-
       const nowIso = new Date().toISOString();
-      const publishAtIso = nextStatus === "scheduled" ? new Date(publishAt).toISOString() : nextStatus === "published" ? nowIso : null;
+      const publishAtIso =
+        nextStatus === "scheduled"
+          ? new Date(publishAt).toISOString()
+          : nextStatus === "published"
+            ? nowIso
+            : null;
 
-      const { data: inserted, error: insertErr } = await supabase
-        .from("blog_posts")
-        .insert({
-          author_id: authorId as string,
-          title: title.trim(),
-          slug: slugify(slug),
-          content_html: contentHtml,
-          excerpt: excerpt.trim(),
-          featured_image_url: featuredImageUrl.trim() || null,
-          featured_image_alt: featuredImageAlt.trim() || null,
-          status: nextStatus,
-          publish_at: publishAtIso,
-          meta_title: metaTitle.trim(),
-          meta_description: metaDescription.trim(),
-          reading_time_minutes: estimateReadingTimeMinutes(contentHtml),
-        })
-        .select("id")
-        .single();
+      const { error: insertErr } = await supabase.from("blog_posts").insert({
+        author_id: authorId as string,
+        title: title.trim(),
+        slug: slugify(slug),
+        content_html: contentHtml,
+        excerpt: excerpt.trim(),
+        featured_image_url: featuredImageUrl.trim() || null,
+        featured_image_alt: featuredImageAlt.trim() || null,
+        status: nextStatus,
+        publish_at: publishAtIso,
+        meta_title: metaTitle.trim(),
+        meta_description: metaDescription.trim(),
+        reading_time_minutes: estimateReadingTimeMinutes(contentHtml),
+      });
 
       if (insertErr) throw insertErr;
-
-      const postId = inserted.id;
-
-      const links: PromiseLike<any>[] = [];
-      links.push(
-        supabase.from("blog_post_categories").insert(
-          selectedCategoryIds.map((categoryId) => ({ post_id: postId, category_id: categoryId }))
-        )
-      );
-
-      if (finalTagIds.length > 0) {
-        links.push(
-          supabase.from("blog_post_tags").insert(finalTagIds.map((tagId) => ({ post_id: postId, tag_id: tagId })))
-        );
-      }
-
-      const linkResults = await Promise.all(links as any);
-      const linkErr = (linkResults as any[]).find((r) => r?.error)?.error;
-      if (linkErr) throw linkErr;
 
       toast({ title: "Post tersimpan", description: `Status: ${nextStatus}` });
       navigate("/dashboard/admin/website/blog", { replace: true });
@@ -268,15 +186,16 @@ export default function AdminWebsiteBlogCreate() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground">Add New Post</h1>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Back">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-3xl font-bold text-foreground">Add New Post</h1>
+          </div>
           <p className="text-sm text-muted-foreground">Buat post blog (full page).</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
           <Button type="button" variant="outline" onClick={() => { void savePost("draft"); }} disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
             {saving ? "Saving..." : "Save Draft"}
@@ -357,7 +276,7 @@ export default function AdminWebsiteBlogCreate() {
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Status*</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as BlogPostStatus)}>
@@ -375,12 +294,6 @@ export default function AdminWebsiteBlogCreate() {
             </div>
 
             <div className="space-y-2">
-              <Label>Author</Label>
-              <Input value={authorId ? "(current user)" : "-"} disabled />
-              <p className="text-xs text-muted-foreground">Default mengikuti user yang login.</p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="publishAt">Publish Date & Time</Label>
               <Input
                 id="publishAt"
@@ -390,60 +303,6 @@ export default function AdminWebsiteBlogCreate() {
                 disabled={status !== "scheduled"}
               />
               <p className="text-xs text-muted-foreground">Aktif jika status Scheduled.</p>
-            </div>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-3">
-              <div>
-                <Label>Categories*</Label>
-                <p className="text-xs text-muted-foreground">Minimal 1 kategori wajib.</p>
-              </div>
-              <div className="grid gap-2 rounded-md border border-border p-3">
-                {categories.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Belum ada kategori.</div>
-                ) : (
-                  categories.map((c) => (
-                    <label key={c.id} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={selectedCategoryIds.includes(c.id)}
-                        onCheckedChange={() => setSelectedCategoryIds((prev) => toggleId(prev, c.id))}
-                      />
-                      <span>{c.name}</span>
-                    </label>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <Label>Tags (opsional)</Label>
-                <p className="text-xs text-muted-foreground">Pilih dari daftar, atau ketik baru (pisahkan dengan koma).</p>
-              </div>
-
-              <div className="space-y-2">
-                <Input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  placeholder="contoh: marketing, seo, tips"
-                />
-                <div className="grid gap-2 rounded-md border border-border p-3 max-h-[240px] overflow-auto">
-                  {tags.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">Belum ada tags.</div>
-                  ) : (
-                    tags.map((t) => (
-                      <label key={t.id} className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={selectedTagIds.includes(t.id)}
-                          onCheckedChange={() => setSelectedTagIds((prev) => toggleId(prev, t.id))}
-                        />
-                        <span>{t.name}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
             </div>
           </div>
 
