@@ -11,6 +11,9 @@ export type FooterLinkItem = {
 export type WebsiteLayoutSettings = {
   header: {
     brandName: string;
+    /** Optional logo URL (if set, replaces brandMarkText in UI). */
+    logoUrl?: string | null;
+    logoAlt?: string | null;
     brandMarkText: string;
     navLinks: NavLinkItem[];
     primaryCtaLabel: string;
@@ -37,6 +40,8 @@ export type WebsiteLayoutSettings = {
 export const defaultWebsiteLayoutSettings: WebsiteLayoutSettings = {
   header: {
     brandName: "EasyMarketingAssist",
+    logoUrl: null,
+    logoAlt: "EasyMarketingAssist logo",
     brandMarkText: "E",
     navLinks: [
       { href: "/", label: "Home" },
@@ -81,6 +86,8 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 
 const asString = (v: unknown, fallback: string) => (typeof v === "string" ? v : fallback);
 
+const asNullableString = (v: unknown, fallback: string | null) => (typeof v === "string" ? v : fallback);
+
 const asArray = <T>(v: unknown, fallback: T[]): T[] => (Array.isArray(v) ? (v as T[]) : fallback);
 
 export function sanitizeWebsiteLayoutSettings(value: unknown): WebsiteLayoutSettings {
@@ -117,6 +124,8 @@ export function sanitizeWebsiteLayoutSettings(value: unknown): WebsiteLayoutSett
   return {
     header: {
       brandName: asString((headerRaw as any).brandName, defaultWebsiteLayoutSettings.header.brandName),
+      logoUrl: asNullableString((headerRaw as any).logoUrl, defaultWebsiteLayoutSettings.header.logoUrl ?? null),
+      logoAlt: asNullableString((headerRaw as any).logoAlt, defaultWebsiteLayoutSettings.header.logoAlt ?? null),
       brandMarkText: asString((headerRaw as any).brandMarkText, defaultWebsiteLayoutSettings.header.brandMarkText),
       navLinks: navLinks.length ? navLinks : defaultWebsiteLayoutSettings.header.navLinks,
       primaryCtaLabel: asString((headerRaw as any).primaryCtaLabel, defaultWebsiteLayoutSettings.header.primaryCtaLabel),

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { WebsiteMediaPickerDialog } from "@/components/media/WebsiteMediaPickerDialog";
 import { useToast } from "@/hooks/use-toast";
 
 import {
@@ -27,6 +28,8 @@ export default function WebsiteLayout() {
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  const [logoPickerOpen, setLogoPickerOpen] = useState(false);
 
   const [settings, setSettings] = useState<WebsiteLayoutSettings>(defaultWebsiteLayoutSettings);
   const [baseline, setBaseline] = useState<WebsiteLayoutSettings>(defaultWebsiteLayoutSettings);
@@ -200,7 +203,52 @@ export default function WebsiteLayout() {
             <Input value={settings.header.brandName} onChange={(e) => updateHeader({ brandName: e.target.value })} disabled={!canSave} />
           </div>
           <div className="grid gap-2">
-            <Label>Brand Mark (1-2 huruf)</Label>
+            <Label>Logo</Label>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="h-12 w-12 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
+                {settings.header.logoUrl ? (
+                  <img
+                    src={settings.header.logoUrl}
+                    alt={settings.header.logoAlt ?? settings.header.brandName}
+                    loading="lazy"
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-muted-foreground">No logo</span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => setLogoPickerOpen(true)} disabled={!canSave}>
+                  Pilih / Upload Logo
+                </Button>
+                {settings.header.logoUrl ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => updateHeader({ logoUrl: null })}
+                    disabled={!canSave}
+                  >
+                    Hapus Logo
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Logo ini akan tampil di Navbar (halaman utama & halaman publik).</p>
+          </div>
+
+          <WebsiteMediaPickerDialog
+            open={logoPickerOpen}
+            onOpenChange={setLogoPickerOpen}
+            title="Pilih Logo"
+            accept="image/*"
+            onPick={(pick) => {
+              updateHeader({ logoUrl: pick.url, logoAlt: pick.name ?? settings.header.brandName });
+            }}
+          />
+
+          <div className="grid gap-2">
+            <Label>Brand Mark (fallback 1-2 huruf)</Label>
             <Input
               value={settings.header.brandMarkText}
               onChange={(e) => updateHeader({ brandMarkText: e.target.value })}
