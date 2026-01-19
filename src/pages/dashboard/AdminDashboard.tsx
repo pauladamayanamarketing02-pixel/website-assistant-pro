@@ -33,6 +33,7 @@ import AdminWebsiteBlog from "./admin/WebsiteBlog";
 import AdminWebsiteBlogCreate from "./admin/WebsiteBlogCreate";
 import AdminWebsiteBlogEdit from "./admin/WebsiteBlogEdit";
 import AdminWebsiteMedia from "./admin/WebsiteMedia";
+import AdminWebsiteContact from "./admin/WebsiteContact";
 import AdminBusinessUsers from "./admin/BusinessUsers";
 import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
 import AdminAssistants from "./admin/Assistants";
@@ -164,7 +165,7 @@ export default function AdminDashboard() {
               <Route path="website/blog/new" element={<AdminWebsiteBlogCreate />} />
               <Route path="website/blog/:id" element={<AdminWebsiteBlogEdit />} />
               <Route path="website/media" element={<AdminWebsiteMedia />} />
-              <Route path="website/contact" element={<AdminPlaceholder title="Contact" />} />
+              <Route path="website/contact" element={<AdminWebsiteContact />} />
               <Route path="website/services" element={<AdminPlaceholder title="Services" />} />
               <Route path="website/layout" element={<AdminPlaceholder title="Layout" />} />
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Mail, Phone, MessageCircle, MapPin, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { PublicLayout } from '@/components/layout/PublicLayout';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 const contactSchema = z.object({
@@ -17,7 +18,16 @@ const contactSchema = z.object({
   message: z.string().trim().min(1, 'Message is required').max(2000, 'Message must be less than 2000 characters'),
 });
 
-const contactInfo = [
+const SETTINGS_KEY = 'contact_other_ways';
+
+type ContactInfoItem = {
+  icon: typeof Mail;
+  title: string;
+  detail: string;
+  description: string;
+};
+
+const defaultContactInfo: ContactInfoItem[] = [
   {
     icon: Mail,
     title: 'Email Us',
@@ -44,6 +54,37 @@ const contactInfo = [
   },
 ];
 
+const iconByKey = {
+  email: Mail,
+  phone: Phone,
+  whatsapp: MessageCircle,
+  location: MapPin,
+} as const;
+
+function parseContactInfo(value: unknown): ContactInfoItem[] {
+  if (!Array.isArray(value)) return defaultContactInfo;
+
+  const normalized = value
+    .map((raw) => {
+      const obj = raw as any;
+      const key = obj?.key as keyof typeof iconByKey | undefined;
+      const Icon = key ? iconByKey[key] : undefined;
+      if (!Icon) return null;
+
+      return {
+        icon: Icon,
+        title: typeof obj.title === 'string' ? obj.title : '',
+        detail: typeof obj.detail === 'string' ? obj.detail : '',
+        description: typeof obj.description === 'string' ? obj.description : '',
+      } satisfies ContactInfoItem;
+    })
+    .filter(Boolean) as ContactInfoItem[];
+
+  // If malformed, fallback
+  return normalized.length ? normalized : defaultContactInfo;
+}
+
+
 export default function Contact() {
   const [formData, setFormData] = useState({
     name: '',
@@ -53,7 +94,21 @@ export default function Contact() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contactInfo, setContactInfo] = useState<ContactInfoItem[]>(defaultContactInfo);
   const { toast } = useToast();
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await (supabase as any)
+        .from('website_settings')
+        .select('value')
+        .eq('key', SETTINGS_KEY)
+        .maybeSingle();
+
+      if (!error) setContactInfo(parseContactInfo(data?.value));
+    })();
+  }, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

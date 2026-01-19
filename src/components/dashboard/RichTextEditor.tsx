@@ -647,7 +647,7 @@ export function RichTextEditor({
           onKeyUp={() => refreshSelectionState()}
           onMouseUp={() => refreshSelectionState()}
           dir="ltr"
-          className={`p-4 focus:outline-none prose prose-sm max-w-none ${isFullscreen ? 'flex-1 min-h-0 overflow-y-auto' : 'min-h-[400px] max-h-[60vh] overflow-y-auto'} ${!isEditing ? 'bg-muted/10 cursor-not-allowed' : 'bg-background'}`}
+          className={`rte-content p-4 focus:outline-none max-w-none ${isFullscreen ? 'flex-1 min-h-0 overflow-y-auto' : 'min-h-[400px] max-h-[60vh] overflow-y-auto'} ${!isEditing ? 'bg-muted/10 cursor-not-allowed' : 'bg-background'}`}
           style={{
             wordWrap: 'break-word',
             overflowWrap: 'break-word',
