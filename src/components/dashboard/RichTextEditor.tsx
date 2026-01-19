@@ -490,7 +490,7 @@ export function RichTextEditor({
             disabled={!isEditing}
             onMouseDown={(e) => {
               e.preventDefault();
-              execCommand('formatBlock', '<h1>');
+              execCommand('formatBlock', 'H1');
             }}
             onPressedChange={() => {
               // noop (handled in onMouseDown to preserve selection)
@@ -506,7 +506,7 @@ export function RichTextEditor({
             disabled={!isEditing}
             onMouseDown={(e) => {
               e.preventDefault();
-              execCommand('formatBlock', '<h2>');
+              execCommand('formatBlock', 'H2');
             }}
             onPressedChange={() => {
               // noop
@@ -522,7 +522,7 @@ export function RichTextEditor({
             disabled={!isEditing}
             onMouseDown={(e) => {
               e.preventDefault();
-              execCommand('formatBlock', '<h3>');
+              execCommand('formatBlock', 'H3');
             }}
             onPressedChange={() => {
               // noop
@@ -538,7 +538,7 @@ export function RichTextEditor({
             disabled={!isEditing}
             onMouseDown={(e) => {
               e.preventDefault();
-              execCommand('formatBlock', '<p>');
+              execCommand('formatBlock', 'P');
             }}
             onPressedChange={() => {
               // noop
@@ -574,10 +574,10 @@ export function RichTextEditor({
           </Toggle>
 
           {/* Quote & Code */}
-          <Toggle size="sm" aria-label="Quote" onPressedChange={() => execCommand('formatBlock', '<blockquote>')}>
+          <Toggle size="sm" aria-label="Quote" onPressedChange={() => execCommand('formatBlock', 'BLOCKQUOTE')}>
             <Quote className="h-4 w-4" />
           </Toggle>
-          <Toggle size="sm" aria-label="Code" onPressedChange={() => execCommand('formatBlock', '<pre>')}>
+          <Toggle size="sm" aria-label="Code" onPressedChange={() => execCommand('formatBlock', 'PRE')}>
             <Code className="h-4 w-4" />
           </Toggle>
 
