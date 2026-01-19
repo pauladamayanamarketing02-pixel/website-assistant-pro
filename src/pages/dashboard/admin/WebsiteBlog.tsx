@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ const statusLabel: Record<BlogStatus, string> = {
 };
 
 export default function AdminWebsiteBlog() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<"all" | BlogStatus>("all");
 
   const posts: BlogPostRow[] = useMemo(
@@ -80,8 +82,11 @@ export default function AdminWebsiteBlog() {
   }, [filter, posts]);
 
   const handleAddNew = (type: "post" | "author" | "categories" | "tags") => {
-    // TODO: connect to real forms / routes
-    void type;
+    if (type === "post") {
+      navigate("/dashboard/admin/website/blog/new");
+      return;
+    }
+    // TODO: routes for author/categories/tags management
   };
 
   return (
