@@ -33,6 +33,8 @@ import {
   Check,
   Pencil,
   Image,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
@@ -43,7 +45,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { WebsiteMediaPickerDialog } from '@/components/media/WebsiteMediaPickerDialog';
-
 
 interface RichTextEditorProps {
   value: string;
@@ -118,7 +119,7 @@ export function RichTextEditor({
   const [editingTitle, setEditingTitle] = useState(false);
   const [localTitle, setLocalTitle] = useState(title);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
-
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
@@ -220,7 +221,7 @@ export function RichTextEditor({
   };
 
   return (
-    <div className="space-y-4">
+    <div className={isFullscreen ? 'fixed inset-0 z-50 bg-background p-4 flex flex-col' : 'space-y-4'}>
       {showTopBar && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -290,7 +291,9 @@ export function RichTextEditor({
         </div>
       )}
 
-      <div className="border rounded-lg bg-background overflow-hidden">
+      <div
+        className={`border rounded-lg bg-background overflow-hidden ${isFullscreen ? 'flex-1 flex flex-col shadow-lg' : ''}`}
+      >
         {/* Toolbar */}
         <div
           className={`border-b p-2 flex flex-wrap items-center gap-1 bg-muted/30 transition-opacity ${!isEditing ? 'opacity-50 pointer-events-none' : ''}`}
@@ -404,16 +407,16 @@ export function RichTextEditor({
           <Separator orientation="vertical" className="h-6 mx-1" />
 
           {/* Headings */}
-          <Toggle size="sm" aria-label="Heading 1" onPressedChange={() => execCommand('formatBlock', 'h1')}>
+          <Toggle size="sm" aria-label="Heading 1" onPressedChange={() => execCommand('formatBlock', '<h1>')}>
             <Heading1 className="h-4 w-4" />
           </Toggle>
-          <Toggle size="sm" aria-label="Heading 2" onPressedChange={() => execCommand('formatBlock', 'h2')}>
+          <Toggle size="sm" aria-label="Heading 2" onPressedChange={() => execCommand('formatBlock', '<h2>')}>
             <Heading2 className="h-4 w-4" />
           </Toggle>
-          <Toggle size="sm" aria-label="Heading 3" onPressedChange={() => execCommand('formatBlock', 'h3')}>
+          <Toggle size="sm" aria-label="Heading 3" onPressedChange={() => execCommand('formatBlock', '<h3>')}>
             <Heading3 className="h-4 w-4" />
           </Toggle>
-          <Toggle size="sm" aria-label="Paragraph" onPressedChange={() => execCommand('formatBlock', 'p')}>
+          <Toggle size="sm" aria-label="Paragraph" onPressedChange={() => execCommand('formatBlock', '<p>')}>
             <Type className="h-4 w-4" />
           </Toggle>
 
@@ -444,10 +447,10 @@ export function RichTextEditor({
           </Toggle>
 
           {/* Quote & Code */}
-          <Toggle size="sm" aria-label="Quote" onPressedChange={() => execCommand('formatBlock', 'blockquote')}>
+          <Toggle size="sm" aria-label="Quote" onPressedChange={() => execCommand('formatBlock', '<blockquote>')}>
             <Quote className="h-4 w-4" />
           </Toggle>
-          <Toggle size="sm" aria-label="Code" onPressedChange={() => execCommand('formatBlock', 'pre')}>
+          <Toggle size="sm" aria-label="Code" onPressedChange={() => execCommand('formatBlock', '<pre>')}>
             <Code className="h-4 w-4" />
           </Toggle>
 
@@ -542,6 +545,21 @@ export function RichTextEditor({
           <Toggle size="sm" aria-label="Remove Formatting" onPressedChange={() => execCommand('removeFormat')}>
             <RemoveFormatting className="h-4 w-4" />
           </Toggle>
+
+          <Separator orientation="vertical" className="h-6 mx-1" />
+
+          {/* Fullscreen */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => setIsFullscreen((v) => !v)}
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
         </div>
 
         {enableImageInsert && (
@@ -563,7 +581,7 @@ export function RichTextEditor({
           contentEditable={isEditing}
           onInput={handleInput}
           dir="ltr"
-          className={`min-h-[400px] p-4 focus:outline-none prose prose-sm max-w-none ${!isEditing ? 'bg-muted/10 cursor-not-allowed' : 'bg-background'}`}
+          className={`p-4 focus:outline-none prose prose-sm max-w-none ${isFullscreen ? 'flex-1 min-h-0 overflow-y-auto' : 'min-h-[400px] max-h-[60vh] overflow-y-auto'} ${!isEditing ? 'bg-muted/10 cursor-not-allowed' : 'bg-background'}`}
           style={{
             wordWrap: 'break-word',
             overflowWrap: 'break-word',
