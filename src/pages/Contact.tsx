@@ -1,22 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Mail, Phone, MessageCircle, MapPin, Send } from 'lucide-react';
+import { ArrowRight, Mail, Phone, MessageCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { supabase } from '@/integrations/supabase/client';
-import { z } from 'zod';
 
-const contactSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
-  email: z.string().trim().email('Please enter a valid email').max(255, 'Email must be less than 255 characters'),
-  subject: z.string().trim().min(1, 'Subject is required').max(200, 'Subject must be less than 200 characters'),
-  message: z.string().trim().min(1, 'Message is required').max(2000, 'Message must be less than 2000 characters'),
-});
+import { ContactMessageForm } from '@/components/contact/ContactMessageForm';
 
 const SETTINGS_KEY = 'contact_other_ways';
 
@@ -116,14 +107,6 @@ function parseContactInfo(value: unknown): ContactInfoItem[] {
 
 
 export default function Contact() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [contactInfo, setContactInfo] = useState<ContactInfoItem[]>(defaultContactInfo);
   const { toast } = useToast();
 
@@ -139,57 +122,6 @@ export default function Contact() {
     })();
   }, []);
 
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrors({});
-
-    const result = contactSchema.safeParse(formData);
-
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach((error) => {
-        if (error.path[0]) {
-          fieldErrors[error.path[0] as string] = error.message;
-        }
-      });
-      setErrors(fieldErrors);
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const payload = {
-        name: result.data.name,
-        email: result.data.email,
-        subject: result.data.subject,
-        message: result.data.message,
-        source: "contact_page",
-        status: "new",
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      };
-
-      const { error } = await (supabase as any).from("website_inquiries").insert(payload);
-      if (error) throw error;
-
-      toast({
-        title: "Message sent!",
-        description: "We\"ll get back to you as soon as possible.",
-      });
-
-      setFormData({ name: "", email: "", subject: "", message: "" });
-    } catch (err) {
-      console.error("Contact submit error:", err);
-      toast({
-        title: "Failed to send",
-        description: "Please try again in a moment.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <PublicLayout>
@@ -212,70 +144,8 @@ export default function Contact() {
         <div className="container">
           <div className="grid gap-12 lg:grid-cols-2">
             {/* Contact Form */}
-            <Card className="shadow-soft animate-fade-in">
-              <CardHeader>
-                <CardTitle className="text-2xl">Send Us a Message</CardTitle>
-                <CardDescription>
-                  Fill out the form below and we'll get back to you within 24 hours.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input
-                        id="name"
-                        placeholder="Your name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className={errors.name ? 'border-destructive' : ''}
-                      />
-                      {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className={errors.email ? 'border-destructive' : ''}
-                      />
-                      {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
-                    <Input
-                      id="subject"
-                      placeholder="What's this about?"
-                      value={formData.subject}
-                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                      className={errors.subject ? 'border-destructive' : ''}
-                    />
-                    {errors.subject && <p className="text-sm text-destructive">{errors.subject}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Message</Label>
-                    <Textarea
-                      id="message"
-                      placeholder="Tell us how we can help..."
-                      rows={5}
-                      value={formData.message}
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      className={errors.message ? 'border-destructive' : ''}
-                    />
-                    {errors.message && <p className="text-sm text-destructive">{errors.message}</p>}
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? 'Sending...' : 'Send Message'}
-                    <Send className="ml-2 h-4 w-4" />
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+            <ContactMessageForm source="contact_page" />
+
 
             {/* Contact Info */}
             <div className="space-y-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
