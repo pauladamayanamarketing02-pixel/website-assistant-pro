@@ -750,6 +750,54 @@ export type Database = {
         }
         Relationships: []
       }
+      task_recurring_rules: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          deadline_day: number
+          description: string | null
+          file_url: string | null
+          id: string
+          is_active: boolean
+          platform: Database["public"]["Enums"]["social_media_platform"] | null
+          title: string
+          type: Database["public"]["Enums"]["task_type"] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          deadline_day: number
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean
+          platform?: Database["public"]["Enums"]["social_media_platform"] | null
+          title: string
+          type?: Database["public"]["Enums"]["task_type"] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          deadline_day?: number
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean
+          platform?: Database["public"]["Enums"]["social_media_platform"] | null
+          title?: string
+          type?: Database["public"]["Enums"]["task_type"] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_work_logs: {
         Row: {
           created_at: string
@@ -807,6 +855,7 @@ export type Database = {
           id: string
           notes: string | null
           platform: Database["public"]["Enums"]["social_media_platform"] | null
+          recurring_rule_id: string | null
           status: Database["public"]["Enums"]["task_status"] | null
           task_number: number | null
           title: string
@@ -823,6 +872,7 @@ export type Database = {
           id?: string
           notes?: string | null
           platform?: Database["public"]["Enums"]["social_media_platform"] | null
+          recurring_rule_id?: string | null
           status?: Database["public"]["Enums"]["task_status"] | null
           task_number?: number | null
           title: string
@@ -839,6 +889,7 @@ export type Database = {
           id?: string
           notes?: string | null
           platform?: Database["public"]["Enums"]["social_media_platform"] | null
+          recurring_rule_id?: string | null
           status?: Database["public"]["Enums"]["task_status"] | null
           task_number?: number | null
           title?: string
@@ -1173,6 +1224,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_recurring_tasks: { Args: never; Returns: number }
       get_assist_accounts: {
         Args: never
         Returns: {
