@@ -1015,6 +1015,45 @@ export type Database = {
         }
         Relationships: []
       }
+      website_inquiries: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip: unknown
+          message: string
+          name: string
+          source: string
+          status: string
+          subject: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip?: unknown
+          message: string
+          name: string
+          source?: string
+          status?: string
+          subject: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip?: unknown
+          message?: string
+          name?: string
+          source?: string
+          status?: string
+          subject?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       website_media_items: {
         Row: {
           alt_text: string | null
