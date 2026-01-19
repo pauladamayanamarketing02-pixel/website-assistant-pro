@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Eye, RefreshCw, CheckCircle2, Send } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Eye, RefreshCw, CheckCircle2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,9 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 
 type InquiryStatus = "new" | "resolved" | "all" | (string & {});
@@ -47,15 +44,6 @@ type InquiryRow = {
   source: string;
 };
 
-type SupportSource = "contact" | "business_support" | "assistant_support";
-
-type SupportQuickFormProps = {
-  title: string;
-  description: string;
-  source: SupportSource;
-  onCreated: () => void;
-};
-
 function formatDateTime(input: string) {
   const d = new Date(input);
   if (Number.isNaN(d.getTime())) return input;
@@ -69,108 +57,103 @@ function statusBadgeVariant(status: string): "default" | "secondary" | "destruct
   return "outline";
 }
 
-function SupportQuickCreateForm({ title, description, source, onCreated }: SupportQuickFormProps) {
-  const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
+type InquiryTableProps = {
+  rows: InquiryRow[];
+  emptyLabel: string;
+  onOpen: (row: InquiryRow) => void;
+  selected: InquiryRow | null;
+  onMarkResolved: (id: string) => void;
+};
 
-  const canSubmit = name.trim() && email.trim() && subject.trim() && message.trim();
-
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit) return;
-
-    try {
-      setSubmitting(true);
-
-      const { error } = await (supabase as any)
-        .from("website_inquiries")
-        .insert({
-          name: name.trim(),
-          email: email.trim(),
-          subject: subject.trim(),
-          message: message.trim(),
-          status: "new",
-          source,
-        });
-
-      if (error) throw error;
-
-      setName("");
-      setEmail("");
-      setSubject("");
-      setMessage("");
-
-      toast({
-        title: "Submitted",
-        description: "Your support message has been added to the inbox.",
-      });
-
-      onCreated();
-    } catch (err) {
-      console.error("Error creating support message:", err);
-      toast({
-        title: "Failed",
-        description: "Could not submit the message. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+function InquiryTable({ rows, emptyLabel, onOpen, selected, onMarkResolved }: InquiryTableProps) {
   return (
-    <Card>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-base">{title}</CardTitle>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-3" onSubmit={onSubmit}>
-          <div className="grid gap-3">
-            <div className="space-y-1">
-              <Label htmlFor={`${source}-name`}>Name</Label>
-              <Input id={`${source}-name`} value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor={`${source}-email`}>Email</Label>
-              <Input
-                id={`${source}-email`}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor={`${source}-subject`}>Subject</Label>
-              <Input
-                id={`${source}-subject`}
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Subject"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor={`${source}-message`}>Message</Label>
-              <Textarea
-                id={`${source}-message`}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Write the message…"
-                rows={6}
-              />
-            </div>
-          </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Received</TableHead>
+          <TableHead>Name</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Subject</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Action</TableHead>
+        </TableRow>
+      </TableHeader>
 
-          <Button type="submit" className="w-full" disabled={!canSubmit || submitting}>
-            <Send className="h-4 w-4" />
-            Submit
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <TableBody>
+        {rows.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={6} className="text-center text-muted-foreground">
+              {emptyLabel}
+            </TableCell>
+          </TableRow>
+        ) : (
+          rows.map((r) => (
+            <TableRow key={r.id}>
+              <TableCell className="text-muted-foreground">{formatDateTime(r.created_at)}</TableCell>
+              <TableCell className="font-medium">{r.name}</TableCell>
+              <TableCell className="text-muted-foreground">{r.email}</TableCell>
+              <TableCell className="text-muted-foreground">{r.subject}</TableCell>
+              <TableCell>
+                <Badge variant={statusBadgeVariant(r.status)}>{r.status}</Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" onClick={() => onOpen(r)}>
+                      <Eye className="h-4 w-4" />
+                      View
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Inquiry Details</DialogTitle>
+                      <DialogDescription>
+                        {r.email} • {formatDateTime(r.created_at)} • source: {r.source}
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-1">
+                        <div className="text-sm font-medium text-foreground">Subject</div>
+                        <div className="text-sm text-muted-foreground">{r.subject}</div>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="text-sm font-medium text-foreground">Message</div>
+                        <div className="whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-3 text-sm text-foreground">
+                          {r.message}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-medium text-foreground">Status:</div>
+                        <Badge variant={statusBadgeVariant(selected?.status ?? r.status)}>
+                          {selected?.id === r.id ? selected.status : r.status}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => onMarkResolved(r.id)}
+                        disabled={
+                          String((selected?.id === r.id ? selected.status : r.status)).toLowerCase() === "resolved"
+                        }
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Mark Resolved
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -221,6 +204,16 @@ export default function AdminSupport() {
     return rows.filter((r) => String(r.status).toLowerCase() === needle);
   }, [rows, statusFilter]);
 
+  const websiteRows = useMemo(() => filtered.filter((r) => String(r.source).toLowerCase() === "contact"), [filtered]);
+  const businessSupportRows = useMemo(
+    () => filtered.filter((r) => String(r.source).toLowerCase() === "business_support"),
+    [filtered]
+  );
+  const assistantSupportRows = useMemo(
+    () => filtered.filter((r) => String(r.source).toLowerCase() === "assistant_support"),
+    [filtered]
+  );
+
   const markResolved = async (id: string) => {
     try {
       const { error } = await (supabase as any).from("website_inquiries").update({ status: "resolved" }).eq("id", id);
@@ -269,123 +262,65 @@ export default function AdminSupport() {
         </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
-        <Card className="lg:col-span-1">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-base">Website Inquiries</CardTitle>
-            <p className="text-sm text-muted-foreground">Click “View” to open details and mark as resolved.</p>
-          </CardHeader>
+      <Card>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-base">Business Support</CardTitle>
+          <p className="text-sm text-muted-foreground">Support messages from business accounts (source: business_support).</p>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="py-8 text-sm text-muted-foreground">Loading business support...</div>
+          ) : (
+            <InquiryTable
+              rows={businessSupportRows}
+              emptyLabel="No business support messages."
+              onOpen={setSelected}
+              selected={selected}
+              onMarkResolved={markResolved}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-          <CardContent>
-            {loading ? (
-              <div className="py-8 text-sm text-muted-foreground">Loading inquiries...</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Received</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
+      <Card>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-base">Website Inquiries</CardTitle>
+          <p className="text-sm text-muted-foreground">Website contact messages (source: contact).</p>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="py-8 text-sm text-muted-foreground">Loading inquiries...</div>
+          ) : (
+            <InquiryTable
+              rows={websiteRows}
+              emptyLabel="No website inquiries."
+              onOpen={setSelected}
+              selected={selected}
+              onMarkResolved={markResolved}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        No inquiries.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filtered.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="text-muted-foreground">{formatDateTime(r.created_at)}</TableCell>
-                        <TableCell className="font-medium">{r.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{r.email}</TableCell>
-                        <TableCell className="text-muted-foreground">{r.subject}</TableCell>
-                        <TableCell>
-                          <Badge variant={statusBadgeVariant(r.status)}>{r.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" onClick={() => setSelected(r)}>
-                                <Eye className="h-4 w-4" />
-                                View
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle>Inquiry Details</DialogTitle>
-                                <DialogDescription>
-                                  {r.email} • {formatDateTime(r.created_at)} • source: {r.source}
-                                </DialogDescription>
-                              </DialogHeader>
-
-                              <div className="space-y-4">
-                                <div className="flex flex-col gap-1">
-                                  <div className="text-sm font-medium text-foreground">Subject</div>
-                                  <div className="text-sm text-muted-foreground">{r.subject}</div>
-                                </div>
-
-                                <div className="flex flex-col gap-1">
-                                  <div className="text-sm font-medium text-foreground">Message</div>
-                                  <div className="whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-3 text-sm text-foreground">
-                                    {r.message}
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <div className="text-sm font-medium text-foreground">Status:</div>
-                                  <Badge variant={statusBadgeVariant(selected?.status ?? r.status)}>
-                                    {selected?.id === r.id ? selected.status : r.status}
-                                  </Badge>
-                                </div>
-                              </div>
-
-                              <DialogFooter className="gap-2 sm:gap-0">
-                                <Button
-                                  type="button"
-                                  variant="default"
-                                  onClick={() => markResolved(r.id)}
-                                  disabled={
-                                    String((selected?.id === r.id ? selected.status : r.status)).toLowerCase() ===
-                                    "resolved"
-                                  }
-                                >
-                                  <CheckCircle2 className="h-4 w-4" />
-                                  Mark Resolved
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        <SupportQuickCreateForm
-          title="Business Support"
-          description="Create a support message on behalf of a business account."
-          source="business_support"
-          onCreated={fetchInquiries}
-        />
-
-        <SupportQuickCreateForm
-          title="Assistant Support"
-          description="Create a support message on behalf of an assistant account."
-          source="assistant_support"
-          onCreated={fetchInquiries}
-        />
-      </div>
+      <Card>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-base">Assistant Support</CardTitle>
+          <p className="text-sm text-muted-foreground">Support messages from assistant accounts (source: assistant_support).</p>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="py-8 text-sm text-muted-foreground">Loading assistant support...</div>
+          ) : (
+            <InquiryTable
+              rows={assistantSupportRows}
+              emptyLabel="No assistant support messages."
+              onOpen={setSelected}
+              selected={selected}
+              onMarkResolved={markResolved}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
