@@ -121,6 +121,31 @@ export function RichTextEditor({
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const [selectionInEditor, setSelectionInEditor] = useState(false);
+  const [activeBlock, setActiveBlock] = useState<string>('p');
+
+  const normalizeFormatBlock = (raw: string) => raw.toLowerCase().replace(/[<>]/g, '').trim();
+
+  const refreshSelectionState = () => {
+    const el = editorRef.current;
+    if (!el) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      setSelectionInEditor(false);
+      return;
+    }
+
+    const node = sel.anchorNode;
+    const inside = !!(node && el.contains(node));
+    setSelectionInEditor(inside);
+
+    if (inside) {
+      const fmt = (document.queryCommandValue('formatBlock') as string) || 'p';
+      setActiveBlock(normalizeFormatBlock(fmt));
+    }
+  };
+
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
       editorRef.current.innerHTML = value;
@@ -131,11 +156,20 @@ export function RichTextEditor({
     setLocalTitle(title);
   }, [title]);
 
+  useEffect(() => {
+    const handler = () => refreshSelectionState();
+    document.addEventListener('selectionchange', handler);
+    return () => document.removeEventListener('selectionchange', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const execCommand = (command: string, commandValue?: string) => {
     editorRef.current?.focus();
     document.execCommand(command, false, commandValue);
     updateContent();
+    refreshSelectionState();
   };
+
 
   const escapeAttr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -407,16 +441,40 @@ export function RichTextEditor({
           <Separator orientation="vertical" className="h-6 mx-1" />
 
           {/* Headings */}
-          <Toggle size="sm" aria-label="Heading 1" onPressedChange={() => execCommand('formatBlock', '<h1>')}>
+          <Toggle
+            size="sm"
+            aria-label="Heading 1"
+            pressed={selectionInEditor && activeBlock === 'h1'}
+            disabled={!isEditing || !selectionInEditor}
+            onPressedChange={() => execCommand('formatBlock', '<h1>')}
+          >
             <Heading1 className="h-4 w-4" />
           </Toggle>
-          <Toggle size="sm" aria-label="Heading 2" onPressedChange={() => execCommand('formatBlock', '<h2>')}>
+          <Toggle
+            size="sm"
+            aria-label="Heading 2"
+            pressed={selectionInEditor && activeBlock === 'h2'}
+            disabled={!isEditing || !selectionInEditor}
+            onPressedChange={() => execCommand('formatBlock', '<h2>')}
+          >
             <Heading2 className="h-4 w-4" />
           </Toggle>
-          <Toggle size="sm" aria-label="Heading 3" onPressedChange={() => execCommand('formatBlock', '<h3>')}>
+          <Toggle
+            size="sm"
+            aria-label="Heading 3"
+            pressed={selectionInEditor && activeBlock === 'h3'}
+            disabled={!isEditing || !selectionInEditor}
+            onPressedChange={() => execCommand('formatBlock', '<h3>')}
+          >
             <Heading3 className="h-4 w-4" />
           </Toggle>
-          <Toggle size="sm" aria-label="Paragraph" onPressedChange={() => execCommand('formatBlock', '<p>')}>
+          <Toggle
+            size="sm"
+            aria-label="Paragraph"
+            pressed={selectionInEditor && (activeBlock === 'p' || activeBlock === 'div')}
+            disabled={!isEditing || !selectionInEditor}
+            onPressedChange={() => execCommand('formatBlock', '<p>')}
+          >
             <Type className="h-4 w-4" />
           </Toggle>
 
@@ -580,6 +638,14 @@ export function RichTextEditor({
           ref={editorRef}
           contentEditable={isEditing}
           onInput={handleInput}
+          onFocus={() => {
+            refreshSelectionState();
+          }}
+          onBlur={() => {
+            setSelectionInEditor(false);
+          }}
+          onKeyUp={() => refreshSelectionState()}
+          onMouseUp={() => refreshSelectionState()}
           dir="ltr"
           className={`p-4 focus:outline-none prose prose-sm max-w-none ${isFullscreen ? 'flex-1 min-h-0 overflow-y-auto' : 'min-h-[400px] max-h-[60vh] overflow-y-auto'} ${!isEditing ? 'bg-muted/10 cursor-not-allowed' : 'bg-background'}`}
           style={{
