@@ -46,12 +46,17 @@ export function sanitizeItems(value: unknown): ContactItem[] {
     const obj = raw as any;
     if (!["email", "phone", "whatsapp", "location"].includes(obj.key)) continue;
 
+    const isWhatsapp = obj.key === "whatsapp";
+
     const item: ContactItem = {
       key: obj.key,
       title: typeof obj.title === "string" ? obj.title : "",
       detail: typeof obj.detail === "string" ? obj.detail : "",
       description: typeof obj.description === "string" ? obj.description : "",
-      openingMessage: typeof obj.openingMessage === "string" ? obj.openingMessage : undefined,
+      // Always keep the WhatsApp openingMessage field present (at least as empty string)
+      // so the admin UI is stable and saves a consistent shape to the database.
+      openingMessage:
+        typeof obj.openingMessage === "string" ? obj.openingMessage : isWhatsapp ? "" : undefined,
     };
     byKey.set(item.key, item);
   }
