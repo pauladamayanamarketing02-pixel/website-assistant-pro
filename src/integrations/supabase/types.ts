@@ -14,6 +14,198 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_locked: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      blog_post_categories: {
+        Row: {
+          category_id: string
+          created_at: string
+          post_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          post_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_post_categories_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_post_tags: {
+        Row: {
+          created_at: string
+          post_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_tags_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_post_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "blog_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_posts: {
+        Row: {
+          allow_comments: boolean
+          author_id: string
+          canonical_url: string | null
+          content_html: string
+          content_type: Database["public"]["Enums"]["blog_content_type"]
+          created_at: string
+          deleted_at: string | null
+          excerpt: string | null
+          featured: boolean
+          featured_image_alt: string | null
+          featured_image_url: string | null
+          focus_keyword: string | null
+          id: string
+          language: string | null
+          meta_description: string | null
+          meta_title: string | null
+          no_index: boolean
+          publish_at: string | null
+          reading_time_minutes: number | null
+          slug: string
+          status: Database["public"]["Enums"]["blog_post_status"]
+          title: string
+          updated_at: string
+          visibility: Database["public"]["Enums"]["blog_visibility"]
+        }
+        Insert: {
+          allow_comments?: boolean
+          author_id: string
+          canonical_url?: string | null
+          content_html: string
+          content_type?: Database["public"]["Enums"]["blog_content_type"]
+          created_at?: string
+          deleted_at?: string | null
+          excerpt?: string | null
+          featured?: boolean
+          featured_image_alt?: string | null
+          featured_image_url?: string | null
+          focus_keyword?: string | null
+          id?: string
+          language?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          no_index?: boolean
+          publish_at?: string | null
+          reading_time_minutes?: number | null
+          slug: string
+          status?: Database["public"]["Enums"]["blog_post_status"]
+          title: string
+          updated_at?: string
+          visibility?: Database["public"]["Enums"]["blog_visibility"]
+        }
+        Update: {
+          allow_comments?: boolean
+          author_id?: string
+          canonical_url?: string | null
+          content_html?: string
+          content_type?: Database["public"]["Enums"]["blog_content_type"]
+          created_at?: string
+          deleted_at?: string | null
+          excerpt?: string | null
+          featured?: boolean
+          featured_image_alt?: string | null
+          featured_image_url?: string | null
+          focus_keyword?: string | null
+          id?: string
+          language?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          no_index?: boolean
+          publish_at?: string | null
+          reading_time_minutes?: number | null
+          slug?: string
+          status?: Database["public"]["Enums"]["blog_post_status"]
+          title?: string
+          updated_at?: string
+          visibility?: Database["public"]["Enums"]["blog_visibility"]
+        }
+        Relationships: []
+      }
+      blog_tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       businesses: {
         Row: {
           bkb_content: string | null
@@ -809,6 +1001,14 @@ export type Database = {
     }
     Enums: {
       app_role: "user" | "assist" | "admin" | "super_admin"
+      blog_content_type: "article" | "news" | "update"
+      blog_post_status:
+        | "draft"
+        | "pending_review"
+        | "private"
+        | "scheduled"
+        | "published"
+      blog_visibility: "public" | "private"
       business_stage: "new" | "growing"
       content_type: "blog" | "social_media" | "email_marketing" | "others"
       package_type: "starter" | "growth" | "website" | "monthly" | "pro"
@@ -953,6 +1153,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["user", "assist", "admin", "super_admin"],
+      blog_content_type: ["article", "news", "update"],
+      blog_post_status: [
+        "draft",
+        "pending_review",
+        "private",
+        "scheduled",
+        "published",
+      ],
+      blog_visibility: ["public", "private"],
       business_stage: ["new", "growing"],
       content_type: ["blog", "social_media", "email_marketing", "others"],
       package_type: ["starter", "growth", "website", "monthly", "pro"],
