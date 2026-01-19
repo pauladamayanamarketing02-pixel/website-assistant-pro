@@ -150,7 +150,7 @@ export default function AdminOverview() {
               <Button asChild variant="outline" className="justify-start" disabled>
                 <Link to="/dashboard/admin/support">
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  Support Inbox
+                  Website Inquiries
                 </Link>
               </Button>
             </div>
