@@ -1,78 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { Mail, MapPin, MessageCircle, Phone, Save } from "lucide-react";
+import { Loader2, MapPin, MessageCircle, Mail, Phone, Pencil, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
+import { ContactItemCard } from "./website-contact/ContactItemCard";
+import { defaultItems, sanitizeItems, type ContactItem, type ContactItemKey } from "./website-contact/types";
+
 const SETTINGS_KEY = "contact_other_ways";
-
-type ContactItemKey = "email" | "phone" | "whatsapp" | "location";
-
-type ContactItem = {
-  key: ContactItemKey;
-  title: string;
-  detail: string;
-  description: string;
-};
-
-const defaultItems: ContactItem[] = [
-  {
-    key: "email",
-    title: "Email Us",
-    detail: "hello@easymarketingassist.com",
-    description: "We typically respond within 24 hours",
-  },
-  {
-    key: "phone",
-    title: "Call Us",
-    detail: "+1 (555) 123-4567",
-    description: "Mon-Fri from 9am to 5pm EST",
-  },
-  {
-    key: "whatsapp",
-    title: "WhatsApp",
-    detail: "+1 (555) 123-4567",
-    description: "Quick responses for existing clients",
-  },
-  {
-    key: "location",
-    title: "Location",
-    detail: "Remote / Worldwide",
-    description: "Available for global clients",
-  },
-];
-
-function sanitizeItems(value: unknown): ContactItem[] {
-  if (!Array.isArray(value)) return defaultItems;
-
-  const byKey = new Map<ContactItemKey, ContactItem>();
-  for (const raw of value) {
-    if (!raw || typeof raw !== "object") continue;
-    const obj = raw as any;
-    if (!["email", "phone", "whatsapp", "location"].includes(obj.key)) continue;
-
-    const item: ContactItem = {
-      key: obj.key,
-      title: typeof obj.title === "string" ? obj.title : "",
-      detail: typeof obj.detail === "string" ? obj.detail : "",
-      description: typeof obj.description === "string" ? obj.description : "",
-    };
-    byKey.set(item.key, item);
-  }
-
-  // Keep order stable
-  return defaultItems.map((d) => byKey.get(d.key) ?? d);
-}
 
 export default function WebsiteContact() {
   const { toast } = useToast();
   const [items, setItems] = useState<ContactItem[]>(defaultItems);
+  const [baselineItems, setBaselineItems] = useState<ContactItem[]>(defaultItems);
   const [loading, setLoading] = useState(true);
+
+  const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const iconByKey = useMemo(
     () => ({
@@ -94,11 +41,13 @@ export default function WebsiteContact() {
         .maybeSingle();
 
       if (error) {
-        // Don't block the page; just fallback
         console.error("Failed to load website contact settings", error);
         setItems(defaultItems);
+        setBaselineItems(defaultItems);
       } else {
-        setItems(sanitizeItems(data?.value));
+        const next = sanitizeItems(data?.value);
+        setItems(next);
+        setBaselineItems(next);
       }
       setLoading(false);
     })();
@@ -108,20 +57,37 @@ export default function WebsiteContact() {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    const payload = { key: SETTINGS_KEY, value: items };
+  // Autosave (debounced) while editing
+  useEffect(() => {
+    if (!isEditing || loading) return;
 
-    const { error } = await (supabase as any)
-      .from("website_settings")
-      .upsert(payload, { onConflict: "key" });
+    const timer = window.setTimeout(async () => {
+      setSaving(true);
+      const payload = { key: SETTINGS_KEY, value: items };
 
-    if (error) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
-    } else {
-      toast({ title: "Tersimpan", description: "Contact info berhasil diupdate." });
-    }
-    setSaving(false);
+      const { error } = await (supabase as any)
+        .from("website_settings")
+        .upsert(payload, { onConflict: "key" });
+
+      if (error) {
+        toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
+      } else {
+        setLastSavedAt(new Date());
+      }
+      setSaving(false);
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [items, isEditing, loading, toast]);
+
+  const cancelEdit = () => {
+    setItems(baselineItems);
+    setIsEditing(false);
+  };
+
+  const finishEdit = () => {
+    setBaselineItems(items);
+    setIsEditing(false);
   };
 
   return (
@@ -130,12 +96,37 @@ export default function WebsiteContact() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Contact Page</h1>
           <p className="text-muted-foreground">Ubah bagian “Other Ways to Reach Us” di halaman /contact.</p>
+          <div className="mt-2 text-xs text-muted-foreground">
+            {loading ? (
+              "Loading..."
+            ) : saving ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menyimpan...
+              </span>
+            ) : lastSavedAt ? (
+              <>Tersimpan {lastSavedAt.toLocaleTimeString()} (auto-save)</>
+            ) : (
+              "Auto-save aktif saat mode Edit."
+            )}
+          </div>
         </div>
 
-        <Button onClick={handleSave} disabled={saving || loading}>
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? "Saving..." : "Save"}
-        </Button>
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={cancelEdit} disabled={saving}>
+                <X className="h-4 w-4 mr-2" /> Cancel
+              </Button>
+              <Button onClick={finishEdit} disabled={saving}>
+                Selesai
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => setIsEditing(true)} disabled={loading}>
+              <Pencil className="h-4 w-4 mr-2" /> Edit
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -151,45 +142,13 @@ export default function WebsiteContact() {
               {items.map((item) => {
                 const Icon = iconByKey[item.key];
                 return (
-                  <Card key={item.key} className="shadow-soft">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">{item.key.toUpperCase()}</CardTitle>
-                          <CardDescription>Ubah teks yang ditampilkan.</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor={`${item.key}-title`}>Title</Label>
-                        <Input
-                          id={`${item.key}-title`}
-                          value={item.title}
-                          onChange={(e) => updateItem(item.key, { title: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`${item.key}-detail`}>Detail</Label>
-                        <Input
-                          id={`${item.key}-detail`}
-                          value={item.detail}
-                          onChange={(e) => updateItem(item.key, { detail: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`${item.key}-desc`}>Description</Label>
-                        <Input
-                          id={`${item.key}-desc`}
-                          value={item.description}
-                          onChange={(e) => updateItem(item.key, { description: e.target.value })}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ContactItemCard
+                    key={item.key}
+                    item={item}
+                    icon={Icon}
+                    disabled={!isEditing || saving}
+                    onChange={updateItem}
+                  />
                 );
               })}
             </div>
