@@ -34,6 +34,7 @@ type BusinessPackage =
   | "custom";
 
 type BusinessAccountRow = {
+  userId: string;
   businessId: string;
   businessName: string;
   contactName: string;
@@ -144,6 +145,7 @@ export default function AdminBusinessUsers() {
         const businessId = businessNumber ? `B${String(businessNumber).padStart(5, "0")}` : "—";
 
         return {
+          userId: p.id,
           businessId,
           businessName: b?.business_name || "—",
           contactName: p?.name || "—",
@@ -267,7 +269,11 @@ export default function AdminBusinessUsers() {
                         <Badge variant="secondary">{statusLabel[row.status]}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => {}}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
+                        >
                           <Eye className="h-4 w-4" />
                           View Details
                         </Button>

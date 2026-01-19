@@ -39,6 +39,7 @@ import AdminWebsiteServices from "./admin/WebsiteServices";
 import AdminWebsiteFaqs from "./admin/WebsiteFaqs";
 import AdminWebsiteLayout from "./admin/WebsiteLayout";
 import AdminBusinessUsers from "./admin/BusinessUsers";
+import AdminBusinessUserDetails from "./admin/BusinessUserDetails";
 import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
 import AdminAssistants from "./admin/Assistants";
 import AdminTasks from "./admin/Tasks";
@@ -160,11 +161,11 @@ export default function AdminDashboard() {
               <Route index element={<AdminOverview />} />
               <Route path="business-users" element={<AdminBusinessUsers />} />
               <Route path="business-users/new" element={<AdminCreateBusinessUser />} />
+              <Route path="business-users/:userId" element={<AdminBusinessUserDetails />} />
               <Route path="assistants" element={<AdminAssistants />} />
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
               <Route path="support" element={<AdminPlaceholder title="Support" />} />
-              {/* Website */}
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
               <Route path="website/blog" element={<AdminWebsiteBlog />} />
               <Route path="website/blog/new" element={<AdminWebsiteBlogCreate />} />

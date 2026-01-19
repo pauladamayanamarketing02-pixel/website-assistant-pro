@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -150,7 +151,14 @@ type KBEditingState = {
 };
 type KnowledgeViewMode = 'bkb' | 'brandExpert' | 'persona1' | 'persona2' | 'persona3';
 
-export default function ClientList() {
+type ClientListProps = {
+  initialClientId?: string;
+  backTo?: string;
+  hideClientList?: boolean;
+};
+
+export default function ClientList({ initialClientId, backTo, hideClientList }: ClientListProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -252,8 +260,52 @@ export default function ClientList() {
   const phoneCodes = [...new Set(countries.map(c => c.phoneCode))].sort();
 
   useEffect(() => {
+    if (initialClientId) {
+      void (async () => {
+        try {
+          setLoading(true);
+          const [{ data: profile, error: profileErr }, { data: business, error: businessErr }] = await Promise.all([
+            (supabase as any)
+              .from('profiles')
+              .select('id, name, email, phone')
+              .eq('id', initialClientId)
+              .maybeSingle(),
+            (supabase as any)
+              .from('businesses')
+              .select('id, user_id, business_name, business_number')
+              .eq('user_id', initialClientId)
+              .maybeSingle(),
+          ]);
+
+          if (profileErr) throw profileErr;
+          if (businessErr) throw businessErr;
+          if (!profile?.id) throw new Error('Client not found.');
+
+          const nextClient: Client = {
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            phone: profile.phone,
+            business_id: business?.id || null,
+            business_name: business?.business_name || null,
+            business_number: business?.business_number || null,
+          };
+
+          setClients([nextClient]);
+          await handleViewDetails(nextClient);
+        } catch (e: any) {
+          toast({ variant: 'destructive', title: 'Failed to load client', description: e?.message || 'Something went wrong.' });
+          if (backTo) navigate(backTo, { replace: true });
+        } finally {
+          setLoading(false);
+        }
+      })();
+
+      return;
+    }
+
     fetchClients();
-  }, []);
+  }, [initialClientId, backTo, navigate, toast]);
 
   const fetchClients = async () => {
     try {
@@ -557,6 +609,11 @@ export default function ClientList() {
   });
 
   const handleBack = () => {
+    if (hideClientList && backTo) {
+      navigate(backTo);
+      return;
+    }
+
     setShowDetails(false);
     setSelectedClient(null);
     setBusinessData(null);
