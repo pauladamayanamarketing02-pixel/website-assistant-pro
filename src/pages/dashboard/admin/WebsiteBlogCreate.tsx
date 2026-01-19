@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Eye, Save } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,11 @@ import { RichTextEditor } from "@/components/dashboard/RichTextEditor";
 import type { Database } from "@/integrations/supabase/types";
 
 type BlogPostStatus = Database["public"]["Enums"]["blog_post_status"];
+
+type BlogCategory = Database["public"]["Tables"]["blog_categories"]["Row"];
+type BlogTag = Database["public"]["Tables"]["blog_tags"]["Row"];
+
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 const slugify = (input: string) =>
   input
@@ -50,6 +56,7 @@ export default function AdminWebsiteBlogCreate() {
   const [saving, setSaving] = useState(false);
 
   const [authorId, setAuthorId] = useState<string | null>(null);
+  const [authorDisplay, setAuthorDisplay] = useState<string>("");
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -65,17 +72,19 @@ export default function AdminWebsiteBlogCreate() {
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
 
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
+  const [tags, setTags] = useState<BlogTag[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+
+  const slugFromTitle = useMemo(() => slugify(title), [title]);
+
   useEffect(() => {
-    const next = slugify(title);
-    // only auto-fill when slug still matches previous title-ish (or empty)
-    setSlug((prev) => {
-      if (!prev) return next;
-      // if user already customized slug, don't overwrite
-      return prev;
-    });
+    // slug harus selalu auto-sync dari title dan tidak editable
+    setSlug(slugFromTitle);
 
     setMetaTitle((prev) => (prev ? prev : title));
-  }, [title]);
+  }, [slugFromTitle, title]);
 
   useEffect(() => {
     void (async () => {
@@ -84,7 +93,32 @@ export default function AdminWebsiteBlogCreate() {
 
         const { data: userData, error: userErr } = await supabase.auth.getUser();
         if (userErr) throw userErr;
-        setAuthorId(userData.user?.id ?? null);
+
+        const uid = userData.user?.id ?? null;
+        setAuthorId(uid);
+
+        if (uid) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("name,email")
+            .eq("id", uid)
+            .maybeSingle<Pick<ProfileRow, "name" | "email">>();
+
+          setAuthorDisplay(profile?.name || profile?.email || userData.user?.email || uid);
+        } else {
+          setAuthorDisplay("");
+        }
+
+        const [{ data: cats, error: catsErr }, { data: tagsData, error: tagsErr }] = await Promise.all([
+          supabase.from("blog_categories").select("*").order("name", { ascending: true }),
+          supabase.from("blog_tags").select("*").order("name", { ascending: true }),
+        ]);
+
+        if (catsErr) throw catsErr;
+        if (tagsErr) throw tagsErr;
+
+        setCategories((cats as BlogCategory[]) ?? []);
+        setTags((tagsData as BlogTag[]) ?? []);
       } catch (e: any) {
         toast({
           variant: "destructive",
@@ -97,6 +131,8 @@ export default function AdminWebsiteBlogCreate() {
     })();
   }, [toast]);
 
+  const toggleSelected = (ids: string[], id: string) =>
+    ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
 
   const validate = () => {
     if (!authorId) {
@@ -107,7 +143,7 @@ export default function AdminWebsiteBlogCreate() {
       toast({ variant: "destructive", title: "Title wajib diisi" });
       return false;
     }
-    if (!slugify(slug).trim()) {
+    if (!slug.trim()) {
       toast({ variant: "destructive", title: "Slug wajib diisi" });
       return false;
     }
@@ -152,27 +188,58 @@ export default function AdminWebsiteBlogCreate() {
             ? nowIso
             : null;
 
-      const { error: insertErr } = await supabase.from("blog_posts").insert({
-        author_id: authorId as string,
-        title: title.trim(),
-        slug: slugify(slug),
-        content_html: contentHtml,
-        excerpt: excerpt.trim(),
-        featured_image_url: featuredImageUrl.trim() || null,
-        featured_image_alt: featuredImageAlt.trim() || null,
-        status: nextStatus,
-        publish_at: publishAtIso,
-        meta_title: metaTitle.trim(),
-        meta_description: metaDescription.trim(),
-        reading_time_minutes: estimateReadingTimeMinutes(contentHtml),
-      });
+      const { data: inserted, error: insertErr } = await supabase
+        .from("blog_posts")
+        .insert({
+          author_id: authorId as string,
+          title: title.trim(),
+          slug: slug,
+          content_html: contentHtml,
+          excerpt: excerpt.trim(),
+          featured_image_url: featuredImageUrl.trim() || null,
+          featured_image_alt: featuredImageAlt.trim() || null,
+          status: nextStatus,
+          publish_at: publishAtIso,
+          meta_title: metaTitle.trim(),
+          meta_description: metaDescription.trim(),
+          reading_time_minutes: estimateReadingTimeMinutes(contentHtml),
+        })
+        .select("id")
+        .single();
 
       if (insertErr) throw insertErr;
+
+      const postId = inserted?.id as string | undefined;
+      if (!postId) throw new Error("Gagal mendapatkan ID post.");
+
+      if (selectedCategoryIds.length) {
+        const { error: catsLinkErr } = await supabase.from("blog_post_categories").insert(
+          selectedCategoryIds.map((categoryId) => ({
+            post_id: postId,
+            category_id: categoryId,
+          }))
+        );
+        if (catsLinkErr) throw catsLinkErr;
+      }
+
+      if (selectedTagIds.length) {
+        const { error: tagsLinkErr } = await supabase.from("blog_post_tags").insert(
+          selectedTagIds.map((tagId) => ({
+            post_id: postId,
+            tag_id: tagId,
+          }))
+        );
+        if (tagsLinkErr) throw tagsLinkErr;
+      }
 
       toast({ title: "Post tersimpan", description: `Status: ${nextStatus}` });
       navigate("/dashboard/admin/website/blog", { replace: true });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal menyimpan post", description: e?.message || "Terjadi kesalahan." });
+      toast({
+        variant: "destructive",
+        title: "Gagal menyimpan post",
+        description: e?.message || "Terjadi kesalahan.",
+      });
     } finally {
       setSaving(false);
     }
@@ -192,7 +259,7 @@ export default function AdminWebsiteBlogCreate() {
             </Button>
             <h1 className="text-3xl font-bold text-foreground">Add New Post</h1>
           </div>
-          <p className="text-sm text-muted-foreground">Buat post blog (full page).</p>
+          <p className="text-sm text-muted-foreground">Buat post blog (untuk halaman Blog / halaman utama).</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -209,7 +276,7 @@ export default function AdminWebsiteBlogCreate() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Minimal Post Form</CardTitle>
+          <CardTitle className="text-base">Post Form</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
@@ -220,13 +287,52 @@ export default function AdminWebsiteBlogCreate() {
 
             <div className="space-y-2">
               <Label htmlFor="slug">Slug / URL*</Label>
-              <Input
-                id="slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="contoh: welcome-to-our-blog"
-              />
-              <p className="text-xs text-muted-foreground">Disarankan: huruf kecil, tanpa spasi (auto dari title, bisa diedit).</p>
+              <Input id="slug" value={slug} disabled placeholder="auto dari title" />
+              <p className="text-xs text-muted-foreground">Otomatis dari title (tidak bisa diedit).</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="author">Author</Label>
+              <Input id="author" value={authorDisplay} disabled placeholder="-" />
+              <p className="text-xs text-muted-foreground">Ditampilkan di halaman blog.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categories</Label>
+              <div className="rounded-md border border-border p-3 space-y-2 max-h-44 overflow-auto">
+                {categories.length ? (
+                  categories.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={selectedCategoryIds.includes(c.id)}
+                        onCheckedChange={() => setSelectedCategoryIds((prev) => toggleSelected(prev, c.id))}
+                      />
+                      <span className="text-foreground">{c.name}</span>
+                    </label>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground">Belum ada kategori.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="rounded-md border border-border p-3 space-y-2 max-h-44 overflow-auto">
+                {tags.length ? (
+                  tags.map((t) => (
+                    <label key={t.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={selectedTagIds.includes(t.id)}
+                        onCheckedChange={() => setSelectedTagIds((prev) => toggleSelected(prev, t.id))}
+                      />
+                      <span className="text-foreground">{t.name}</span>
+                    </label>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground">Belum ada tag.</div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2 md:col-span-2">
