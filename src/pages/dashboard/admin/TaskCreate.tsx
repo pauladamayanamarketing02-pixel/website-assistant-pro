@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -16,10 +17,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Client = {
   id: string;
   business_name: string;
+};
+
+type AssistAccount = {
+  id: string;
+  name: string;
 };
 
 type FormState = {
@@ -29,9 +36,12 @@ type FormState = {
   platform: string;
   clientId: string;
   deadline: string;
+  assignedTo: string;
+  recurringMonthly: boolean;
 };
 
 export default function AdminTaskCreate() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,6 +49,7 @@ export default function AdminTaskCreate() {
   const [creating, setCreating] = useState(false);
 
   const [clients, setClients] = useState<Client[]>([]);
+  const [assistAccounts, setAssistAccounts] = useState<AssistAccount[]>([]);
   const [nextTaskNumber, setNextTaskNumber] = useState(100);
 
   const [formData, setFormData] = useState<FormState>({
@@ -48,6 +59,8 @@ export default function AdminTaskCreate() {
     platform: "",
     clientId: "",
     deadline: "",
+    assignedTo: "",
+    recurringMonthly: false,
   });
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -62,7 +75,7 @@ export default function AdminTaskCreate() {
     try {
       setLoading(true);
 
-      const [clientsRes, maxRes] = await Promise.all([
+      const [clientsRes, maxRes, assistRes] = await Promise.all([
         (supabase as any)
           .from("businesses")
           .select("user_id, business_name")
@@ -73,19 +86,26 @@ export default function AdminTaskCreate() {
           .select("task_number")
           .order("task_number", { ascending: false })
           .limit(1),
+        (supabase as any).rpc("get_assist_accounts"),
       ]);
 
       if (clientsRes.error) throw clientsRes.error;
       if (maxRes.error) throw maxRes.error;
+      if (assistRes.error) throw assistRes.error;
 
       const nextClients: Client[] = ((clientsRes.data as any[]) ?? [])
         .filter((x) => x?.user_id && x?.business_name)
         .map((x) => ({ id: String(x.user_id), business_name: String(x.business_name) }));
 
+      const nextAssists: AssistAccount[] = ((assistRes.data as any[]) ?? [])
+        .filter((x) => x?.id && x?.name)
+        .map((x) => ({ id: String(x.id), name: String(x.name) }));
+
       const maxNum = Number((maxRes.data as any[])?.[0]?.task_number ?? 99);
       const safeMax = Number.isFinite(maxNum) ? maxNum : 99;
 
       setClients(nextClients);
+      setAssistAccounts(nextAssists);
       setNextTaskNumber(safeMax + 1);
     } catch (e) {
       console.error("Error preparing task create form:", e);
@@ -100,7 +120,16 @@ export default function AdminTaskCreate() {
   };
 
   const resetForm = () => {
-    setFormData({ title: "", description: "", type: "", platform: "", clientId: "", deadline: "" });
+    setFormData({
+      title: "",
+      description: "",
+      type: "",
+      platform: "",
+      clientId: "",
+      deadline: "",
+      assignedTo: "",
+      recurringMonthly: false,
+    });
     setUploadedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     navigate("/dashboard/admin/tasks");
@@ -121,6 +150,24 @@ export default function AdminTaskCreate() {
       return;
     }
 
+    if (formData.recurringMonthly && !formData.deadline) {
+      toast({
+        title: "Missing deadline",
+        description: "Deadline is required for monthly recurring tasks.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: "Not signed in",
+        description: "Please sign in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setCreating(true);
 
@@ -129,13 +176,51 @@ export default function AdminTaskCreate() {
       if (uploadedFile) {
         const filePath = `${formData.clientId}/tasks/${Date.now()}-${uploadedFile.name}`;
         const { error: uploadError } = await supabase.storage.from("user-files").upload(filePath, uploadedFile);
-
         if (uploadError) throw uploadError;
 
         const { data: urlData } = supabase.storage.from("user-files").getPublicUrl(filePath);
         fileUrl = urlData.publicUrl;
       }
 
+      // Monthly recurring rule (auto-generate H-7 from chosen deadline day)
+      if (formData.recurringMonthly) {
+        const deadlineDay = Number.parseInt(formData.deadline.split("-")[2] || "", 10);
+        if (!Number.isFinite(deadlineDay) || deadlineDay < 1 || deadlineDay > 31) {
+          toast({
+            title: "Invalid deadline",
+            description: "Please choose a valid deadline date.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const { error: ruleErr } = await (supabase as any)
+          .from("task_recurring_rules")
+          .insert({
+            created_by: user.id,
+            user_id: formData.clientId,
+            assigned_to: formData.assignedTo || null,
+            title: formData.title.trim(),
+            description: formData.description?.trim() ? formData.description.trim() : null,
+            type: (formData.type as any) || null,
+            platform: formData.type === "social_media" ? ((formData.platform as any) || null) : null,
+            file_url: fileUrl,
+            deadline_day: deadlineDay,
+            is_active: true,
+          });
+
+        if (ruleErr) throw ruleErr;
+
+        toast({
+          title: "Recurring Task Enabled",
+          description: "This task will auto-generate monthly (H-7 from the deadline).",
+        });
+
+        resetForm();
+        return;
+      }
+
+      // One-time task
       const { error } = await (supabase as any)
         .from("tasks")
         .insert({
@@ -145,7 +230,7 @@ export default function AdminTaskCreate() {
           description: formData.description?.trim() ? formData.description.trim() : null,
           type: (formData.type as any) || null,
           platform: formData.type === "social_media" ? ((formData.platform as any) || null) : null,
-          assigned_to: null,
+          assigned_to: formData.assignedTo || null,
           deadline: formData.deadline || null,
           file_url: fileUrl,
           notes: null,
@@ -315,7 +400,18 @@ export default function AdminTaskCreate() {
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="deadline">Deadline</Label>
+                  <div className="flex items-center justify-between gap-4">
+                    <Label htmlFor="deadline">Deadline</Label>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground">Monthly</Label>
+                      <Switch
+                        checked={formData.recurringMonthly}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({ ...prev, recurringMonthly: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
                   <Input
                     id="deadline"
                     type="date"
@@ -323,10 +419,30 @@ export default function AdminTaskCreate() {
                     onChange={(e) => setFormData((prev) => ({ ...prev, deadline: e.target.value }))}
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="assignee">Assignee</Label>
-                  <Input id="assignee" value="Unassigned" disabled className="bg-muted" />
-                  <p className="text-xs text-muted-foreground">This task will be unassigned (assign later).</p>
+                  <Select
+                    value={formData.assignedTo || "__unassigned__"}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        assignedTo: value === "__unassigned__" ? "" : value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="assignee">
+                      <SelectValue placeholder="Select assignee (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                      {assistAccounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
