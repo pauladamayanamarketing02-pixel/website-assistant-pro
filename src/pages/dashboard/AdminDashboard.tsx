@@ -7,6 +7,7 @@ import {
   Briefcase,
   CheckSquare,
   ClipboardCheck,
+  FileQuestion,
   FileText,
   Globe,
   Image,
@@ -34,6 +35,8 @@ import AdminWebsiteBlogCreate from "./admin/WebsiteBlogCreate";
 import AdminWebsiteBlogEdit from "./admin/WebsiteBlogEdit";
 import AdminWebsiteMedia from "./admin/WebsiteMedia";
 import AdminWebsiteContact from "./admin/WebsiteContact";
+import AdminWebsiteServices from "./admin/WebsiteServices";
+import AdminWebsiteFaqs from "./admin/WebsiteFaqs";
 import AdminBusinessUsers from "./admin/BusinessUsers";
 import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
 import AdminAssistants from "./admin/Assistants";
@@ -69,6 +72,7 @@ export default function AdminDashboard() {
           { title: "Media Library", url: "/dashboard/admin/website/media", icon: Image },
           { title: "Contact", url: "/dashboard/admin/website/contact", icon: Phone },
           { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
+          { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
           { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
         ],
       },
@@ -166,7 +170,8 @@ export default function AdminDashboard() {
               <Route path="website/blog/:id" element={<AdminWebsiteBlogEdit />} />
               <Route path="website/media" element={<AdminWebsiteMedia />} />
               <Route path="website/contact" element={<AdminWebsiteContact />} />
-              <Route path="website/services" element={<AdminPlaceholder title="Services" />} />
+              <Route path="website/services" element={<AdminWebsiteServices />} />
+              <Route path="website/services/faqs" element={<AdminWebsiteFaqs />} />
               <Route path="website/layout" element={<AdminPlaceholder title="Layout" />} />
 
               {/* Analytics */}
