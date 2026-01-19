@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
 import { Send, Paperclip, MessageCircle, User, Search, Trash2, Upload, Download, X } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,8 +42,6 @@ interface AssistContact {
 export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [assists, setAssists] = useState<AssistContact[]>([]);
   const [selectedAssist, setSelectedAssist] = useState<AssistContact | null>(null);
@@ -66,37 +63,23 @@ export default function Messages() {
         .eq('role', 'assist');
 
       if (roles) {
-        const assistIds = roles.map((r) => r.user_id);
+        const assistIds = roles.map(r => r.user_id);
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, name, email, avatar_url')
           .in('id', assistIds);
 
         if (profiles) {
-          const normalized = (profiles as AssistContact[]).map((p) => ({
-            ...p,
-            // Pastikan selalu punya “Full Name” untuk ditampilkan
-            name: (p.name && p.name.trim().length > 0)
-              ? p.name
-              : (p.email?.split('@')[0] || 'Assist'),
-          }));
-
-          setAssists(normalized);
-
-          const assistIdFromUrl = searchParams.get('assistId');
-          const initial =
-            (assistIdFromUrl && normalized.find((a) => a.id === assistIdFromUrl)) ||
-            normalized[0] ||
-            null;
-
-          setSelectedAssist(initial);
+          setAssists(profiles as AssistContact[]);
+          if (profiles.length > 0) {
+            setSelectedAssist(profiles[0] as AssistContact);
+          }
         }
       }
       setLoading(false);
     };
 
     fetchAssists();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch messages for selected assist
@@ -291,14 +274,7 @@ export default function Messages() {
                 filteredAssists.map((assist) => (
                   <div
                     key={assist.id}
-                    onClick={() => {
-                      setSelectedAssist(assist);
-                      setSearchParams((prev) => {
-                        const next = new URLSearchParams(prev);
-                        next.set('assistId', assist.id);
-                        return next;
-                      });
-                    }}
+                    onClick={() => setSelectedAssist(assist)}
                     className={cn(
                       "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
                       selectedAssist?.id === assist.id && "bg-muted"
