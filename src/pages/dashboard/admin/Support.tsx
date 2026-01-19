@@ -4,7 +4,7 @@ import { Eye, RefreshCw, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -262,9 +262,9 @@ export default function AdminSupport() {
       <Card>
         <CardHeader className="space-y-1">
           <CardTitle className="text-base">Website Inquiries</CardTitle>
-          <DialogDescription className="text-sm">
+          <CardDescription>
             Semua inquiry yang dibuat dari form publik (kecuali Business/Assistant Support).
-          </DialogDescription>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
