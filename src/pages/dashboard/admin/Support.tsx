@@ -204,7 +204,6 @@ export default function AdminSupport() {
     return rows.filter((r) => String(r.status).toLowerCase() === needle);
   }, [rows, statusFilter]);
 
-  const websiteRows = useMemo(() => filtered.filter((r) => String(r.source).toLowerCase() === "contact"), [filtered]);
   const businessSupportRows = useMemo(
     () => filtered.filter((r) => String(r.source).toLowerCase() === "business_support"),
     [filtered]
@@ -237,8 +236,8 @@ export default function AdminSupport() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground">Website Inquiries</h1>
-          <p className="text-sm text-muted-foreground">All messages submitted from the website contact form.</p>
+          <h1 className="text-3xl font-bold text-foreground">Support Inbox</h1>
+          <p className="text-sm text-muted-foreground">Business Support dan Assistant Support.</p>
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -282,25 +281,6 @@ export default function AdminSupport() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-base">Website Inquiries</CardTitle>
-          <p className="text-sm text-muted-foreground">Website contact messages (source: contact).</p>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="py-8 text-sm text-muted-foreground">Loading inquiries...</div>
-          ) : (
-            <InquiryTable
-              rows={websiteRows}
-              emptyLabel="No website inquiries."
-              onOpen={setSelected}
-              selected={selected}
-              onMarkResolved={markResolved}
-            />
-          )}
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader className="space-y-1">

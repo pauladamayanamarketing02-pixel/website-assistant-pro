@@ -68,7 +68,7 @@ export default function AdminDashboard() {
       { title: "Assistant", url: "/dashboard/admin/assistants", icon: ShieldCheck },
       { title: "Tasks", url: "/dashboard/admin/tasks", icon: CheckSquare },
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
-      { title: "Support", url: "/dashboard/admin/support", icon: MessageSquare },
+      { title: "Messages", url: "/dashboard/admin/messages", icon: MessageSquare },
       {
         title: "Website",
         url: "/dashboard/admin/website",
@@ -81,6 +81,7 @@ export default function AdminDashboard() {
           { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
           { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
           { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
+          { title: "Support", url: "/dashboard/admin/website/support", icon: MessageSquare },
         ],
       },
       {
@@ -173,7 +174,7 @@ export default function AdminDashboard() {
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="tasks/new" element={<AdminTaskCreate />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
-              <Route path="support" element={<AdminSupport />} />
+              <Route path="messages" element={<AdminPlaceholder title="Messages" />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
               <Route path="website/blog" element={<AdminWebsiteBlog />} />
               <Route path="website/blog/new" element={<AdminWebsiteBlogCreate />} />
@@ -183,6 +184,7 @@ export default function AdminDashboard() {
               <Route path="website/services" element={<AdminWebsiteServices />} />
               <Route path="website/services/faqs" element={<AdminWebsiteFaqs />} />
               <Route path="website/layout" element={<AdminWebsiteLayout />} />
+              <Route path="website/support" element={<AdminSupport />} />
 
               {/* Analytics */}
               <Route path="analytics/traffic" element={<AdminPlaceholder title="Traffic" />} />
