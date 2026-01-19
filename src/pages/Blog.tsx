@@ -1,74 +1,66 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, Calendar, Clock, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { PublicLayout } from '@/components/layout/PublicLayout';
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Calendar, Clock } from "lucide-react";
+import { format } from "date-fns";
 
-const blogPosts = [
-  {
-    id: 1,
-    title: '5 Ways to Optimize Your Google Business Profile in 2024',
-    excerpt: 'Learn the latest strategies to make your GMB listing stand out and attract more local customers.',
-    category: 'GMB Tips',
-    author: 'Marketing Team',
-    date: 'Dec 20, 2024',
-    readTime: '5 min read',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop',
-  },
-  {
-    id: 2,
-    title: 'The Small Business Guide to Social Media Content',
-    excerpt: 'Discover what content works best for small businesses and how to create it efficiently.',
-    category: 'Social Media',
-    author: 'Marketing Team',
-    date: 'Dec 18, 2024',
-    readTime: '7 min read',
-    image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&h=400&fit=crop',
-  },
-  {
-    id: 3,
-    title: 'Why Every Business Needs a Simple Website',
-    excerpt: 'Even in the age of social media, a website remains your most important digital asset.',
-    category: 'Websites',
-    author: 'Marketing Team',
-    date: 'Dec 15, 2024',
-    readTime: '4 min read',
-    image: 'https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=600&h=400&fit=crop',
-  },
-  {
-    id: 4,
-    title: 'SEO Basics: Getting Found Online Without Breaking the Bank',
-    excerpt: 'Simple, practical SEO strategies that any small business can implement today.',
-    category: 'SEO',
-    author: 'Marketing Team',
-    date: 'Dec 12, 2024',
-    readTime: '6 min read',
-    image: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=600&h=400&fit=crop',
-  },
-  {
-    id: 5,
-    title: 'How to Write Blog Posts That Actually Get Read',
-    excerpt: 'Tips for creating blog content that engages your audience and ranks well in search.',
-    category: 'Content',
-    author: 'Marketing Team',
-    date: 'Dec 10, 2024',
-    readTime: '5 min read',
-    image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&h=400&fit=crop',
-  },
-  {
-    id: 6,
-    title: 'Working with a Marketing Assist vs Hiring an Agency',
-    excerpt: 'Compare the benefits of personal marketing assistance versus traditional agency services.',
-    category: 'Business',
-    author: 'Marketing Team',
-    date: 'Dec 8, 2024',
-    readTime: '6 min read',
-    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400&fit=crop',
-  },
-];
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import { supabase } from "@/integrations/supabase/client";
+
+type BlogListItem = {
+  id: string;
+  title: string;
+  excerpt: string | null;
+  created_at: string;
+  publish_at: string | null;
+  reading_time_minutes: number | null;
+  featured_image_url: string | null;
+  featured_image_alt: string | null;
+  content_type: string;
+};
 
 export default function Blog() {
+  const [posts, setPosts] = useState<BlogListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("blog_posts")
+        .select(
+          "id,title,excerpt,created_at,publish_at,reading_time_minutes,featured_image_url,featured_image_alt,content_type"
+        )
+        .eq("status", "published")
+        .eq("visibility", "public")
+        .is("deleted_at", null)
+        .eq("no_index", false)
+        .order("publish_at", { ascending: false, nullsFirst: false });
+
+      if (cancelled) return;
+
+      if (error) {
+        // Jika ada error (mis. RLS / jaringan), kita tetap render halaman tanpa crash.
+        console.error("Failed to load blog posts", error);
+        setPosts([]);
+      } else {
+        setPosts((data as BlogListItem[]) ?? []);
+      }
+      setLoading(false);
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const cards = useMemo(() => posts, [posts]);
+
   return (
     <PublicLayout>
       {/* Hero */}
@@ -89,50 +81,83 @@ export default function Blog() {
       <section className="py-20 md:py-28">
         <div className="container">
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {blogPosts.map((post, index) => (
-              <Card
-                key={post.id}
-                className="overflow-hidden shadow-soft hover:shadow-glow transition-all duration-300 animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="aspect-video overflow-hidden">
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                  />
-                </div>
-                <CardHeader className="pb-2">
-                  <Badge variant="secondary" className="w-fit text-xs">
-                    {post.category}
-                  </Badge>
-                  <h3 className="text-xl font-semibold text-foreground mt-2 line-clamp-2">
-                    {post.title}
-                  </h3>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <p className="text-muted-foreground text-sm line-clamp-2">
-                    {post.excerpt}
-                  </p>
-                </CardContent>
-                <CardFooter className="pt-0 flex items-center justify-between text-xs text-muted-foreground">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {post.date}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {post.readTime}
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 p-0">
-                    Read More
-                    <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+            {loading ? (
+              Array.from({ length: 6 }).map((_, index) => (
+                <Card
+                  key={`skeleton-${index}`}
+                  className="overflow-hidden shadow-soft animate-pulse"
+                >
+                  <div className="aspect-video bg-muted" />
+                  <CardHeader className="pb-2">
+                    <div className="h-5 w-24 rounded bg-muted" />
+                    <div className="mt-3 h-6 w-4/5 rounded bg-muted" />
+                  </CardHeader>
+                  <CardContent className="pb-4">
+                    <div className="h-4 w-full rounded bg-muted" />
+                    <div className="mt-2 h-4 w-2/3 rounded bg-muted" />
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <div className="h-4 w-40 rounded bg-muted" />
+                  </CardFooter>
+                </Card>
+              ))
+            ) : (
+              cards.map((post, index) => {
+                const publishedDate = post.publish_at ?? post.created_at;
+                const dateLabel = format(new Date(publishedDate), "MMM d, yyyy");
+                const readTimeLabel = post.reading_time_minutes
+                  ? `${post.reading_time_minutes} min read`
+                  : "";
+
+                return (
+                  <Card
+                    key={post.id}
+                    className="overflow-hidden shadow-soft hover:shadow-glow transition-all duration-300 animate-fade-in"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="aspect-video overflow-hidden">
+                      <img
+                        src={post.featured_image_url ?? "/placeholder.svg"}
+                        alt={post.featured_image_alt ?? post.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      />
+                    </div>
+                    <CardHeader className="pb-2">
+                      <Badge variant="secondary" className="w-fit text-xs">
+                        {post.content_type}
+                      </Badge>
+                      <h3 className="text-xl font-semibold text-foreground mt-2 line-clamp-2">
+                        {post.title}
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <p className="text-muted-foreground text-sm line-clamp-2">
+                        {post.excerpt ?? ""}
+                      </p>
+                    </CardContent>
+                    <CardFooter className="pt-0 flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {dateLabel}
+                        </span>
+                        {readTimeLabel ? (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {readTimeLabel}
+                          </span>
+                        ) : null}
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 p-0">
+                        Read More
+                        <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })
+            )}
           </div>
         </div>
       </section>
