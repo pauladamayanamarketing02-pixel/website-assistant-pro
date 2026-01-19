@@ -276,7 +276,7 @@ export default function AdminBusinessUsers() {
                               title="Set Active"
                               onClick={() => {}}
                             >
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              <CheckCircle2 className="h-4 w-4 text-primary" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -285,7 +285,7 @@ export default function AdminBusinessUsers() {
                               title="Set Inactive"
                               onClick={() => {}}
                             >
-                              <UserX className="h-4 w-4 text-orange-600" />
+                              <UserX className="h-4 w-4 text-muted-foreground" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -294,7 +294,7 @@ export default function AdminBusinessUsers() {
                               title="Blacklist"
                               onClick={() => {}}
                             >
-                              <Ban className="h-4 w-4 text-red-600" />
+                              <Ban className="h-4 w-4 text-destructive" />
                             </Button>
                             <Button
                               variant="ghost"
