@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,11 +20,11 @@ import {
 import { RichTextEditor } from "@/components/dashboard/RichTextEditor";
 
 import type { Database } from "@/integrations/supabase/types";
+import { AuthorPicker } from "@/components/blog/AuthorPicker";
+import { CategoriesPanel, type BlogCategoryRow } from "@/components/blog/CategoriesPanel";
+import { TagsInput, type BlogTagRow } from "@/components/blog/TagsInput";
 
 type BlogPostStatus = Database["public"]["Enums"]["blog_post_status"];
-
-type BlogCategory = Database["public"]["Tables"]["blog_categories"]["Row"];
-type BlogTag = Database["public"]["Tables"]["blog_tags"]["Row"];
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -55,8 +54,13 @@ export default function AdminWebsiteBlogCreate() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // system author for RLS (must equal auth.uid())
   const [authorId, setAuthorId] = useState<string | null>(null);
   const [authorDisplay, setAuthorDisplay] = useState<string>("");
+
+  // blog-facing author (managed in blog_authors table)
+  const [blogAuthorId, setBlogAuthorId] = useState<string | null>(null);
+  const [blogAuthorLabel, setBlogAuthorLabel] = useState<string>("");
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -72,8 +76,8 @@ export default function AdminWebsiteBlogCreate() {
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
 
-  const [categories, setCategories] = useState<BlogCategory[]>([]);
-  const [tags, setTags] = useState<BlogTag[]>([]);
+  const [categories, setCategories] = useState<BlogCategoryRow[]>([]);
+  const [tags, setTags] = useState<BlogTagRow[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
@@ -82,9 +86,21 @@ export default function AdminWebsiteBlogCreate() {
   useEffect(() => {
     // slug harus selalu auto-sync dari title dan tidak editable
     setSlug(slugFromTitle);
-
     setMetaTitle((prev) => (prev ? prev : title));
   }, [slugFromTitle, title]);
+
+  const loadCatsTags = async () => {
+    const [{ data: cats, error: catsErr }, { data: tagsData, error: tagsErr }] = await Promise.all([
+      supabase.from("blog_categories").select("id,name,slug,parent_id").order("name", { ascending: true }),
+      supabase.from("blog_tags").select("id,name,slug").order("name", { ascending: true }),
+    ]);
+
+    if (catsErr) throw catsErr;
+    if (tagsErr) throw tagsErr;
+
+    setCategories(((cats as any[]) ?? []) as BlogCategoryRow[]);
+    setTags(((tagsData as any[]) ?? []) as BlogTagRow[]);
+  };
 
   useEffect(() => {
     void (async () => {
@@ -109,16 +125,7 @@ export default function AdminWebsiteBlogCreate() {
           setAuthorDisplay("");
         }
 
-        const [{ data: cats, error: catsErr }, { data: tagsData, error: tagsErr }] = await Promise.all([
-          supabase.from("blog_categories").select("*").order("name", { ascending: true }),
-          supabase.from("blog_tags").select("*").order("name", { ascending: true }),
-        ]);
-
-        if (catsErr) throw catsErr;
-        if (tagsErr) throw tagsErr;
-
-        setCategories((cats as BlogCategory[]) ?? []);
-        setTags((tagsData as BlogTag[]) ?? []);
+        await loadCatsTags();
       } catch (e: any) {
         toast({
           variant: "destructive",
@@ -131,12 +138,13 @@ export default function AdminWebsiteBlogCreate() {
     })();
   }, [toast]);
 
-  const toggleSelected = (ids: string[], id: string) =>
-    ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
-
   const validate = () => {
     if (!authorId) {
       toast({ variant: "destructive", title: "Author tidak ditemukan (silakan login ulang)" });
+      return false;
+    }
+    if (!blogAuthorId) {
+      toast({ variant: "destructive", title: "Author (publik) wajib dipilih" });
       return false;
     }
     if (!title.trim()) {
@@ -188,22 +196,25 @@ export default function AdminWebsiteBlogCreate() {
             ? nowIso
             : null;
 
+      const insertPayload: any = {
+        author_id: authorId as string, // required by RLS
+        blog_author_id: blogAuthorId,
+        title: title.trim(),
+        slug: slug,
+        content_html: contentHtml,
+        excerpt: excerpt.trim(),
+        featured_image_url: featuredImageUrl.trim() || null,
+        featured_image_alt: featuredImageAlt.trim() || null,
+        status: nextStatus,
+        publish_at: publishAtIso,
+        meta_title: metaTitle.trim(),
+        meta_description: metaDescription.trim(),
+        reading_time_minutes: estimateReadingTimeMinutes(contentHtml),
+      };
+
       const { data: inserted, error: insertErr } = await supabase
         .from("blog_posts")
-        .insert({
-          author_id: authorId as string,
-          title: title.trim(),
-          slug: slug,
-          content_html: contentHtml,
-          excerpt: excerpt.trim(),
-          featured_image_url: featuredImageUrl.trim() || null,
-          featured_image_alt: featuredImageAlt.trim() || null,
-          status: nextStatus,
-          publish_at: publishAtIso,
-          meta_title: metaTitle.trim(),
-          meta_description: metaDescription.trim(),
-          reading_time_minutes: estimateReadingTimeMinutes(contentHtml),
-        })
+        .insert(insertPayload)
         .select("id")
         .single();
 
@@ -263,11 +274,11 @@ export default function AdminWebsiteBlogCreate() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button" variant="outline" onClick={() => { void savePost("draft"); }} disabled={saving}>
+          <Button type="button" variant="outline" onClick={() => void savePost("draft")} disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
             {saving ? "Saving..." : "Save Draft"}
           </Button>
-          <Button type="button" onClick={() => { void savePost(status); }} disabled={saving}>
+          <Button type="button" onClick={() => void savePost(status)} disabled={saving}>
             <Eye className="h-4 w-4 mr-2" />
             {saving ? "Saving..." : status === "published" ? "Publish" : status === "scheduled" ? "Schedule" : "Save"}
           </Button>
@@ -292,55 +303,45 @@ export default function AdminWebsiteBlogCreate() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="author">Author</Label>
-              <Input id="author" value={authorDisplay} disabled placeholder="-" />
-              <p className="text-xs text-muted-foreground">Ditampilkan di halaman blog.</p>
+              <Label htmlFor="systemAuthor">System Author (login)</Label>
+              <Input id="systemAuthor" value={authorDisplay} disabled placeholder="-" />
+              <p className="text-xs text-muted-foreground">Dipakai untuk izin (RLS). Tidak tampil ke publik.</p>
             </div>
 
-            <div className="space-y-2">
-              <Label>Categories</Label>
-              <div className="rounded-md border border-border p-3 space-y-2 max-h-44 overflow-auto">
-                {categories.length ? (
-                  categories.map((c) => (
-                    <label key={c.id} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={selectedCategoryIds.includes(c.id)}
-                        onCheckedChange={() => setSelectedCategoryIds((prev) => toggleSelected(prev, c.id))}
-                      />
-                      <span className="text-foreground">{c.name}</span>
-                    </label>
-                  ))
-                ) : (
-                  <div className="text-sm text-muted-foreground">Belum ada kategori.</div>
-                )}
-              </div>
-            </div>
+            <AuthorPicker
+              value={blogAuthorId}
+              onChange={(id, label) => {
+                setBlogAuthorId(id);
+                setBlogAuthorLabel(label);
+              }}
+              label="Author (publik)"
+              placeholder="Pilih author untuk tampil di blog"
+            />
 
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="rounded-md border border-border p-3 space-y-2 max-h-44 overflow-auto">
-                {tags.length ? (
-                  tags.map((t) => (
-                    <label key={t.id} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={selectedTagIds.includes(t.id)}
-                        onCheckedChange={() => setSelectedTagIds((prev) => toggleSelected(prev, t.id))}
-                      />
-                      <span className="text-foreground">{t.name}</span>
-                    </label>
-                  ))
-                ) : (
-                  <div className="text-sm text-muted-foreground">Belum ada tag.</div>
-                )}
-              </div>
-            </div>
+            <CategoriesPanel
+              categories={categories}
+              selectedIds={selectedCategoryIds}
+              onSelectedIdsChange={setSelectedCategoryIds}
+              onCreated={() => {
+                void loadCatsTags();
+              }}
+            />
+
+            <TagsInput
+              tags={tags}
+              selectedIds={selectedTagIds}
+              onSelectedIdsChange={setSelectedTagIds}
+              onTagsChange={(next) => setTags(next)}
+            />
 
             <div className="space-y-2 md:col-span-2">
               <Label>Content*</Label>
               <RichTextEditor
                 value={contentHtml}
                 onChange={setContentHtml}
-                onSave={() => { /* saving handled by bottom buttons */ }}
+                onSave={() => {
+                  /* saving handled by bottom buttons */
+                }}
                 title="Content"
                 description=""
                 icon={Save}
