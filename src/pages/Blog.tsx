@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, Calendar, Clock } from "lucide-react";
 import { format } from "date-fns";
 
@@ -10,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 type BlogListItem = {
   id: string;
+  slug: string;
   title: string;
   excerpt: string | null;
   created_at: string;
@@ -32,7 +34,7 @@ export default function Blog() {
       const { data, error } = await supabase
         .from("blog_posts")
         .select(
-          "id,title,excerpt,created_at,publish_at,reading_time_minutes,featured_image_url,featured_image_alt,content_type"
+          "id,slug,title,excerpt,created_at,publish_at,reading_time_minutes,featured_image_url,featured_image_alt,content_type"
         )
         .eq("status", "published")
         .eq("visibility", "public")
@@ -149,9 +151,11 @@ export default function Blog() {
                           </span>
                         ) : null}
                       </div>
-                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 p-0">
-                        Read More
-                        <ArrowRight className="ml-1 h-3 w-3" />
+                      <Button asChild variant="ghost" size="sm" className="text-primary hover:text-primary/80 p-0">
+                        <Link to={`/blog/${post.slug}`} aria-label={`Read full article: ${post.title}`}>
+                          Read More
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Link>
                       </Button>
                     </CardFooter>
                   </Card>
