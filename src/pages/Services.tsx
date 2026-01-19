@@ -1,85 +1,201 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, Globe, MessageCircle, Code, FileText, HeartHandshake, CheckCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PublicLayout } from '@/components/layout/PublicLayout';
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  CheckCircle,
+  Code,
+  FileText,
+  Globe,
+  HeartHandshake,
+  MessageCircle,
+} from "lucide-react";
 
-const services = [
-  {
-    icon: Globe,
-    title: 'Google Business Profile (GMB) Setup',
-    description: 'Get found by local customers searching for your services.',
-    features: [
-      'Complete profile setup and optimization',
-      'Photos and business information',
-      'Review response management',
-      'Regular posts and updates',
-      'Insights and performance tracking',
-    ],
-  },
-  {
-    icon: MessageCircle,
-    title: 'Social Media Posting',
-    description: 'Build your brand with consistent, engaging social content.',
-    features: [
-      'Content calendar planning',
-      'Custom graphics and visuals',
-      'Platform-specific optimization',
-      'Hashtag strategy',
-      'Engagement and community building',
-    ],
-  },
-  {
-    icon: Code,
-    title: 'Website Development',
-    description: 'Beautiful, fast websites that convert visitors into customers.',
-    features: [
-      'Modern, responsive design',
-      'Mobile-first approach',
-      'SEO-friendly structure',
-      'Fast loading speeds',
-      'Easy content management',
-    ],
-  },
-  {
-    icon: FileText,
-    title: 'Blog & SEO Content',
-    description: 'Attract organic traffic with quality content that ranks.',
-    features: [
-      'Keyword research and strategy',
-      'SEO-optimized blog posts',
-      'Content that builds authority',
-      'Regular publishing schedule',
-      'Performance analytics',
-    ],
-  },
-  {
-    icon: HeartHandshake,
-    title: 'Ongoing Marketing Assistance',
-    description: 'Your dedicated assist for all marketing needs.',
-    features: [
-      'Weekly strategy calls',
-      'Task management and execution',
-      'Performance reporting',
-      'Quick response times',
-      'Flexible task prioritization',
-    ],
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+
+import type { Database } from "@/integrations/supabase/types";
+
+type FaqRow = Database["public"]["Tables"]["website_faqs"]["Row"];
+
+type ServiceIconKey = "globe" | "message" | "code" | "file" | "handshake";
+
+type ServiceItem = {
+  icon: ServiceIconKey;
+  title: string;
+  description: string;
+  features: string[];
+};
+
+type ServicesPageSettings = {
+  heroTitle: string;
+  heroSubtitle: string;
+  ctaTitle: string;
+  ctaSubtitle: string;
+  services: ServiceItem[];
+};
+
+const SETTINGS_KEY = "services_page";
+
+const iconMap = {
+  globe: Globe,
+  message: MessageCircle,
+  code: Code,
+  file: FileText,
+  handshake: HeartHandshake,
+} as const;
+
+const fallbackSettings: ServicesPageSettings = {
+  heroTitle: "Marketing Services That Actually Help",
+  heroSubtitle: "No fluff, no jargon. Just practical marketing support from your dedicated assist.",
+  ctaTitle: "Ready to Get Started?",
+  ctaSubtitle: "Check out our packages to find the right level of support for your business.",
+  services: [
+    {
+      icon: "globe",
+      title: "Google Business Profile (GMB) Setup",
+      description: "Get found by local customers searching for your services.",
+      features: [
+        "Complete profile setup and optimization",
+        "Photos and business information",
+        "Review response management",
+        "Regular posts and updates",
+        "Insights and performance tracking",
+      ],
+    },
+    {
+      icon: "message",
+      title: "Social Media Posting",
+      description: "Build your brand with consistent, engaging social content.",
+      features: [
+        "Content calendar planning",
+        "Custom graphics and visuals",
+        "Platform-specific optimization",
+        "Hashtag strategy",
+        "Engagement and community building",
+      ],
+    },
+    {
+      icon: "code",
+      title: "Website Development",
+      description: "Beautiful, fast websites that convert visitors into customers.",
+      features: [
+        "Modern, responsive design",
+        "Mobile-first approach",
+        "SEO-friendly structure",
+        "Fast loading speeds",
+        "Easy content management",
+      ],
+    },
+    {
+      icon: "file",
+      title: "Blog & SEO Content",
+      description: "Attract organic traffic with quality content that ranks.",
+      features: [
+        "Keyword research and strategy",
+        "SEO-optimized blog posts",
+        "Content that builds authority",
+        "Regular publishing schedule",
+        "Performance analytics",
+      ],
+    },
+    {
+      icon: "handshake",
+      title: "Ongoing Marketing Assistance",
+      description: "Your dedicated assist for all marketing needs.",
+      features: [
+        "Weekly strategy calls",
+        "Task management and execution",
+        "Performance reporting",
+        "Quick response times",
+        "Flexible task prioritization",
+      ],
+    },
+  ],
+};
+
+function sanitizeServices(value: unknown): ServicesPageSettings {
+  if (!value || typeof value !== "object") return fallbackSettings;
+  const v = value as any;
+
+  const services: ServiceItem[] = Array.isArray(v.services)
+    ? (v.services as any[])
+        .map((raw) => {
+          if (!raw || typeof raw !== "object") return null;
+          const r = raw as any;
+          const icon = (r.icon as ServiceIconKey) in iconMap ? (r.icon as ServiceIconKey) : "globe";
+          const title = typeof r.title === "string" ? r.title : "";
+          if (!title) return null;
+          return {
+            icon,
+            title,
+            description: typeof r.description === "string" ? r.description : "",
+            features: Array.isArray(r.features)
+              ? (r.features.filter((x: any) => typeof x === "string") as string[])
+              : [],
+          } satisfies ServiceItem;
+        })
+        .filter(Boolean) as ServiceItem[]
+    : [];
+
+  return {
+    heroTitle: typeof v.heroTitle === "string" ? v.heroTitle : fallbackSettings.heroTitle,
+    heroSubtitle: typeof v.heroSubtitle === "string" ? v.heroSubtitle : fallbackSettings.heroSubtitle,
+    ctaTitle: typeof v.ctaTitle === "string" ? v.ctaTitle : fallbackSettings.ctaTitle,
+    ctaSubtitle: typeof v.ctaSubtitle === "string" ? v.ctaSubtitle : fallbackSettings.ctaSubtitle,
+    services: services.length ? services : fallbackSettings.services,
+  };
+}
 
 export default function Services() {
+  const [content, setContent] = useState<ServicesPageSettings>(fallbackSettings);
+  const [faqs, setFaqs] = useState<FaqRow[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await (supabase as any)
+        .from("website_settings")
+        .select("value")
+        .eq("key", SETTINGS_KEY)
+        .maybeSingle();
+
+      if (!error) setContent(sanitizeServices(data?.value));
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("website_faqs")
+        .select("id,page,question,answer,sort_order,is_published,created_at,updated_at")
+        .eq("page", "services")
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (!error) setFaqs((data ?? []) as FaqRow[]);
+    })();
+  }, []);
+
+  const services = useMemo(
+    () =>
+      content.services.map((s) => ({
+        ...s,
+        Icon: iconMap[s.icon] ?? Globe,
+      })),
+    [content.services]
+  );
+
   return (
     <PublicLayout>
       {/* Hero */}
       <section className="py-16 md:py-24 gradient-hero">
         <div className="container">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-              Marketing Services That <span className="text-gradient">Actually Help</span>
-            </h1>
-            <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
-              No fluff, no jargon. Just practical marketing support from your dedicated assist.
-            </p>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">{content.heroTitle}</h1>
+            <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">{content.heroSubtitle}</p>
           </div>
         </div>
       </section>
@@ -97,7 +213,7 @@ export default function Services() {
                 <div className="grid md:grid-cols-5 gap-6">
                   <CardHeader className="md:col-span-2 bg-muted/30 flex flex-col justify-center p-8">
                     <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary mb-6">
-                      <service.icon className="h-7 w-7" />
+                      <service.Icon className="h-7 w-7" />
                     </div>
                     <CardTitle className="text-2xl">{service.title}</CardTitle>
                     <p className="mt-3 text-muted-foreground">{service.description}</p>
@@ -119,16 +235,33 @@ export default function Services() {
         </div>
       </section>
 
+      {/* FAQ */}
+      {faqs.length > 0 && (
+        <section className="py-20 md:py-28 bg-muted/50">
+          <div className="container">
+            <div className="mx-auto max-w-2xl text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground">Common Questions</h2>
+            </div>
+            <div className="mx-auto max-w-3xl space-y-6">
+              {faqs.map((faq) => (
+                <Card key={faq.id} className="shadow-soft">
+                  <CardContent className="pt-6">
+                    <h3 className="font-semibold text-foreground mb-2">{faq.question}</h3>
+                    <p className="text-muted-foreground">{faq.answer}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* CTA */}
       <section className="py-20 md:py-28 bg-muted/50">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground">
-              Ready to Get Started?
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Check out our packages to find the right level of support for your business.
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground">{content.ctaTitle}</h2>
+            <p className="mt-4 text-lg text-muted-foreground">{content.ctaSubtitle}</p>
             <div className="mt-10">
               <Button size="lg" asChild>
                 <Link to="/packages">
