@@ -44,6 +44,7 @@ import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
 import AdminAssistants from "./admin/Assistants";
 import AdminAssistantDetails from "./admin/AssistantDetails";
 import AdminTasks from "./admin/Tasks";
+import AdminSupport from "./admin/Support";
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -167,7 +168,7 @@ export default function AdminDashboard() {
               <Route path="assistants/:userId" element={<AdminAssistantDetails />} />
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
-              <Route path="support" element={<AdminPlaceholder title="Support" />} />
+              <Route path="support" element={<AdminSupport />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
               <Route path="website/blog" element={<AdminWebsiteBlog />} />
               <Route path="website/blog/new" element={<AdminWebsiteBlogCreate />} />
