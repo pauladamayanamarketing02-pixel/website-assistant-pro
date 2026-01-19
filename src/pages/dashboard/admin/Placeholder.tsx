@@ -19,11 +19,10 @@ const roadmap: Record<string, string[]> = {
   Reports: ["Review laporan", "Approve/reject", "Minta revisi", "Kirim ke user"],
   Support: ["Monitor chat user ↔ assistant", "Komplain & tiket", "Internal note"],
 
-  Website: ["Kelola halaman website", "Blog & artikel", "Media library", "SEO", "Contact", "Services", "Layout"],
+  Website: ["Kelola halaman website", "Blog & artikel", "Media library", "Contact", "Services", "Layout"],
   Pages: ["Daftar halaman", "Edit konten", "Publish / unpublish", "Preview"],
   Blog: ["Daftar artikel", "Editor", "Kategori & tag", "Publish"],
   "Media Library": ["Upload gambar", "Folder/label", "Optimasi gambar", "Pakai di konten"],
-  SEO: ["Meta title/description", "OG image", "Sitemap/robots", "Audit"],
   Contact: ["Edit informasi kontak", "Jam operasional", "CTA WhatsApp/Email", "Maps embed"],
   Services: ["Daftar layanan", "Harga/paket", "Highlight fitur", "CTA order"],
   Layout: ["Header/footer", "Navigasi", "Komponen global", "Theme/branding"],
