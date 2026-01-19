@@ -254,7 +254,7 @@ export default function BlogPost() {
 
               <section className="container mt-10 md:mt-14">
                 <div
-                  className="prose prose-sm md:prose-base max-w-3xl mx-auto prose-headings:tracking-tight prose-a:text-primary"
+                  className="rte-content max-w-3xl mx-auto"
                   dangerouslySetInnerHTML={{ __html: post.content_html }}
                 />
               </section>
