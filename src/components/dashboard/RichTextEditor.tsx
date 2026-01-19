@@ -112,6 +112,9 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
+  const lastSelectionRangeRef = useRef<Range | null>(null);
+  const lastSelectionInsideRef = useRef(false);
+
   const [linkUrl, setLinkUrl] = useState('');
   const [tableRows, setTableRows] = useState('3');
   const [tableCols, setTableCols] = useState('3');
@@ -126,19 +129,53 @@ export function RichTextEditor({
 
   const normalizeFormatBlock = (raw: string) => raw.toLowerCase().replace(/[<>]/g, '').trim();
 
+  const captureSelectionIfInsideEditor = () => {
+    const el = editorRef.current;
+    if (!el) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    const node = sel.anchorNode;
+    const inside = !!(node && el.contains(node));
+    if (!inside) return;
+
+    lastSelectionInsideRef.current = true;
+    lastSelectionRangeRef.current = sel.getRangeAt(0).cloneRange();
+  };
+
+  const restoreSelection = () => {
+    const el = editorRef.current;
+    const range = lastSelectionRangeRef.current;
+    if (!el || !range) return;
+
+    const sel = window.getSelection();
+    if (!sel) return;
+
+    el.focus();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+
   const refreshSelectionState = () => {
     const el = editorRef.current;
     if (!el) return;
 
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) {
-      setSelectionInEditor(false);
+      // Keep the buttons enabled if we have a last-known selection in the editor
+      setSelectionInEditor(lastSelectionInsideRef.current);
       return;
     }
 
     const node = sel.anchorNode;
     const inside = !!(node && el.contains(node));
-    setSelectionInEditor(inside);
+
+    if (inside) {
+      captureSelectionIfInsideEditor();
+    }
+
+    setSelectionInEditor(inside || lastSelectionInsideRef.current);
 
     if (inside) {
       const fmt = (document.queryCommandValue('formatBlock') as string) || 'p';
@@ -157,14 +194,18 @@ export function RichTextEditor({
   }, [title]);
 
   useEffect(() => {
-    const handler = () => refreshSelectionState();
+    const handler = () => {
+      captureSelectionIfInsideEditor();
+      refreshSelectionState();
+    };
     document.addEventListener('selectionchange', handler);
     return () => document.removeEventListener('selectionchange', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const execCommand = (command: string, commandValue?: string) => {
-    editorRef.current?.focus();
+    // Toolbar click can steal focus; restore the last selection inside editor first.
+    restoreSelection();
     document.execCommand(command, false, commandValue);
     updateContent();
     refreshSelectionState();
@@ -446,8 +487,14 @@ export function RichTextEditor({
             aria-label="Heading 1"
             title="Heading 1"
             pressed={selectionInEditor && activeBlock === 'h1'}
-            disabled={!isEditing || !selectionInEditor}
-            onPressedChange={() => execCommand('formatBlock', '<h1>')}
+            disabled={!isEditing}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              execCommand('formatBlock', '<h1>');
+            }}
+            onPressedChange={() => {
+              // noop (handled in onMouseDown to preserve selection)
+            }}
           >
             <Heading1 className="h-4 w-4" />
           </Toggle>
@@ -456,8 +503,14 @@ export function RichTextEditor({
             aria-label="Heading 2"
             title="Heading 2"
             pressed={selectionInEditor && activeBlock === 'h2'}
-            disabled={!isEditing || !selectionInEditor}
-            onPressedChange={() => execCommand('formatBlock', '<h2>')}
+            disabled={!isEditing}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              execCommand('formatBlock', '<h2>');
+            }}
+            onPressedChange={() => {
+              // noop
+            }}
           >
             <Heading2 className="h-4 w-4" />
           </Toggle>
@@ -466,8 +519,14 @@ export function RichTextEditor({
             aria-label="Heading 3"
             title="Heading 3"
             pressed={selectionInEditor && activeBlock === 'h3'}
-            disabled={!isEditing || !selectionInEditor}
-            onPressedChange={() => execCommand('formatBlock', '<h3>')}
+            disabled={!isEditing}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              execCommand('formatBlock', '<h3>');
+            }}
+            onPressedChange={() => {
+              // noop
+            }}
           >
             <Heading3 className="h-4 w-4" />
           </Toggle>
@@ -476,8 +535,14 @@ export function RichTextEditor({
             aria-label="Paragraph"
             title="Paragraph"
             pressed={selectionInEditor && (activeBlock === 'p' || activeBlock === 'div')}
-            disabled={!isEditing || !selectionInEditor}
-            onPressedChange={() => execCommand('formatBlock', '<p>')}
+            disabled={!isEditing}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              execCommand('formatBlock', '<p>');
+            }}
+            onPressedChange={() => {
+              // noop
+            }}
           >
             <Type className="h-4 w-4" />
           </Toggle>
@@ -646,7 +711,7 @@ export function RichTextEditor({
             refreshSelectionState();
           }}
           onBlur={() => {
-            setSelectionInEditor(false);
+            // do not clear selection state; toolbar actions need last-known selection
           }}
           onKeyUp={() => refreshSelectionState()}
           onMouseUp={() => refreshSelectionState()}

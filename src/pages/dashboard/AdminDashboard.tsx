@@ -37,6 +37,7 @@ import AdminWebsiteMedia from "./admin/WebsiteMedia";
 import AdminWebsiteContact from "./admin/WebsiteContact";
 import AdminWebsiteServices from "./admin/WebsiteServices";
 import AdminWebsiteFaqs from "./admin/WebsiteFaqs";
+import AdminWebsiteLayout from "./admin/WebsiteLayout";
 import AdminBusinessUsers from "./admin/BusinessUsers";
 import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
 import AdminAssistants from "./admin/Assistants";
@@ -172,7 +173,7 @@ export default function AdminDashboard() {
               <Route path="website/contact" element={<AdminWebsiteContact />} />
               <Route path="website/services" element={<AdminWebsiteServices />} />
               <Route path="website/services/faqs" element={<AdminWebsiteFaqs />} />
-              <Route path="website/layout" element={<AdminPlaceholder title="Layout" />} />
+              <Route path="website/layout" element={<AdminWebsiteLayout />} />
 
               {/* Analytics */}
               <Route path="analytics/traffic" element={<AdminPlaceholder title="Traffic" />} />

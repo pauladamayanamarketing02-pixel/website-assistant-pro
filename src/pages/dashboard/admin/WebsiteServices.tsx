@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -53,6 +58,7 @@ export default function WebsiteServices() {
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
 
   const [settings, setSettings] = useState<ServicesPageSettings>(defaultServicesSettings);
   const [baseline, setBaseline] = useState<ServicesPageSettings>(defaultServicesSettings);
@@ -244,106 +250,132 @@ export default function WebsiteServices() {
           ) : settings.services.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">Belum ada service.</div>
           ) : (
-            settings.services.map((svc, index) => (
-              <div key={`${svc.title}-${index}`} className="rounded-lg border border-border bg-card">
-                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="font-medium text-foreground truncate">{svc.title || "(Untitled)"}</div>
-                      <div className="text-xs text-muted-foreground truncate">{svc.description || "No description"}</div>
+            settings.services.map((svc, index) => {
+              const isCollapsed = collapsed[index] ?? false;
+
+              return (
+                <Collapsible
+                  key={`${svc.title}-${index}`}
+                  open={!isCollapsed}
+                  onOpenChange={(open) => setCollapsed((p) => ({ ...p, [index]: !open }))}
+                  className="rounded-lg border border-border bg-card"
+                >
+                  <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={!canSave}
+                          aria-label={isCollapsed ? "Expand service" : "Collapse service"}
+                        >
+                          {isCollapsed ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground truncate">{svc.title || "(Untitled)"}</div>
+                        <div className="text-xs text-muted-foreground truncate">{svc.description || "No description"}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => moveService(index, Math.max(0, index - 1))}
+                        disabled={!canSave || index === 0}
+                      >
+                        Up
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => moveService(index, Math.min(settings.services.length - 1, index + 1))}
+                        disabled={!canSave || index === settings.services.length - 1}
+                      >
+                        Down
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeService(index)}
+                        disabled={!canSave}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => moveService(index, Math.max(0, index - 1))}
-                      disabled={!canSave || index === 0}
-                    >
-                      Up
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => moveService(index, Math.min(settings.services.length - 1, index + 1))}
-                      disabled={!canSave || index === settings.services.length - 1}
-                    >
-                      Down
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeService(index)}
-                      disabled={!canSave}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
+                  <CollapsibleContent>
+                    <Separator />
 
-                <Separator />
+                    <div className="grid gap-4 p-4 md:grid-cols-2">
+                      <div className="grid gap-2">
+                        <Label>Icon</Label>
+                        <Select
+                          value={svc.icon}
+                          onValueChange={(v) => updateService(index, { icon: v as ServiceIconKey })}
+                          disabled={!canSave}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select icon" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {iconOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                <div className="grid gap-4 p-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Icon</Label>
-                    <Select
-                      value={svc.icon}
-                      onValueChange={(v) => updateService(index, { icon: v as ServiceIconKey })}
-                      disabled={!canSave}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select icon" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {iconOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <div className="grid gap-2">
+                        <Label>Title</Label>
+                        <Input
+                          value={svc.title}
+                          onChange={(e) => updateService(index, { title: e.target.value })}
+                          disabled={!canSave}
+                          placeholder="Service name"
+                        />
+                      </div>
 
-                  <div className="grid gap-2">
-                    <Label>Title</Label>
-                    <Input
-                      value={svc.title}
-                      onChange={(e) => updateService(index, { title: e.target.value })}
-                      disabled={!canSave}
-                      placeholder="Service name"
-                    />
-                  </div>
+                      <div className="grid gap-2 md:col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={svc.description}
+                          onChange={(e) => updateService(index, { description: e.target.value })}
+                          disabled={!canSave}
+                          rows={2}
+                          placeholder="Short description"
+                        />
+                      </div>
 
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label>Description</Label>
-                    <Textarea
-                      value={svc.description}
-                      onChange={(e) => updateService(index, { description: e.target.value })}
-                      disabled={!canSave}
-                      rows={2}
-                      placeholder="Short description"
-                    />
-                  </div>
-
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label>Features (1 per baris)</Label>
-                    <Textarea
-                      value={featuresToTextarea(svc.features)}
-                      onChange={(e) => updateService(index, { features: textareaToFeatures(e.target.value) })}
-                      disabled={!canSave}
-                      rows={5}
-                      placeholder="Feature A\nFeature B\nFeature C"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))
+                      <div className="grid gap-2 md:col-span-2">
+                        <Label>Features (1 per baris)</Label>
+                        <Textarea
+                          value={featuresToTextarea(svc.features)}
+                          onChange={(e) => updateService(index, { features: textareaToFeatures(e.target.value) })}
+                          disabled={!canSave}
+                          rows={5}
+                          placeholder="Feature A\nFeature B\nFeature C"
+                        />
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })
           )}
 
           {isEditing && !loading && (

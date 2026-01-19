@@ -1,30 +1,25 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/services', label: 'Services' },
-  { href: '/packages', label: 'Packages' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/about', label: 'About Us' },
-  { href: '/contact', label: 'Contact' },
-];
+import { useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useWebsiteLayoutSettings } from "@/hooks/useWebsiteLayout";
 
 export function Navbar() {
+  const { settings } = useWebsiteLayoutSettings();
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+
+  const navLinks = useMemo(() => settings.header.navLinks ?? [], [settings.header.navLinks]);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">E</span>
+            <span className="text-lg font-bold text-primary-foreground">{settings.header.brandMarkText}</span>
           </div>
-          <span className="text-xl font-bold text-foreground">EasyMarketingAssist</span>
+          <span className="text-xl font-bold text-foreground">{settings.header.brandName}</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -47,10 +42,10 @@ export function Navbar() {
 
         <div className="hidden items-center gap-3 md:flex">
           <Button variant="ghost" asChild>
-            <Link to="/auth">Login</Link>
+            <Link to={settings.header.secondaryCtaHref}>{settings.header.secondaryCtaLabel}</Link>
           </Button>
           <Button asChild>
-            <Link to="/packages">Get Started</Link>
+            <Link to={settings.header.primaryCtaHref}>{settings.header.primaryCtaLabel}</Link>
           </Button>
         </div>
 
@@ -85,10 +80,14 @@ export function Navbar() {
             ))}
             <div className="pt-4 border-t border-border space-y-2">
               <Button variant="outline" className="w-full" asChild>
-                <Link to="/auth" onClick={() => setIsOpen(false)}>Login</Link>
+                <Link to={settings.header.secondaryCtaHref} onClick={() => setIsOpen(false)}>
+                  {settings.header.secondaryCtaLabel}
+                </Link>
               </Button>
               <Button className="w-full" asChild>
-                <Link to="/packages" onClick={() => setIsOpen(false)}>Get Started</Link>
+                <Link to={settings.header.primaryCtaHref} onClick={() => setIsOpen(false)}>
+                  {settings.header.primaryCtaLabel}
+                </Link>
               </Button>
             </div>
           </div>
