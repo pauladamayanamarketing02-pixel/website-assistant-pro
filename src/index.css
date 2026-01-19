@@ -122,47 +122,71 @@
 @layer components {
   /* RichTextEditor content styles (Tailwind Typography plugin is not enabled) */
   .rte-content {
-    @apply text-base leading-7;
+    @apply text-base leading-7 text-foreground;
   }
 
-.rte-content h1 {
-    @apply text-4xl leading-tight mt-6 mb-3;
+  .rte-content h1 {
+    @apply text-4xl leading-tight mt-8 mb-4 text-foreground;
   }
 
   .rte-content h2 {
-    @apply text-3xl leading-tight mt-5 mb-3;
+    @apply text-3xl leading-tight mt-8 mb-4 text-foreground;
   }
 
   .rte-content h3 {
-    @apply text-2xl leading-snug mt-4 mb-2;
+    @apply text-2xl leading-snug mt-6 mb-3 text-foreground;
+  }
+
+  .rte-content h4 {
+    @apply text-xl leading-snug mt-6 mb-2 text-foreground;
+  }
+
+  .rte-content h5 {
+    @apply text-lg leading-snug mt-5 mb-2 text-foreground;
+  }
+
+  .rte-content h6 {
+    @apply text-base leading-snug mt-4 mb-2 text-foreground;
   }
 
   .rte-content p {
-    @apply my-3;
+    @apply my-4;
+  }
+
+  .rte-content strong {
+    @apply font-semibold;
   }
 
   .rte-content ul {
-    @apply list-disc pl-6 my-3;
+    @apply list-disc pl-6 my-4;
   }
 
   .rte-content ol {
-    @apply list-decimal pl-6 my-3;
+    @apply list-decimal pl-6 my-4;
+  }
+
+  .rte-content li {
+    @apply my-2;
   }
 
   .rte-content blockquote {
-    @apply border-l-4 border-border pl-4 italic text-muted-foreground my-4;
+    @apply border-l-4 border-border pl-4 italic text-muted-foreground my-6;
+  }
+
+  .rte-content hr {
+    @apply my-8 border-border;
   }
 
   .rte-content pre {
-    @apply rounded-md bg-muted p-3 overflow-x-auto my-4;
+    @apply rounded-md bg-muted p-4 overflow-x-auto my-6;
   }
 
   .rte-content img {
-    @apply max-w-full h-auto rounded-md my-4;
+    @apply max-w-full h-auto rounded-md my-6;
   }
 
   .rte-content a {
-    @apply underline underline-offset-4;
+    @apply underline underline-offset-4 text-primary;
   }
 }
 
