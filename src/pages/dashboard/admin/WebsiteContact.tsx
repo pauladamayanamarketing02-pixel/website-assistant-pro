@@ -146,7 +146,8 @@ export default function WebsiteContact() {
                     key={item.key}
                     item={item}
                     icon={Icon}
-                    disabled={!isEditing || saving}
+                    // Keep fields editable while autosave runs to avoid cursor/focus loss.
+                    disabled={!isEditing}
                     onChange={updateItem}
                   />
                 );
