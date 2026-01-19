@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, Plus } from "lucide-react";
+import { Ban, CheckCircle2, Eye, Plus, Trash2, UserX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -131,14 +131,53 @@ export default function AdminAssistants() {
                       <TableCell className="text-muted-foreground">{row.phone ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{row.country ?? "—"}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/dashboard/admin/assistants/${row.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          View Details
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Set Active"
+                            onClick={() => {}}
+                          >
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Set Nonactive"
+                            onClick={() => {}}
+                          >
+                            <UserX className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Blacklist"
+                            onClick={() => {}}
+                          >
+                            <Ban className="h-4 w-4 text-destructive" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Delete"
+                            onClick={() => {}}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/dashboard/admin/assistants/${row.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                            View Details
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
