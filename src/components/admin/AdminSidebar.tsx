@@ -120,6 +120,7 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                               <SidebarMenuSubButton asChild>
                                 <NavLink
                                   to={child.url}
+                                  end
                                   className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
                                   activeClassName="bg-sidebar-accent text-sidebar-primary"
                                 >
@@ -140,7 +141,7 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.url}
-                        end={item.url === "/dashboard/admin"}
+                        end
                         className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
                         activeClassName="bg-sidebar-accent text-sidebar-primary"
                       >
