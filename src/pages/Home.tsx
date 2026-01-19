@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle, Users, Briefcase, TrendingUp, Sparkles, Globe,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PublicLayout } from '@/components/layout/PublicLayout';
+import { HomePromoBanner } from '@/components/home/HomePromoBanner';
 
 const steps = [
   {
@@ -61,6 +62,10 @@ const services = [
 export default function Home() {
   return (
     <PublicLayout>
+      <div className="pt-6">
+        <HomePromoBanner />
+      </div>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden gradient-hero py-20 md:py-32">
         <div className="container relative z-10">

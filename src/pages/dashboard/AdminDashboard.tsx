@@ -10,6 +10,7 @@ import {
   FileQuestion,
   FileText,
   Globe,
+  Home as HomeIcon,
   Image,
   LayoutDashboard,
   LayoutTemplate,
@@ -38,6 +39,7 @@ import AdminWebsiteContact from "./admin/WebsiteContact";
 import AdminWebsiteServices from "./admin/WebsiteServices";
 import AdminWebsiteFaqs from "./admin/WebsiteFaqs";
 import AdminWebsiteLayout from "./admin/WebsiteLayout";
+import AdminWebsiteHomepage from "./admin/WebsiteHomepage";
 import AdminBusinessUsers from "./admin/BusinessUsers";
 import AdminBusinessUserDetails from "./admin/BusinessUserDetails";
 import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
@@ -73,16 +75,17 @@ export default function AdminDashboard() {
         title: "Website",
         url: "/dashboard/admin/website",
         icon: Globe,
-        children: [
-          { title: "Pages", url: "/dashboard/admin/website/pages", icon: FileText },
-          { title: "Blog", url: "/dashboard/admin/website/blog", icon: Newspaper },
-          { title: "Media Library", url: "/dashboard/admin/website/media", icon: Image },
-          { title: "Contact", url: "/dashboard/admin/website/contact", icon: Phone },
-          { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
-          { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
-          { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
-          { title: "Support", url: "/dashboard/admin/website/support", icon: MessageSquare },
-        ],
+          children: [
+            { title: "Homepage", url: "/dashboard/admin/website/homepage", icon: HomeIcon },
+            { title: "Pages", url: "/dashboard/admin/website/pages", icon: FileText },
+            { title: "Blog", url: "/dashboard/admin/website/blog", icon: Newspaper },
+            { title: "Media Library", url: "/dashboard/admin/website/media", icon: Image },
+            { title: "Contact", url: "/dashboard/admin/website/contact", icon: Phone },
+            { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
+            { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
+            { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
+            { title: "Support", url: "/dashboard/admin/website/support", icon: MessageSquare },
+          ],
       },
       {
         title: "Analytics",
@@ -176,6 +179,7 @@ export default function AdminDashboard() {
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
               <Route path="messages" element={<AdminPlaceholder title="Messages" />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
+              <Route path="website/homepage" element={<AdminWebsiteHomepage />} />
               <Route path="website/blog" element={<AdminWebsiteBlog />} />
               <Route path="website/blog/new" element={<AdminWebsiteBlogCreate />} />
               <Route path="website/blog/:id" element={<AdminWebsiteBlogEdit />} />
