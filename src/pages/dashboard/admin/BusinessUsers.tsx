@@ -237,16 +237,16 @@ export default function AdminBusinessUsers() {
           {loading ? (
             <div className="py-8 text-sm text-muted-foreground">Loading business accounts...</div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto lg:overflow-visible">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[100px]">Business ID</TableHead>
-                    <TableHead className="min-w-[150px]">Business Name</TableHead>
-                    <TableHead className="min-w-[120px]">Contact</TableHead>
-                    <TableHead className="min-w-[180px]">Email</TableHead>
-                    <TableHead className="min-w-[100px]">Status</TableHead>
-                    <TableHead className="text-center min-w-[220px]">Action</TableHead>
+                    <TableHead className="min-w-[100px] lg:min-w-0">Business ID</TableHead>
+                    <TableHead className="min-w-[150px] lg:min-w-0">Business Name</TableHead>
+                    <TableHead className="min-w-[120px] lg:min-w-0">Contact</TableHead>
+                    <TableHead className="min-w-[180px] lg:min-w-0">Email</TableHead>
+                    <TableHead className="min-w-[100px] lg:min-w-0">Status</TableHead>
+                    <TableHead className="text-center min-w-[220px] lg:min-w-0">Action</TableHead>
                   </TableRow>
                 </TableHeader>
 
