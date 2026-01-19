@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Eye, RefreshCw, CheckCircle2, Send } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+import { ContactMessageForm } from "@/components/contact/ContactMessageForm";
 import {
   Select,
   SelectContent,
@@ -162,6 +164,7 @@ export default function AdminSupport() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<InquiryStatus>("all");
   const [selected, setSelected] = useState<InquiryRow | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
 
   const fetchInquiries = async () => {
     try {
@@ -254,12 +257,32 @@ export default function AdminSupport() {
             </Select>
           </div>
 
+          <Button variant="outline" onClick={() => setSendOpen(true)}>
+            <Send className="h-4 w-4" />
+            Send Message
+          </Button>
+
           <Button variant="outline" onClick={fetchInquiries}>
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
         </div>
       </header>
+
+      <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Send Us a Message</DialogTitle>
+            <DialogDescription>Ini adalah form yang sama seperti halaman /contact.</DialogDescription>
+          </DialogHeader>
+
+          <ContactMessageForm
+            source="contact_page"
+            wrapper="none"
+            onSubmitted={() => setSendOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader className="space-y-1">
