@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 
 type AppRole = 'user' | 'assist';
 
@@ -31,22 +30,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer role fetching with setTimeout to prevent deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
-        } else {
-          setRole(null);
-          setLoading(false);
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.info("[auth] event", event);
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      // Defer role fetching with setTimeout to prevent deadlock
+      if (session?.user) {
+        setTimeout(() => {
+          fetchUserRole(session.user.id);
+        }, 0);
+      } else {
+        setRole(null);
+        setLoading(false);
       }
-    );
+    });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -64,16 +64,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
+      // Prevent rare "stuck loading" if the roles query hangs.
+      const timeoutMs = 8000;
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Role fetch timeout")), timeoutMs)
+      );
+
+      const roleQuery = supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
         .maybeSingle();
-      
+
+      const { data, error } = await Promise.race([roleQuery, timeout]);
+
       if (error) throw error;
-      setRole(data?.role as AppRole ?? null);
+      setRole((data?.role as AppRole) ?? null);
     } catch (error) {
-      console.error('Error fetching role:', error);
+      console.error("Error fetching role:", error);
       setRole(null);
     } finally {
       setLoading(false);
