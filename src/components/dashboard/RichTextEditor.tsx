@@ -444,6 +444,7 @@ export function RichTextEditor({
           <Toggle
             size="sm"
             aria-label="Heading 1"
+            title="Heading 1"
             pressed={selectionInEditor && activeBlock === 'h1'}
             disabled={!isEditing || !selectionInEditor}
             onPressedChange={() => execCommand('formatBlock', '<h1>')}
@@ -453,6 +454,7 @@ export function RichTextEditor({
           <Toggle
             size="sm"
             aria-label="Heading 2"
+            title="Heading 2"
             pressed={selectionInEditor && activeBlock === 'h2'}
             disabled={!isEditing || !selectionInEditor}
             onPressedChange={() => execCommand('formatBlock', '<h2>')}
@@ -462,6 +464,7 @@ export function RichTextEditor({
           <Toggle
             size="sm"
             aria-label="Heading 3"
+            title="Heading 3"
             pressed={selectionInEditor && activeBlock === 'h3'}
             disabled={!isEditing || !selectionInEditor}
             onPressedChange={() => execCommand('formatBlock', '<h3>')}
@@ -471,6 +474,7 @@ export function RichTextEditor({
           <Toggle
             size="sm"
             aria-label="Paragraph"
+            title="Paragraph"
             pressed={selectionInEditor && (activeBlock === 'p' || activeBlock === 'div')}
             disabled={!isEditing || !selectionInEditor}
             onPressedChange={() => execCommand('formatBlock', '<p>')}

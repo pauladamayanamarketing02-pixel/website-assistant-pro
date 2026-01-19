@@ -125,16 +125,16 @@
     @apply text-base leading-7;
   }
 
-  .rte-content h1 {
-    @apply text-3xl leading-tight mt-6 mb-3;
+.rte-content h1 {
+    @apply text-4xl leading-tight mt-6 mb-3;
   }
 
   .rte-content h2 {
-    @apply text-2xl leading-tight mt-5 mb-3;
+    @apply text-3xl leading-tight mt-5 mb-3;
   }
 
   .rte-content h3 {
-    @apply text-xl leading-snug mt-4 mb-2;
+    @apply text-2xl leading-snug mt-4 mb-2;
   }
 
   .rte-content p {
