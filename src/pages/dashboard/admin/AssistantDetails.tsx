@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, MapPin, User } from "lucide-react";
+import { ArrowLeft, ExternalLink, Globe, MapPin, User } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+type SocialLink = {
+  platform: string;
+  url: string;
+};
 
 type ProfileRow = {
   id: string;
@@ -17,12 +24,42 @@ type ProfileRow = {
   country: string | null;
   city: string | null;
   skills: string[] | null;
+  portfolio_url: string | null;
+  social_links: SocialLink[] | null;
 };
+
+const socialPlatforms = [
+  { value: "facebook", label: "Facebook" },
+  { value: "twitter", label: "X/Twitter" },
+  { value: "instagram", label: "Instagram" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "youtube", label: "YouTube" },
+  { value: "tiktok", label: "TikTok" },
+] as const;
 
 const formatAssistId = (userId: string) => {
   const idNum = (parseInt(userId.slice(-4), 16) % 900) + 100;
   return `A${String(idNum).padStart(5, "0")}`;
 };
+
+function normalizeSocialLinks(value: unknown): SocialLink[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((x) => {
+      const obj = x as any;
+      const platform = typeof obj?.platform === "string" ? obj.platform : "";
+      const url = typeof obj?.url === "string" ? obj.url : "";
+      if (!platform || !url) return null;
+      return { platform, url } satisfies SocialLink;
+    })
+    .filter(Boolean) as SocialLink[];
+}
+
+function safeLink(url: string) {
+  const u = (url ?? "").trim();
+  if (!u) return null;
+  return u.startsWith("http") ? u : `https://${u}`;
+}
 
 export default function AdminAssistantDetails() {
   const navigate = useNavigate();
@@ -41,12 +78,30 @@ export default function AdminAssistantDetails() {
       try {
         const { data, error } = await (supabase as any)
           .from("profiles")
-          .select("id, name, email, phone, avatar_url, country, city, skills")
+          .select("id, name, email, phone, avatar_url, country, city, skills, portfolio_url, social_links")
           .eq("id", userId)
           .maybeSingle();
 
         if (error) throw error;
-        setProfile((data as ProfileRow) ?? null);
+
+        const row = (data as any) ?? null;
+        if (!row) {
+          setProfile(null);
+          return;
+        }
+
+        setProfile({
+          id: String(row.id),
+          name: row.name ?? null,
+          email: String(row.email ?? ""),
+          phone: row.phone ?? null,
+          avatar_url: row.avatar_url ?? null,
+          country: row.country ?? null,
+          city: row.city ?? null,
+          skills: Array.isArray(row.skills) ? (row.skills as string[]) : null,
+          portfolio_url: row.portfolio_url ?? null,
+          social_links: normalizeSocialLinks(row.social_links),
+        });
       } catch (e) {
         console.error("Error fetching assistant profile:", e);
         setProfile(null);
@@ -60,82 +115,151 @@ export default function AdminAssistantDetails() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/admin/assistants")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Assistant Profile</h1>
-          <p className="text-sm text-muted-foreground">View assistant account profile details.</p>
+      <div>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/admin/assistants")}>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
         </div>
-      </header>
+        <h1 className="text-3xl font-bold text-foreground">Profile</h1>
+        <p className="text-muted-foreground">Profile assistant (read-only).</p>
+      </div>
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Read-only view for admin.</CardDescription>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Profile Information</CardTitle>
+                <CardDescription>Your account details and portfolio</CardDescription>
+              </div>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8">
           {loading ? (
             <div className="py-8 text-sm text-muted-foreground">Loading profile...</div>
           ) : !profile ? (
             <div className="py-8 text-sm text-muted-foreground">Profile not found.</div>
           ) : (
             <>
+              {/* Avatar */}
               <div className="flex items-center gap-6">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={profile.avatar_url ?? undefined} alt={profile.name ? `${profile.name} avatar` : "Assistant avatar"} />
-                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
-                    {(profile.name ?? "A").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-xl font-semibold text-foreground truncate">{profile.name ?? "—"}</h2>
-                    <Badge variant="secondary" className="font-mono">{assistId}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground truncate">{profile.email}</p>
+                <div className="relative">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={profile.avatar_url ?? undefined} />
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                      {(profile.name ?? "A").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div>
+                  <h3 className="font-medium text-lg">{profile.name ?? "—"}</h3>
+                  <p className="text-sm text-muted-foreground">{profile.email || "-"}</p>
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-lg border border-border p-4">
-                  <div className="text-xs text-muted-foreground">Phone</div>
-                  <div className="mt-1 text-sm font-medium text-foreground">{profile.phone ?? "—"}</div>
-                </div>
-                <div className="rounded-lg border border-border p-4">
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Location
-                  </div>
-                  <div className="mt-1 text-sm font-medium text-foreground">
-                    {[profile.city, profile.country].filter(Boolean).join(", ") || "—"}
-                  </div>
-                </div>
-              </div>
-
-              {Array.isArray(profile.skills) && profile.skills.length > 0 && (
+              {/* Basic Info */}
+              <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground">Skills</div>
-                  <div className="flex flex-wrap gap-2">
-                    {profile.skills.map((skill) => (
-                      <Badge key={skill} variant="secondary">{skill}</Badge>
-                    ))}
-                  </div>
+                  <Label>Assist ID</Label>
+                  <Input value={assistId} disabled className="bg-muted font-mono" />
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <p className="py-2 font-medium">{profile.email || "-"}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input value={profile.name ?? ""} disabled className="bg-muted" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <p className="py-2 font-medium">{profile.phone || "-"}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />Country
+                  </Label>
+                  <p className="py-2 font-medium">{profile.country || "-"}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>City</Label>
+                  <p className="py-2 font-medium">{profile.city || "-"}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Skills</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {(profile.skills ?? []).length ? (
+                    (profile.skills ?? []).map((skill) => (
+                      <Badge key={skill} variant="secondary" className="flex items-center gap-1">
+                        {skill}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="py-2 text-muted-foreground">-</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Portfolio */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />Portfolio URL
+                </Label>
+                {profile.portfolio_url ? (
+                  <a
+                    href={safeLink(profile.portfolio_url) ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2 text-primary hover:underline flex items-center gap-2"
+                  >
+                    {profile.portfolio_url}
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <p className="py-2 text-muted-foreground">-</p>
+                )}
+              </div>
+
+              {/* Social Media */}
+              <div className="space-y-2">
+                <Label>Social Media</Label>
+                <div className="space-y-2">
+                  {(profile.social_links ?? []).length ? (
+                    (profile.social_links ?? []).map((link, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                        <Badge variant="outline">
+                          {socialPlatforms.find((p) => p.value === link.platform)?.label || link.platform}
+                        </Badge>
+                        <a
+                          href={safeLink(link.url) ?? undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          {link.url}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="py-2 text-muted-foreground">-</p>
+                  )}
+                </div>
+              </div>
             </>
           )}
         </CardContent>
