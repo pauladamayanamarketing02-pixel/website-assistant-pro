@@ -47,6 +47,7 @@ import AdminAssistantCreate from "./admin/AssistantCreate";
 import AdminTasks from "./admin/Tasks";
 import AdminTaskCreate from "./admin/TaskCreate";
 import AdminSupport from "./admin/Support";
+import AdminAccount from "./admin/Account";
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -63,7 +64,7 @@ export default function AdminDashboard() {
   const navItems: AdminNavItem[] = useMemo(
     () => [
       { title: "Dashboard", url: "/dashboard/admin", icon: LayoutDashboard },
-      { title: "Bussines User", url: "/dashboard/admin/business-users", icon: Users },
+      { title: "Business", url: "/dashboard/admin/business-users", icon: Users },
       { title: "Assistant", url: "/dashboard/admin/assistants", icon: ShieldCheck },
       { title: "Tasks", url: "/dashboard/admin/tasks", icon: CheckSquare },
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
@@ -193,7 +194,7 @@ export default function AdminDashboard() {
               <Route path="announcements" element={<AdminPlaceholder title="Announcements" />} />
               <Route path="qc" element={<AdminPlaceholder title="Quality Control" />} />
               <Route path="logs" element={<AdminPlaceholder title="Activity Logs" />} />
-              <Route path="account" element={<AdminPlaceholder title="My Account" />} />
+              <Route path="account" element={<AdminAccount />} />
             </Routes>
           </main>
         </div>
