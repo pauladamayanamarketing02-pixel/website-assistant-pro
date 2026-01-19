@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ const toTaskStatus = (status: unknown): TaskStatus => {
 };
 
 export default function AdminTasks() {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
   const [rows, setRows] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +137,7 @@ export default function AdminTasks() {
           <p className="text-sm text-muted-foreground">View and manage tasks across all businesses.</p>
         </div>
 
-        <Button type="button" onClick={() => {}}>
+        <Button type="button" onClick={() => navigate("/dashboard/admin/tasks/new")}>
           <Plus className="h-4 w-4" />
           Add New Tasks
         </Button>
@@ -203,7 +205,7 @@ export default function AdminTasks() {
                         <Badge variant="secondary">{statusLabel[t.status]}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => {}}>
+                        <Button variant="outline" size="sm" disabled>
                           <Eye className="h-4 w-4" />
                           View Details
                         </Button>
