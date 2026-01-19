@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, Trash2, User } from "lucide-react";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useRef } from 'react';
+import { Send, Paperclip, MessageCircle, User, Search, Trash2, Upload, Download, X } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,158 +16,116 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { ChatPageShell, type ChatContactUI } from "@/components/messages/ChatPageShell";
-import { ChatComposer } from "@/components/messages/ChatComposer";
-import { MessageBubble, type ChatMessage } from "@/components/messages/MessageBubble";
-import { toPreviewText } from "@/components/messages/chatUtils";
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
-type AssistContact = {
+interface Message {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  file_url: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+interface AssistContact {
   id: string;
   name: string;
   email: string;
   avatar_url: string | null;
-};
+}
 
 export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [assists, setAssists] = useState<AssistContact[]>([]);
-  const [selectedAssistId, setSelectedAssistId] = useState<string | null>(null);
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedAssist, setSelectedAssist] = useState<AssistContact | null>(null);
+  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [newMessage, setNewMessage] = useState("");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [unreadByContact, setUnreadByContact] = useState<Record<string, number>>({});
-  const [lastPreviewByContact, setLastPreviewByContact] = useState<Record<string, string | null>>({});
-
-  const scrollBottomRef = useRef<HTMLDivElement>(null);
-
-  const selectedAssist = useMemo(
-    () => assists.find((a) => a.id === selectedAssistId) ?? null,
-    [assists, selectedAssistId]
-  );
-
-  // Contacts: all assists (role assist)
+  // Fetch assists
   useEffect(() => {
-    const run = async () => {
-      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "assist");
-      const assistIds = (roles ?? []).map((r) => r.user_id);
+    const fetchAssists = async () => {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'assist');
 
-      if (assistIds.length) {
+      if (roles) {
+        const assistIds = roles.map(r => r.user_id);
         const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, name, email, avatar_url")
-          .in("id", assistIds);
+          .from('profiles')
+          .select('id, name, email, avatar_url')
+          .in('id', assistIds);
 
-        const next = (profiles as AssistContact[]) ?? [];
-        setAssists(next);
-        setSelectedAssistId((prev) => prev ?? next[0]?.id ?? null);
-      } else {
-        setAssists([]);
-        setSelectedAssistId(null);
+        if (profiles) {
+          setAssists(profiles as AssistContact[]);
+          if (profiles.length > 0) {
+            setSelectedAssist(profiles[0] as AssistContact);
+          }
+        }
       }
-
       setLoading(false);
     };
 
-    void run();
+    fetchAssists();
   }, []);
 
-  // Unread + last preview summary (single query)
+  // Fetch messages for selected assist
   useEffect(() => {
-    const run = async () => {
-      if (!user) return;
-
-      const { data: rows } = await supabase
-        .from("messages")
-        .select("sender_id, receiver_id, content, is_read, created_at")
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order("created_at", { ascending: false })
-        .limit(300);
-
-      const unread: Record<string, number> = {};
-      const preview: Record<string, string | null> = {};
-
-      for (const m of (rows ?? []) as any[]) {
-        const otherId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
-
-        // last preview (first time we see this contact due to desc order)
-        if (preview[otherId] === undefined) preview[otherId] = toPreviewText(m.content);
-
-        // unread count
-        if (m.receiver_id === user.id && m.is_read === false) {
-          unread[otherId] = (unread[otherId] ?? 0) + 1;
-        }
-      }
-
-      setUnreadByContact(unread);
-      setLastPreviewByContact(preview);
-    };
-
-    void run();
-  }, [user]);
-
-  // Thread messages for selected assist
-  useEffect(() => {
-    const fetchThread = async () => {
-      if (!user || !selectedAssistId) return;
+    const fetchMessages = async () => {
+      if (!user || !selectedAssist) return;
 
       const { data } = await supabase
-        .from("messages")
-        .select("*")
-        .or(
-          `and(sender_id.eq.${user.id},receiver_id.eq.${selectedAssistId}),and(sender_id.eq.${selectedAssistId},receiver_id.eq.${user.id})`
-        )
-        .order("created_at", { ascending: true });
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedAssist.id}),and(sender_id.eq.${selectedAssist.id},receiver_id.eq.${user.id})`)
+        .order('created_at', { ascending: true });
 
-      setMessages(((data as any[]) ?? []) as ChatMessage[]);
-
-      // mark read
-      await supabase
-        .from("messages")
-        .update({ is_read: true })
-        .eq("receiver_id", user.id)
-        .eq("sender_id", selectedAssistId)
-        .eq("is_read", false);
-
-      setUnreadByContact((prev) => ({ ...prev, [selectedAssistId]: 0 }));
+      if (data) {
+        setMessages(data);
+        // Mark messages as read
+        await supabase
+          .from('messages')
+          .update({ is_read: true })
+          .eq('receiver_id', user.id)
+          .eq('sender_id', selectedAssist.id)
+          .eq('is_read', false);
+      }
     };
 
-    void fetchThread();
+    fetchMessages();
 
-    if (!user || !selectedAssistId) return;
-
+    // Set up real-time subscription
+    if (!user || !selectedAssist) return;
+    
     const channel = supabase
-      .channel(`user-thread-${user.id}-${selectedAssistId}`)
+      .channel('messages-changes')
       .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
         (payload) => {
-          const msg = payload.new as ChatMessage;
-          const inThisThread =
-            (msg.sender_id === user.id && msg.receiver_id === selectedAssistId) ||
-            (msg.sender_id === selectedAssistId && msg.receiver_id === user.id);
-
-          if (!inThisThread) return;
-
-          setMessages((prev) => [...prev, msg]);
-
-          const otherId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
-          setLastPreviewByContact((prev) => ({ ...prev, [otherId]: toPreviewText(msg.content) }));
-
-          if (msg.receiver_id === user.id) {
-            setUnreadByContact((prev) => ({ ...prev, [otherId]: (prev[otherId] ?? 0) + 1 }));
+          const newMsg = payload.new as Message;
+          if (
+            (newMsg.sender_id === user?.id && newMsg.receiver_id === selectedAssist?.id) ||
+            (newMsg.sender_id === selectedAssist?.id && newMsg.receiver_id === user?.id)
+          ) {
+            setMessages((prev) => [...prev, newMsg]);
           }
         }
       )
@@ -172,187 +134,352 @@ export default function Messages() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedAssistId]);
+  }, [user, selectedAssist]);
 
-  // auto-scroll
   useEffect(() => {
-    scrollBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    // Scroll to bottom when new messages arrive
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setUploadedFile(e.target.files[0]);
+    }
+  };
 
   const handleSend = async () => {
-    if (!user || !selectedAssistId) return;
-    if (!newMessage.trim() && !uploadedFile) return;
+    if (!user || !selectedAssist || (!newMessage.trim() && !uploadedFile)) return;
 
     setSending(true);
+    setUploading(true);
 
     try {
       let fileUrl: string | null = null;
 
+      // Upload file if exists
       if (uploadedFile) {
         const filePath = `messages/${user.id}/${Date.now()}-${uploadedFile.name}`;
-        const { error: uploadError } = await supabase.storage.from("user-files").upload(filePath, uploadedFile);
-        if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from('user-files')
+          .upload(filePath, uploadedFile);
 
-        const { data: urlData } = supabase.storage.from("user-files").getPublicUrl(filePath);
-        fileUrl = urlData.publicUrl;
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('user-files')
+            .getPublicUrl(filePath);
+          fileUrl = urlData.publicUrl;
+        }
       }
 
-      const content = newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : "");
-
-      const { error } = await supabase.from("messages").insert({
+      const { error } = await supabase.from('messages').insert({
         sender_id: user.id,
-        receiver_id: selectedAssistId,
-        content,
+        receiver_id: selectedAssist.id,
+        content: newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : ''),
         file_url: fileUrl,
       });
-      if (error) throw error;
 
-      setNewMessage("");
+      if (error) throw error;
+      setNewMessage('');
       setUploadedFile(null);
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal mengirim pesan", description: e?.message ?? String(e) });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error sending message',
+        description: error.message,
+      });
     } finally {
       setSending(false);
+      setUploading(false);
     }
   };
 
   const handleClearChat = async () => {
-    if (!user || !selectedAssistId) return;
+    if (!user || !selectedAssist) return;
 
     try {
       const { error } = await supabase
-        .from("messages")
+        .from('messages')
         .delete()
-        .or(
-          `and(sender_id.eq.${user.id},receiver_id.eq.${selectedAssistId}),and(sender_id.eq.${selectedAssistId},receiver_id.eq.${user.id})`
-        );
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedAssist.id}),and(sender_id.eq.${selectedAssist.id},receiver_id.eq.${user.id})`);
+
       if (error) throw error;
 
       setMessages([]);
-      toast({ title: "Chat dihapus", description: "Semua pesan pada percakapan ini telah dihapus." });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal", description: e?.message ?? String(e) });
+      toast({
+        title: 'Chat cleared',
+        description: 'All messages have been deleted.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message,
+      });
     }
   };
 
-  const contactsUi = useMemo<ChatContactUI[]>(() => {
-    const list = assists
-      .filter((a) => {
-        if (!searchQuery.trim()) return true;
-        const q = searchQuery.toLowerCase();
-        return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
-      })
-      .map((a) => ({
-        id: a.id,
-        title: a.name, // Full Name (assist)
-        subtitle: "Marketing Assist",
-        unreadCount: unreadByContact[a.id] ?? 0,
-        lastPreview: lastPreviewByContact[a.id] ?? null,
-      }));
+  const getFileName = (url: string) => {
+    const parts = url.split('/');
+    const fileName = parts[parts.length - 1];
+    return fileName.replace(/^\d+-/, '');
+  };
 
-    // sort: unread desc then title
-    return list.sort((x, y) => {
-      const ud = (y.unreadCount ?? 0) - (x.unreadCount ?? 0);
-      if (ud !== 0) return ud;
-      return x.title.localeCompare(y.title);
-    });
-  }, [assists, searchQuery, unreadByContact, lastPreviewByContact]);
+  const filteredAssists = assists.filter(a => 
+    a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="h-[680px] bg-muted rounded-lg" />
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-96 bg-muted rounded-lg"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <ChatPageShell
-      pageTitle="Messages"
-      pageSubtitle="Chat dengan Marketing Assist Anda"
-      searchPlaceholder="Cari assist…"
-      searchQuery={searchQuery}
-      onSearchQueryChange={setSearchQuery}
-      contacts={contactsUi}
-      selectedContactId={selectedAssistId}
-      onSelectContact={(id) => setSelectedAssistId(id)}
-      leftEmptyState={
-        <div className="text-center text-muted-foreground">
-          <User className="h-8 w-8 mx-auto mb-2" />
-          <p className="text-sm">Belum ada assist</p>
-        </div>
-      }
-      rightEmptyState={
-        <div className="text-center text-muted-foreground">
-          <MessageCircle className="h-12 w-12 mx-auto mb-4" />
-          <h3 className="font-medium text-foreground">Pilih assist</h3>
-          <p className="text-sm text-muted-foreground">Pilih dari daftar kontak untuk mulai chat</p>
-        </div>
-      }
-      rightPanel={
-        <>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Messages</h1>
+        <p className="text-muted-foreground">Chat with your Marketing Assist</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
+        {/* Contacts List */}
+        <Card className="md:col-span-1">
           <CardHeader className="border-b py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-lg">{selectedAssist?.name ?? "—"}</CardTitle>
-                <p className="text-xs text-muted-foreground">Marketing Assist</p>
-              </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Clear chat">
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Hapus chat</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Ini akan menghapus semua pesan dengan {selectedAssist?.name}. Aksi ini tidak bisa dibatalkan.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearChat} className="bg-destructive text-destructive-foreground">
-                      Hapus
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search assists..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
           </CardHeader>
-
-          <CardContent className="flex-1 flex flex-col p-0">
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-3">
-                {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-16">
-                    <MessageCircle className="h-10 w-10 mb-2" />
-                    <p className="text-sm">Belum ada pesan. Mulai percakapan!</p>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              {filteredAssists.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  <User className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm">No assists available</p>
+                </div>
+              ) : (
+                filteredAssists.map((assist) => (
+                  <div
+                    key={assist.id}
+                    onClick={() => setSelectedAssist(assist)}
+                    className={cn(
+                      "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
+                      selectedAssist?.id === assist.id && "bg-muted"
+                    )}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={assist.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {assist.name?.charAt(0)?.toUpperCase() || 'A'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{assist.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {assist.email}
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  messages.map((m) => (
-                    <MessageBubble key={m.id} message={m} isOwn={m.sender_id === user?.id} bubbleVariant="solid" />
-                  ))
-                )}
-                <div ref={scrollBottomRef} />
-              </div>
+                ))
+              )}
             </ScrollArea>
-
-            <ChatComposer
-              value={newMessage}
-              onChange={setNewMessage}
-              uploadedFile={uploadedFile}
-              onPickFile={setUploadedFile}
-              onSend={handleSend}
-              disabled={sending}
-              sending={sending}
-            />
           </CardContent>
-        </>
-      }
-    />
+        </Card>
+
+        {/* Chat Area */}
+        <Card className="md:col-span-2 flex flex-col">
+          {selectedAssist ? (
+            <>
+              <CardHeader className="border-b py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={selectedAssist.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {selectedAssist.name?.charAt(0)?.toUpperCase() || 'A'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <CardTitle className="text-lg">{selectedAssist.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        Marketing Assist
+                      </p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Clear Chat</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will delete all messages with {selectedAssist.name}. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearChat} className="bg-destructive text-destructive-foreground">
+                          Clear Chat
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardHeader>
+
+              <CardContent className="flex-1 flex flex-col p-0">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {messages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                      <MessageCircle className="h-10 w-10 mb-2" />
+                      <p className="text-sm">No messages yet. Start the conversation!</p>
+                    </div>
+                  ) : (
+                    messages.map((msg) => {
+                      const isOwn = msg.sender_id === user?.id;
+                      const isFileOnly = msg.file_url && (!msg.content || msg.content.startsWith('📎 '));
+                      return (
+                        <div
+                          key={msg.id}
+                          className={cn(
+                            "flex gap-2",
+                            isOwn ? 'justify-end' : 'justify-start'
+                          )}
+                        >
+                          {!isOwn && (
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={selectedAssist.avatar_url || undefined} />
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {selectedAssist.name?.charAt(0)?.toUpperCase() || 'A'}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div
+                            className={cn(
+                              "max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm",
+                              isOwn
+                                ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                : 'bg-muted text-foreground rounded-bl-sm'
+                            )}
+                          >
+                            {msg.content && (
+                              <p className="whitespace-pre-wrap break-words mb-1">{msg.content}</p>
+                            )}
+                            {msg.file_url && (
+                              <div className={cn(
+                                "mt-1 flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
+                                isOwn ? 'border-primary/40 bg-primary/10' : 'border-muted-foreground/10 bg-background/60'
+                              )}>
+                                <Paperclip className="h-4 w-4" />
+                                <span className="truncate flex-1">{getFileName(msg.file_url)}</span>
+                                <a
+                                  href={msg.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                >
+                                  <Download className="h-3 w-3" />
+                                  Download
+                                </a>
+                              </div>
+                            )}
+                            <span className={cn(
+                              "mt-1 block text-[10px] opacity-70 text-right",
+                              isOwn ? 'text-primary-foreground' : 'text-muted-foreground'
+                            )}>
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Message Input */}
+                <div className="border-t p-3 space-y-2 bg-background/60 backdrop-blur">
+                  {uploadedFile && (
+                    <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/60 rounded-md px-3 py-1">
+                      <span className="flex items-center gap-2">
+                        <Paperclip className="h-3 w-3" />
+                        {uploadedFile.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedFile(null)}
+                        className="inline-flex items-center justify-center rounded-full hover:bg-muted p-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1 flex flex-col gap-2">
+                      <Textarea
+                        placeholder="Type your message..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        rows={2}
+                        className="resize-none"
+                      />
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Files are stored securely in your workspace.</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handleFileUpload}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleSend}
+                        disabled={sending || (!newMessage.trim() && !uploadedFile)}
+                        className="h-10"
+                      >
+                        <Send className="h-4 w-4 mr-1" />
+                        Send
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+              <MessageCircle className="h-10 w-10 mb-2" />
+              <p className="text-sm">Select an assist to start chatting.</p>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
   );
 }

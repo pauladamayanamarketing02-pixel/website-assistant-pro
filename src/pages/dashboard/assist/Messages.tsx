@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, Trash2, User } from "lucide-react";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useRef } from 'react';
+import { Send, MessageCircle, User, Search, Trash2, Upload, Download, Paperclip, X } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,160 +16,130 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { ChatPageShell, type ChatContactUI } from "@/components/messages/ChatPageShell";
-import { ChatComposer } from "@/components/messages/ChatComposer";
-import { MessageBubble, type ChatMessage } from "@/components/messages/MessageBubble";
-import { toPreviewText } from "@/components/messages/chatUtils";
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
-type UserContact = {
+interface Message {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  file_url: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+interface UserContact {
   id: string;
   name: string;
   email: string;
   business_name: string | null;
-};
+}
 
 export default function AssistMessages() {
   const { user } = useAuth();
   const { toast } = useToast();
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<UserContact[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserContact | null>(null);
+  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [newMessage, setNewMessage] = useState("");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [unreadByContact, setUnreadByContact] = useState<Record<string, number>>({});
-  const [lastPreviewByContact, setLastPreviewByContact] = useState<Record<string, string | null>>({});
-
-  const scrollBottomRef = useRef<HTMLDivElement>(null);
-
-  const selectedUser = useMemo(
-    () => users.find((u) => u.id === selectedUserId) ?? null,
-    [users, selectedUserId]
-  );
-
-  // Contacts: all business users (role user) + business name
+  // Fetch users (clients)
   useEffect(() => {
-    const run = async () => {
-      const { data: roles } = await (supabase as any).from("user_roles").select("user_id").eq("role", "user");
-      const userIds = ((roles as any[]) ?? []).map((r) => r.user_id);
+    const fetchUsers = async () => {
+      const { data: roles } = await (supabase as any)
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'user');
 
-      if (userIds.length) {
+      if (roles) {
+        const userIds = (roles as any[]).map((r) => r.user_id);
         const { data: profiles } = await (supabase as any)
-          .from("profiles")
-          .select("id, name, email, business_name")
-          .in("id", userIds);
+          .from('profiles')
+          .select('id, name, email, business_name')
+          .in('id', userIds);
 
-        const { data: businesses } = await (supabase as any)
-          .from("businesses")
-          .select("user_id, business_name")
-          .in("user_id", userIds);
+        if (profiles) {
+          // Fetch business names
+          const { data: businesses } = await (supabase as any)
+            .from('businesses')
+            .select('user_id, business_name')
+            .in('user_id', userIds);
 
-        const next = ((profiles as any[]) ?? []).map((p) => {
-          const b = ((businesses as any[]) ?? []).find((x) => x.user_id === p.id);
-          return {
-            ...p,
-            business_name: b?.business_name || p.business_name || null,
-          } as UserContact;
-        });
+          const usersWithBusiness = (profiles as any[]).map((p) => {
+            const business = (businesses as any[])?.find((b: any) => b.user_id === p.id);
+            return {
+              ...p,
+              business_name: business?.business_name || p.business_name || null,
+            };
+          });
 
-        setUsers(next);
-        setSelectedUserId((prev) => prev ?? next[0]?.id ?? null);
-      } else {
-        setUsers([]);
-        setSelectedUserId(null);
+          setUsers(usersWithBusiness as UserContact[]);
+          if (usersWithBusiness.length > 0) {
+            setSelectedUser(usersWithBusiness[0] as UserContact);
+          }
+        }
       }
-
       setLoading(false);
     };
 
-    void run();
+    fetchUsers();
   }, []);
 
-  // Unread + last preview summary
+  // Fetch messages for selected user
   useEffect(() => {
-    const run = async () => {
-      if (!user) return;
-
-      const { data: rows } = await (supabase as any)
-        .from("messages")
-        .select("sender_id, receiver_id, content, is_read, created_at")
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order("created_at", { ascending: false })
-        .limit(300);
-
-      const unread: Record<string, number> = {};
-      const preview: Record<string, string | null> = {};
-
-      for (const m of (rows ?? []) as any[]) {
-        const otherId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
-        if (preview[otherId] === undefined) preview[otherId] = toPreviewText(m.content);
-        if (m.receiver_id === user.id && m.is_read === false) unread[otherId] = (unread[otherId] ?? 0) + 1;
-      }
-
-      setUnreadByContact(unread);
-      setLastPreviewByContact(preview);
-    };
-
-    void run();
-  }, [user]);
-
-  // Thread messages for selected user
-  useEffect(() => {
-    const fetchThread = async () => {
-      if (!user || !selectedUserId) return;
+    const fetchMessages = async () => {
+      if (!user || !selectedUser) return;
 
       const { data } = await (supabase as any)
-        .from("messages")
-        .select("*")
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUserId}),and(sender_id.eq.${selectedUserId},receiver_id.eq.${user.id})`)
-        .order("created_at", { ascending: true });
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${user.id})`)
+        .order('created_at', { ascending: true });
 
-      setMessages(((data as any[]) ?? []) as ChatMessage[]);
-
-      await (supabase as any)
-        .from("messages")
-        .update({ is_read: true })
-        .eq("receiver_id", user.id)
-        .eq("sender_id", selectedUserId)
-        .eq("is_read", false);
-
-      setUnreadByContact((prev) => ({ ...prev, [selectedUserId]: 0 }));
+      if (data) {
+        setMessages((data as unknown as Message[]) ?? []);
+        // Mark messages as read
+        await (supabase as any)
+          .from('messages')
+          .update({ is_read: true })
+          .eq('receiver_id', user.id)
+          .eq('sender_id', selectedUser.id)
+          .eq('is_read', false);
+      }
     };
 
-    void fetchThread();
+    fetchMessages();
 
-    if (!user || !selectedUserId) return;
-
+    // Set up real-time subscription
+    if (!user || !selectedUser) return;
+    
     const channel = supabase
-      .channel(`assist-thread-${user.id}-${selectedUserId}`)
+      .channel('assist-messages-changes')
       .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
         (payload) => {
-          const msg = payload.new as ChatMessage;
-          const inThisThread =
-            (msg.sender_id === user.id && msg.receiver_id === selectedUserId) ||
-            (msg.sender_id === selectedUserId && msg.receiver_id === user.id);
-          if (!inThisThread) return;
-
-          setMessages((prev) => [...prev, msg]);
-
-          const otherId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
-          setLastPreviewByContact((prev) => ({ ...prev, [otherId]: toPreviewText(msg.content) }));
-
-          if (msg.receiver_id === user.id) {
-            setUnreadByContact((prev) => ({ ...prev, [otherId]: (prev[otherId] ?? 0) + 1 }));
+          const newMsg = payload.new as Message;
+          if (
+            (newMsg.sender_id === user?.id && newMsg.receiver_id === selectedUser?.id) ||
+            (newMsg.sender_id === selectedUser?.id && newMsg.receiver_id === user?.id)
+          ) {
+            setMessages((prev) => [...prev, newMsg]);
           }
         }
       )
@@ -174,189 +148,343 @@ export default function AssistMessages() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedUserId]);
+  }, [user, selectedUser]);
 
   useEffect(() => {
-    scrollBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    // Scroll to bottom when new messages arrive
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setUploadedFile(e.target.files[0]);
+    }
+  };
 
   const handleSend = async () => {
-    if (!user || !selectedUserId) return;
-    if (!newMessage.trim() && !uploadedFile) return;
+    if (!user || !selectedUser || (!newMessage.trim() && !uploadedFile)) return;
 
     setSending(true);
+    setUploading(true);
 
     try {
       let fileUrl: string | null = null;
 
+      // Upload file if exists
       if (uploadedFile) {
         const filePath = `messages/${user.id}/${Date.now()}-${uploadedFile.name}`;
-        const { error: uploadError } = await supabase.storage.from("user-files").upload(filePath, uploadedFile);
-        if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from('user-files')
+          .upload(filePath, uploadedFile);
 
-        const { data: urlData } = supabase.storage.from("user-files").getPublicUrl(filePath);
-        fileUrl = urlData.publicUrl;
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('user-files')
+            .getPublicUrl(filePath);
+          fileUrl = urlData.publicUrl;
+        }
       }
 
-      const content = newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : "");
-
-      const { error } = await (supabase as any).from("messages").insert({
+      const { error } = await (supabase as any).from('messages').insert({
         sender_id: user.id,
-        receiver_id: selectedUserId,
-        content,
+        receiver_id: selectedUser.id,
+        content: newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : ''),
         file_url: fileUrl,
       });
-      if (error) throw error;
 
-      setNewMessage("");
+      if (error) throw error;
+      setNewMessage('');
       setUploadedFile(null);
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal mengirim pesan", description: e?.message ?? String(e) });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error sending message',
+        description: error.message,
+      });
     } finally {
       setSending(false);
+      setUploading(false);
     }
   };
 
   const handleClearChat = async () => {
-    if (!user || !selectedUserId) return;
+    if (!user || !selectedUser) return;
 
     try {
       const { error } = await (supabase as any)
-        .from("messages")
+        .from('messages')
         .delete()
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUserId}),and(sender_id.eq.${selectedUserId},receiver_id.eq.${user.id})`);
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${user.id})`);
+
       if (error) throw error;
 
       setMessages([]);
-      toast({ title: "Chat dihapus", description: "Semua pesan pada percakapan ini telah dihapus." });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal", description: e?.message ?? String(e) });
+      toast({
+        title: 'Chat cleared',
+        description: 'All messages have been deleted.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message,
+      });
     }
   };
 
-  const contactsUi = useMemo<ChatContactUI[]>(() => {
-    const q = searchQuery.trim().toLowerCase();
+  const getFileName = (url: string) => {
+    const parts = url.split('/');
+    const fileName = parts[parts.length - 1];
+    // Remove timestamp prefix
+    return fileName.replace(/^\d+-/, '');
+  };
 
-    const list = users
-      .filter((u) => {
-        if (!q) return true;
-        return (
-          u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q) ||
-          (u.business_name ?? "").toLowerCase().includes(q)
-        );
-      })
-      .map((u) => ({
-        id: u.id,
-        // per permintaan: Assist melihat Business Name sebagai label kontak utama
-        title: u.business_name || u.name,
-        subtitle: u.business_name ? u.name : u.email,
-        unreadCount: unreadByContact[u.id] ?? 0,
-        lastPreview: lastPreviewByContact[u.id] ?? null,
-      }));
-
-    return list.sort((x, y) => {
-      const ud = (y.unreadCount ?? 0) - (x.unreadCount ?? 0);
-      if (ud !== 0) return ud;
-      return x.title.localeCompare(y.title);
-    });
-  }, [users, searchQuery, unreadByContact, lastPreviewByContact]);
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.business_name && u.business_name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="h-[680px] bg-muted rounded-lg" />
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-96 bg-muted rounded-lg"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <ChatPageShell
-      pageTitle="Messages"
-      pageSubtitle="Chat dengan klien Anda"
-      searchPlaceholder="Cari bisnis / nama…"
-      searchQuery={searchQuery}
-      onSearchQueryChange={setSearchQuery}
-      contacts={contactsUi}
-      selectedContactId={selectedUserId}
-      onSelectContact={(id) => setSelectedUserId(id)}
-      leftEmptyState={
-        <div className="text-center text-muted-foreground">
-          <User className="h-8 w-8 mx-auto mb-2" />
-          <p className="text-sm">Belum ada klien</p>
-        </div>
-      }
-      rightEmptyState={
-        <div className="text-center text-muted-foreground">
-          <MessageCircle className="h-12 w-12 mx-auto mb-4" />
-          <h3 className="font-medium text-foreground">Pilih klien</h3>
-          <p className="text-sm text-muted-foreground">Pilih dari daftar kontak untuk mulai chat</p>
-        </div>
-      }
-      rightPanel={
-        <>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Messages</h1>
+        <p className="text-muted-foreground">Chat with your clients</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
+        {/* Contacts List */}
+        <Card className="md:col-span-1">
           <CardHeader className="border-b py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-lg">{selectedUser?.business_name || selectedUser?.name || "—"}</CardTitle>
-                <p className="text-xs text-muted-foreground">{selectedUser?.business_name ? selectedUser?.name : selectedUser?.email}</p>
-              </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Clear chat">
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Hapus chat</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Ini akan menghapus semua pesan dengan {selectedUser?.business_name || selectedUser?.name}. Aksi ini tidak bisa dibatalkan.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearChat} className="bg-destructive text-destructive-foreground">
-                      Hapus
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or business..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
           </CardHeader>
-
-          <CardContent className="flex-1 flex flex-col p-0">
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-3">
-                {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-16">
-                    <MessageCircle className="h-10 w-10 mb-2" />
-                    <p className="text-sm">Belum ada pesan. Mulai percakapan!</p>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              {filteredUsers.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  <User className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm">No clients available</p>
+                </div>
+              ) : (
+                filteredUsers.map((client) => (
+                  <div
+                    key={client.id}
+                    onClick={() => setSelectedUser(client)}
+                    className={cn(
+                      "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
+                      selectedUser?.id === client.id && "bg-muted"
+                    )}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {client.name?.charAt(0)?.toUpperCase() || 'C'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{client.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {client.business_name || 'No business name'}
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  messages.map((m) => (
-                    <MessageBubble key={m.id} message={m} isOwn={m.sender_id === user?.id} bubbleVariant="soft" />
-                  ))
-                )}
-                <div ref={scrollBottomRef} />
-              </div>
+                ))
+              )}
             </ScrollArea>
-
-            <ChatComposer
-              value={newMessage}
-              onChange={setNewMessage}
-              uploadedFile={uploadedFile}
-              onPickFile={setUploadedFile}
-              onSend={handleSend}
-              disabled={sending}
-              sending={sending}
-            />
           </CardContent>
-        </>
-      }
-    />
+        </Card>
+
+        {/* Chat Area */}
+        <Card className="md:col-span-2 flex flex-col">
+          {selectedUser ? (
+            <>
+              <CardHeader className="border-b py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {selectedUser.name?.charAt(0)?.toUpperCase() || 'C'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <CardTitle className="text-lg">{selectedUser.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedUser.business_name || 'No business name'}
+                      </p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Clear Chat</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will delete all messages with {selectedUser.name}. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearChat} className="bg-destructive text-destructive-foreground">
+                          Clear Chat
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col p-0">
+                {/* Messages Area */}
+                <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+                  {messages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center py-12">
+                      <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="font-medium text-foreground">No messages yet</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Start a conversation with {selectedUser.name}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            "flex",
+                            message.sender_id === user?.id ? "justify-end" : "justify-start"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "max-w-[70%] rounded-lg px-4 py-2",
+                              message.sender_id === user?.id
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-foreground"
+                            )}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                            {message.file_url && (
+                              <a
+                                href={message.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download
+                                className={cn(
+                                  "flex items-center gap-1 text-xs mt-2 underline",
+                                  message.sender_id === user?.id
+                                    ? "text-primary-foreground/80"
+                                    : "text-primary"
+                                )}
+                              >
+                                <Download className="h-3 w-3" />
+                                {getFileName(message.file_url)}
+                              </a>
+                            )}
+                            <p
+                              className={cn(
+                                "text-xs mt-1",
+                                message.sender_id === user?.id
+                                  ? "text-primary-foreground/70"
+                                  : "text-muted-foreground"
+                              )}
+                            >
+                              {new Date(message.created_at).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+
+                {/* Input Area */}
+                <div className="p-4 border-t space-y-2">
+                  {uploadedFile && (
+                    <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm">
+                      <Paperclip className="h-4 w-4" />
+                      <span className="flex-1 truncate">{uploadedFile.name}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setUploadedFile(null)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <Textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type your message..."
+                      className="min-h-[44px] max-h-32 resize-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
+                        }
+                      }}
+                    />
+                    <Button
+                      size="icon"
+                      onClick={handleSend}
+                      disabled={(!newMessage.trim() && !uploadedFile) || sending}
+                      className="shrink-0"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </>
+          ) : (
+            <CardContent className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="font-medium text-foreground">Select a client</h3>
+                <p className="text-sm text-muted-foreground">
+                  Choose a client from the list to start chatting
+                </p>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      </div>
+    </div>
   );
 }
