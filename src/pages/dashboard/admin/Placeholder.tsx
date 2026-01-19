@@ -4,22 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const roadmap: Record<string, string[]> = {
-  "Bussines User": [
-    "Daftar user + detail profil bisnis",
-    "Suspend / aktifkan user",
-    "Catatan internal user",
-  ],
-  Assistant: [
-    "Verifikasi assistant",
-    "Aktif / nonaktif assistant",
-    "Assign assistant ke user + workload",
-    "Monitoring performa",
-  ],
+  Business: ["Daftar user + detail profil bisnis", "Suspend / aktifkan user", "Catatan internal user"],
+  Assistant: ["Verifikasi assistant", "Aktif / nonaktif assistant", "Assign assistant ke user + workload", "Monitoring performa"],
   Tasks: ["Lihat semua task", "Assign/reassign", "Deadline + prioritas", "Monitoring status"],
   Reports: ["Review laporan", "Approve/reject", "Minta revisi", "Kirim ke user"],
-  Support: ["Monitor chat user ↔ assistant", "Komplain & tiket", "Internal note"],
+  Messages: ["Inbox admin", "Filter/search", "Lampiran file", "Status read/unread"],
 
-  Website: ["Kelola halaman website", "Blog & artikel", "Media library", "Contact", "Services", "Layout"],
+  Website: ["Kelola halaman website", "Blog & artikel", "Media library", "Contact", "Services", "Layout", "Support"],
   Pages: ["Daftar halaman", "Edit konten", "Publish / unpublish", "Preview"],
   Blog: ["Daftar artikel", "Editor", "Kategori & tag", "Publish"],
   "Media Library": ["Upload gambar", "Folder/label", "Optimasi gambar", "Pakai di konten"],
