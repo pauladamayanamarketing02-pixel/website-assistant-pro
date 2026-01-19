@@ -3,6 +3,7 @@ import type React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 import type { ContactItem, ContactItemKey } from "./types";
 
@@ -51,15 +52,18 @@ export function ContactItemCard({ item, icon: Icon, disabled, onChange }: Props)
 
         {item.key === "whatsapp" ? (
           <div className="space-y-2">
-            <Label htmlFor={`${item.key}-openingMessage`}>Whatsapp Opening Message</Label>
-            <Input
+            <Label htmlFor={`${item.key}-openingMessage`}>Whatsapp Message</Label>
+            <Textarea
               id={`${item.key}-openingMessage`}
               value={item.openingMessage ?? ""}
               disabled={disabled}
-              placeholder="Contoh: Halo, saya ingin bertanya tentang..."
+              rows={4}
+              placeholder="Contoh: Hallo !!!\nSaya ingin bertanya tentang..."
               onChange={(e) => onChange(item.key, { openingMessage: e.target.value })}
             />
-            <p className="text-xs text-muted-foreground">Teks ini bisa dipakai untuk chat pembuka WhatsApp.</p>
+            <p className="text-xs text-muted-foreground">
+              Saat user klik WhatsApp di halaman /contact, teks ini akan otomatis terisi sebagai chat.
+            </p>
           </div>
         ) : null}
 
