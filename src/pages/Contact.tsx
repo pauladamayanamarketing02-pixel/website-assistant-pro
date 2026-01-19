@@ -72,7 +72,7 @@ const iconByKey = {
 } as const;
 
 function toWhatsAppPhone(input: string) {
-  // wa.me only supports digits (no +, spaces, (), -)
+  // WhatsApp phone param supports digits only (no +, spaces, (), -)
   return (input ?? "").replace(/\D/g, "");
 }
 
@@ -80,7 +80,7 @@ function buildWhatsAppUrl(phone: string, message: string) {
   const normalized = toWhatsAppPhone(phone);
   if (!normalized) return null;
   const text = encodeURIComponent(message || "Hallo !!!");
-  return `https://wa.me/${normalized}?text=${text}`;
+  return `https://api.whatsapp.com/send?phone=${normalized}&text=${text}`;
 }
 
 function buildOutlookComposeUrl(email: string) {
