@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Send, MessageCircle, User, Search, Trash2, Upload, Download, Paperclip, X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,8 @@ interface UserContact {
 export default function AssistMessages() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<UserContact[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserContact | null>(null);
@@ -85,15 +88,21 @@ export default function AssistMessages() {
           });
 
           setUsers(usersWithBusiness as UserContact[]);
-          if (usersWithBusiness.length > 0) {
-            setSelectedUser(usersWithBusiness[0] as UserContact);
-          }
+
+          const userIdFromUrl = searchParams.get('userId');
+          const initial =
+            (userIdFromUrl && (usersWithBusiness as any[]).find((u) => u.id === userIdFromUrl)) ||
+            usersWithBusiness[0] ||
+            null;
+
+          setSelectedUser(initial as UserContact | null);
         }
       }
       setLoading(false);
     };
 
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch messages for selected user
@@ -289,7 +298,14 @@ export default function AssistMessages() {
                 filteredUsers.map((client) => (
                   <div
                     key={client.id}
-                    onClick={() => setSelectedUser(client)}
+                    onClick={() => {
+                      setSelectedUser(client);
+                      setSearchParams((prev) => {
+                        const next = new URLSearchParams(prev);
+                        next.set('userId', client.id);
+                        return next;
+                      });
+                    }}
                     className={cn(
                       "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
                       selectedUser?.id === client.id && "bg-muted"
