@@ -116,14 +116,18 @@ export default function AdminAssistantDetails() {
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/admin/assistants")}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => navigate("/dashboard/admin/assistants")}
+          >
             <ArrowLeft className="h-4 w-4" />
-            Back
           </Button>
+          <h1 className="text-3xl font-bold text-foreground">Profile</h1>
         </div>
-        <h1 className="text-3xl font-bold text-foreground">Profile</h1>
-        <p className="text-muted-foreground">Profile assistant (read-only).</p>
+        <p className="text-muted-foreground ml-10">Profile assistant (read-only).</p>
       </div>
 
       <Card>
