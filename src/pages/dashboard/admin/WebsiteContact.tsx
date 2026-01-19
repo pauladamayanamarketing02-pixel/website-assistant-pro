@@ -67,7 +67,7 @@ export default function WebsiteContact() {
       .upsert(payload, { onConflict: "key" });
 
     if (error) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
+      toast({ variant: "destructive", title: "Failed to save", description: error.message });
       setSaving(false);
       return false;
     }
@@ -95,16 +95,16 @@ export default function WebsiteContact() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Contact Page</h1>
-          <p className="text-muted-foreground">Ubah bagian “Other Ways to Reach Us” di halaman /contact.</p>
+          <p className="text-muted-foreground">Edit the “Other Ways to Reach Us” section on /contact.</p>
           <div className="mt-2 text-xs text-muted-foreground">
             {loading ? (
               "Loading..."
             ) : saving ? (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menyimpan...
-              </span>
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
+                </span>
             ) : lastSavedAt ? (
-              <>Tersimpan {lastSavedAt.toLocaleTimeString()}</>
+              <>Saved at {lastSavedAt.toLocaleTimeString()}</>
             ) : (
               "Klik Selesai untuk menyimpan perubahan."
             )}
@@ -118,7 +118,7 @@ export default function WebsiteContact() {
                 <X className="h-4 w-4 mr-2" /> Cancel
               </Button>
               <Button onClick={finishEdit} disabled={saving}>
-                Selesai
+                Done
               </Button>
             </>
           ) : (
@@ -132,7 +132,7 @@ export default function WebsiteContact() {
       <Card>
         <CardHeader>
           <CardTitle>Other Ways to Reach Us</CardTitle>
-          <CardDescription>Isi ini tampil sebagai 4 kartu di halaman publik Contact.</CardDescription>
+          <CardDescription>This content appears as 4 cards on the public Contact page.</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (

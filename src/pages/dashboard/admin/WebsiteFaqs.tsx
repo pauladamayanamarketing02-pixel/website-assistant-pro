@@ -71,8 +71,8 @@ export default function WebsiteFaqs() {
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal memuat Common Questions",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Failed to load Common Questions",
+        description: e?.message || "Something went wrong.",
       });
       setItems([]);
     } finally {
@@ -134,25 +134,25 @@ export default function WebsiteFaqs() {
 
       setOpen(false);
       await load();
-      toast({ title: "Tersimpan", description: "Common Questions (/packages) berhasil disimpan." });
+      toast({ title: "Saved", description: "Common Questions (/packages) have been saved." });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: e?.message || "Terjadi kesalahan." });
+      toast({ variant: "destructive", title: "Failed to save", description: e?.message || "Something went wrong." });
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (row: FaqRow) => {
-    const ok = window.confirm("Hapus pertanyaan ini dari Common Questions /packages?");
+    const ok = window.confirm("Delete this question from Common Questions on /packages?");
     if (!ok) return;
 
     try {
       const { error } = await supabase.from("website_faqs").delete().eq("id", row.id);
       if (error) throw error;
       setItems((prev) => prev.filter((x) => x.id !== row.id));
-      toast({ title: "Deleted", description: "FAQ dihapus." });
+      toast({ title: "Deleted", description: "FAQ deleted." });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Delete gagal", description: e?.message || "Terjadi kesalahan." });
+      toast({ variant: "destructive", title: "Delete failed", description: e?.message || "Something went wrong." });
     }
   };
 
@@ -162,7 +162,7 @@ export default function WebsiteFaqs() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Common Questions</h1>
           <p className="text-sm text-muted-foreground">
-            Mengubah bagian <span className="font-medium text-foreground">Common Questions</span> di halaman publik /packages.
+            Edit the <span className="font-medium text-foreground">Common Questions</span> section on the public /packages page.
           </p>
         </div>
 
@@ -183,7 +183,7 @@ export default function WebsiteFaqs() {
               </span>
             </div>
           ) : items.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">Belum ada pertanyaan.</div>
+            <div className="py-10 text-center text-sm text-muted-foreground">No questions yet.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -239,7 +239,7 @@ export default function WebsiteFaqs() {
               <Input
                 value={form.question}
                 onChange={(e) => setForm((p) => ({ ...p, question: e.target.value }))}
-                placeholder="Tulis pertanyaan..."
+                placeholder="Write the question..."
               />
             </div>
 
@@ -249,7 +249,7 @@ export default function WebsiteFaqs() {
                 value={form.answer}
                 onChange={(e) => setForm((p) => ({ ...p, answer: e.target.value }))}
                 rows={6}
-                placeholder="Tulis jawaban..."
+                placeholder="Write the answer..."
               />
             </div>
 
@@ -265,8 +265,8 @@ export default function WebsiteFaqs() {
 
               <div className="flex items-center justify-between rounded-md border border-border p-3">
                 <div>
-                  <div className="text-sm font-medium text-foreground">Published</div>
-                  <div className="text-xs text-muted-foreground">Tampilkan di /packages</div>
+                   <div className="text-sm font-medium text-foreground">Published</div>
+                   <div className="text-xs text-muted-foreground">Show on /packages</div>
                 </div>
                 <Switch checked={form.is_published} onCheckedChange={(v) => setForm((p) => ({ ...p, is_published: v }))} />
               </div>

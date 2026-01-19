@@ -107,7 +107,7 @@ export default function WebsiteServices() {
       .upsert(payload, { onConflict: "key" });
 
     if (error) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
+      toast({ variant: "destructive", title: "Failed to save", description: error.message });
       setSaving(false);
       return false;
     }
@@ -170,16 +170,16 @@ export default function WebsiteServices() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Services Page</h1>
-          <p className="text-sm text-muted-foreground">Edit konten halaman publik /services.</p>
+          <p className="text-sm text-muted-foreground">Edit content for the public /services page.</p>
           <div className="mt-2 text-xs text-muted-foreground">
             {loading ? (
               "Loading..."
             ) : saving ? (
               <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menyimpan...
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
               </span>
             ) : lastSavedAt ? (
-              <>Tersimpan {lastSavedAt.toLocaleTimeString()}</>
+              <>Saved at {lastSavedAt.toLocaleTimeString()}</>
             ) : (
               "Klik Selesai untuk menyimpan perubahan."
             )}
@@ -207,7 +207,7 @@ export default function WebsiteServices() {
       <Card>
         <CardHeader>
           <CardTitle>Hero</CardTitle>
-          <CardDescription>Judul & subjudul di bagian atas halaman /services.</CardDescription>
+          <CardDescription>Title and subtitle at the top of the /services page.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
@@ -236,7 +236,7 @@ export default function WebsiteServices() {
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>Services</CardTitle>
-            <CardDescription>{serviceCount} item layanan (urutan di sini = urutan tampil di publik).</CardDescription>
+            <CardDescription>{serviceCount} service items (order here = public order).</CardDescription>
           </div>
 
           <Button type="button" onClick={addService} disabled={!canSave}>
@@ -248,7 +248,7 @@ export default function WebsiteServices() {
           {loading ? (
             <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
           ) : settings.services.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">Belum ada service.</div>
+            <div className="py-8 text-center text-sm text-muted-foreground">No services yet.</div>
           ) : (
             settings.services.map((svc, index) => {
               const isCollapsed = collapsed[index] ?? true;
@@ -380,7 +380,7 @@ export default function WebsiteServices() {
 
           {isEditing && !loading && (
             <div className="text-xs text-muted-foreground">
-              {hasChanges ? "Perubahan belum disimpan." : "Tidak ada perubahan."}
+              {hasChanges ? "Changes not saved." : "No changes."}
             </div>
           )}
         </CardContent>
@@ -389,7 +389,7 @@ export default function WebsiteServices() {
       <Card>
         <CardHeader>
           <CardTitle>CTA</CardTitle>
-          <CardDescription>Bagian call-to-action di bawah (tombol tetap menuju /packages).</CardDescription>
+          <CardDescription>Call-to-action section at the bottom (the button still links to /packages).</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">

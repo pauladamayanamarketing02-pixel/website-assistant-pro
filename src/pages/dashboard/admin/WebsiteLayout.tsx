@@ -76,7 +76,7 @@ export default function WebsiteLayout() {
       .upsert(payload, { onConflict: "key" });
 
     if (error) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
+      toast({ variant: "destructive", title: "Failed to save", description: error.message });
       setSaving(false);
       return false;
     }
@@ -158,16 +158,16 @@ export default function WebsiteLayout() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Website Layout</h1>
-          <p className="text-sm text-muted-foreground">Ubah Header & Footer halaman publik.</p>
+          <p className="text-sm text-muted-foreground">Edit the public site header and footer.</p>
           <div className="mt-2 text-xs text-muted-foreground">
             {loading ? (
               "Loading..."
             ) : saving ? (
               <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menyimpan...
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
               </span>
             ) : lastSavedAt ? (
-              <>Tersimpan {lastSavedAt.toLocaleTimeString()}</>
+              <>Saved at {lastSavedAt.toLocaleTimeString()}</>
             ) : (
               "Klik Selesai untuk menyimpan perubahan."
             )}
@@ -219,9 +219,9 @@ export default function WebsiteLayout() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={() => setLogoPickerOpen(true)} disabled={!canSave}>
-                  Pilih / Upload Logo
-                </Button>
+                  <Button type="button" variant="outline" onClick={() => setLogoPickerOpen(true)} disabled={!canSave}>
+                    Choose / Upload Logo
+                  </Button>
                 {settings.header.logoUrl ? (
                   <Button
                     type="button"
@@ -229,18 +229,18 @@ export default function WebsiteLayout() {
                     onClick={() => updateHeader({ logoUrl: null })}
                     disabled={!canSave}
                   >
-                    Hapus Logo
+                    Remove Logo
                   </Button>
                 ) : null}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Logo ini akan tampil di Navbar (halaman utama & halaman publik).</p>
+            <p className="text-xs text-muted-foreground">This logo appears in the site navbar (homepage and public pages).</p>
           </div>
 
           <WebsiteMediaPickerDialog
             open={logoPickerOpen}
             onOpenChange={setLogoPickerOpen}
-            title="Pilih Logo"
+            title="Choose Logo"
             accept="image/*"
             onPick={(pick) => {
               updateHeader({ logoUrl: pick.url, logoAlt: pick.name ?? settings.header.brandName });
@@ -248,7 +248,7 @@ export default function WebsiteLayout() {
           />
 
           <div className="grid gap-2">
-            <Label>Brand Mark (fallback 1-2 huruf)</Label>
+            <Label>Brand Mark (fallback 1–2 letters)</Label>
             <Input
               value={settings.header.brandMarkText}
               onChange={(e) => updateHeader({ brandMarkText: e.target.value })}
@@ -262,7 +262,7 @@ export default function WebsiteLayout() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-foreground">Nav Links</div>
-              <div className="text-xs text-muted-foreground">Urutan di sini = urutan tampil di header.</div>
+              <div className="text-xs text-muted-foreground">Order here = order shown in the header.</div>
             </div>
             <Button type="button" onClick={addHeaderLink} disabled={!canSave}>
               <Plus className="h-4 w-4" /> Add Link
@@ -444,7 +444,7 @@ export default function WebsiteLayout() {
           <Separator />
 
           <div className="grid gap-2">
-            <Label>Copyright Text (setelah tahun)</Label>
+            <Label>Copyright Text (after the year)</Label>
             <Input
               value={settings.footer.copyrightText}
               onChange={(e) => updateFooter({ copyrightText: e.target.value })}
@@ -454,7 +454,7 @@ export default function WebsiteLayout() {
 
           {isEditing && !loading && (
             <div className="text-xs text-muted-foreground">
-              {hasChanges ? "Perubahan belum disimpan." : "Tidak ada perubahan."}
+              {hasChanges ? "Changes not saved." : "No changes."}
             </div>
           )}
         </CardContent>
