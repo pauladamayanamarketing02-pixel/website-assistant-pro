@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Trash2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,12 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "@/components/ui/use-toast";
 
 export type BlogCategoryRow = {
   id: string;
   name: string;
   slug: string;
   parent_id?: string | null;
+  is_locked?: boolean;
 };
 
 const slugify = (input: string) =>
@@ -37,14 +39,22 @@ type Props = {
   selectedIds: string[];
   onSelectedIdsChange: (next: string[]) => void;
   onCreated?: (newCategory: BlogCategoryRow) => void;
+  onDeleted?: (deletedId: string) => void;
 };
 
-export function CategoriesPanel({ categories, selectedIds, onSelectedIdsChange, onCreated }: Props) {
+export function CategoriesPanel({
+  categories,
+  selectedIds,
+  onSelectedIdsChange,
+  onCreated,
+  onDeleted,
+}: Props) {
   const [open, setOpen] = useState(true);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const parents = useMemo(() => categories, [categories]);
 
@@ -63,7 +73,7 @@ export function CategoriesPanel({ categories, selectedIds, onSelectedIdsChange, 
       const { data, error } = await supabase
         .from("blog_categories")
         .insert(payload)
-        .select("id,name,slug,parent_id")
+        .select("id,name,slug,parent_id,is_locked")
         .single();
       if (error) throw error;
 
@@ -72,8 +82,42 @@ export function CategoriesPanel({ categories, selectedIds, onSelectedIdsChange, 
       setName("");
       setParentId(null);
       setAdding(false);
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal membuat category",
+        description: e?.message || "Terjadi kesalahan.",
+      });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const deleteCategory = async (cat: BlogCategoryRow) => {
+    if (cat.is_locked) return;
+    const ok = window.confirm(`Hapus kategori "${cat.name}"?`);
+    if (!ok) return;
+
+    setDeletingId(cat.id);
+    try {
+      const { error } = await supabase.from("blog_categories").delete().eq("id", cat.id);
+      if (error) throw error;
+
+      // remove from selection
+      if (selectedIds.includes(cat.id)) {
+        onSelectedIdsChange(selectedIds.filter((x) => x !== cat.id));
+      }
+
+      onDeleted?.(cat.id);
+      toast({ title: "Kategori dihapus" });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menghapus category",
+        description: e?.message || "Terjadi kesalahan.",
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -84,8 +128,7 @@ export function CategoriesPanel({ categories, selectedIds, onSelectedIdsChange, 
           <Label>Categories</Label>
           <CollapsibleTrigger asChild>
             <Button type="button" variant="ghost" size="icon" aria-label="Toggle categories">
-              <ChevronDown className={"h-4 w-4 transition-transform " + (open ? "rotate-180" : "")}
-              />
+              <ChevronDown className={"h-4 w-4 transition-transform " + (open ? "rotate-180" : "")} />
             </Button>
           </CollapsibleTrigger>
         </div>
@@ -94,10 +137,25 @@ export function CategoriesPanel({ categories, selectedIds, onSelectedIdsChange, 
           <div className="rounded-md border border-border p-3 space-y-2 max-h-52 overflow-auto">
             {categories.length ? (
               categories.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={selectedIds.includes(c.id)} onCheckedChange={() => toggle(c.id)} />
-                  <span className="text-foreground">{c.name}</span>
-                </label>
+                <div key={c.id} className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-sm min-w-0">
+                    <Checkbox checked={selectedIds.includes(c.id)} onCheckedChange={() => toggle(c.id)} />
+                    <span className="text-foreground truncate">{c.name}</span>
+                  </label>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    disabled={!!c.is_locked || deletingId === c.id}
+                    onClick={() => void deleteCategory(c)}
+                    aria-label={`Delete category ${c.name}`}
+                    title={c.is_locked ? "Kategori terkunci" : "Delete"}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               ))
             ) : (
               <div className="text-sm text-muted-foreground">Belum ada kategori.</div>
@@ -144,3 +202,4 @@ export function CategoriesPanel({ categories, selectedIds, onSelectedIdsChange, 
     </div>
   );
 }
+
