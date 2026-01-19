@@ -48,7 +48,7 @@ type Props = {
 export function WebsiteMediaPickerDialog({
   open,
   onOpenChange,
-  title = "Pilih Media",
+  title = "Select media",
   accept = "image/*",
   onPick,
 }: Props) {
@@ -75,8 +75,8 @@ export function WebsiteMediaPickerDialog({
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal memuat media",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Failed to load media",
+        description: e?.message || "Something went wrong.",
       });
       setItems([]);
     } finally {
@@ -100,9 +100,9 @@ export function WebsiteMediaPickerDialog({
       const { data: userData, error: userErr } = await supabase.auth.getUser();
       if (userErr) throw userErr;
       const uid = userData.user?.id;
-      if (!uid) throw new Error("User belum login.");
+      if (!uid) throw new Error("You must be logged in.");
 
-      // Upload satu file pertama (lebih simple untuk picker)
+      // Upload first selected file (simple picker UX)
       const f = files[0];
       const mediaType = detectMediaType(f);
       const cleaned = safeFileName(f.name);
@@ -116,7 +116,7 @@ export function WebsiteMediaPickerDialog({
 
       const { data: publicData } = supabase.storage.from("user-files").getPublicUrl(storagePath);
       const publicUrl = publicData?.publicUrl;
-      if (!publicUrl) throw new Error("Gagal membuat public URL.");
+      if (!publicUrl) throw new Error("Failed to create public URL.");
 
       const { data: inserted, error: insertErr } = await supabase
         .from("website_media_items")
@@ -134,7 +134,7 @@ export function WebsiteMediaPickerDialog({
 
       if (insertErr) throw insertErr;
 
-      toast({ title: "Uploaded", description: "File tersimpan ke Media Library." });
+      toast({ title: "Uploaded", description: "Saved to the Media Library." });
       await loadItems();
 
       onPick({ url: inserted?.url ?? publicUrl, name: inserted?.name ?? f.name, id: inserted?.id });
@@ -142,8 +142,8 @@ export function WebsiteMediaPickerDialog({
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Upload gagal",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Upload failed",
+        description: e?.message || "Something went wrong.",
       });
     } finally {
       setUploading(false);
@@ -156,7 +156,7 @@ export function WebsiteMediaPickerDialog({
       await navigator.clipboard.writeText(url);
       toast({ title: "Copied", description: "URL copied to clipboard." });
     } catch {
-      toast({ variant: "destructive", title: "Copy failed", description: "Tidak bisa copy URL." });
+      toast({ variant: "destructive", title: "Copy failed", description: "Could not copy URL." });
     }
   };
 
@@ -177,7 +177,7 @@ export function WebsiteMediaPickerDialog({
             {loading ? (
               <div className="py-10 text-center text-sm text-muted-foreground">Loading...</div>
             ) : images.length === 0 ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">Belum ada gambar.</div>
+              <div className="py-10 text-center text-sm text-muted-foreground">No images yet.</div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {images.map((it) => (
@@ -251,11 +251,9 @@ export function WebsiteMediaPickerDialog({
               <input ref={fileInputRef} type="file" className="hidden" accept={accept} onChange={handleUpload} />
               <Button type="button" onClick={handleUploadClick} disabled={uploading}>
                 <Upload className="h-4 w-4" />
-                {uploading ? "Uploading..." : "Pilih file dari komputer"}
+                {uploading ? "Uploading..." : "Choose a file"}
               </Button>
-              <p className="text-xs text-muted-foreground">
-                File yang diupload akan otomatis tersimpan juga di halaman Media Library.
-              </p>
+              <p className="text-xs text-muted-foreground">Uploaded files will also appear in the Media Library.</p>
             </div>
           </TabsContent>
         </Tabs>

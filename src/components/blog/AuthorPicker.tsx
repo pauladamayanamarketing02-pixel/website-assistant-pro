@@ -38,7 +38,7 @@ export function AuthorPicker({
   value,
   onChange,
   label = "Author",
-  placeholder = "Pilih author...",
+  placeholder = "Select an author...",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -146,7 +146,7 @@ export function AuthorPicker({
 
   const deleteAuthor = async (a: BlogAuthorRow) => {
     if (a.is_locked) return;
-    if (!confirm(`Hapus author "${a.name}"?`)) return;
+    if (!confirm(`Delete author "${a.name}"?`)) return;
 
     const { error } = await supabase.from("blog_authors").delete().eq("id", a.id);
     if (error) throw error;
@@ -191,11 +191,11 @@ export function AuthorPicker({
 
         <PopoverContent className="w-[360px] p-0" align="start">
           <Command>
-            <CommandInput placeholder="Cari author..." value={query} onValueChange={setQuery} />
+            <CommandInput placeholder="Search authors..." value={query} onValueChange={setQuery} />
             <CommandList>
-              <CommandEmpty>{loading ? "Loading..." : "Tidak ada author"}</CommandEmpty>
+              <CommandEmpty>{loading ? "Loading..." : "No authors found"}</CommandEmpty>
 
-              <CommandGroup heading="Pilih author">
+              <CommandGroup heading="Select author">
                 {filtered.map((a) => (
                   <CommandItem
                     key={a.id}
@@ -245,32 +245,32 @@ export function AuthorPicker({
 
               <CommandSeparator />
 
-              <CommandGroup heading="Kelola">
+              <CommandGroup heading="Manage">
                 {editingId ? (
                   <div className="p-3 space-y-2">
-                    <div className="text-sm font-medium">Edit Author</div>
-                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nama" />
-                    <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="Email (opsional)" />
+                    <div className="text-sm font-medium">Edit author</div>
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" />
+                    <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="Email (optional)" />
                     <div className="flex gap-2">
                       <Button type="button" onClick={() => void saveEdit()} className="flex-1">
-                        Simpan
+                        Save
                       </Button>
                       <Button type="button" variant="outline" onClick={cancelEdit}>
-                        Batal
+                        Cancel
                       </Button>
                     </div>
                   </div>
                 ) : creating ? (
                   <div className="p-3 space-y-2">
-                    <div className="text-sm font-medium">Tambah Author Baru</div>
-                    <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nama" />
-                    <Input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="Email (opsional)" />
+                    <div className="text-sm font-medium">Add new author</div>
+                    <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name" />
+                    <Input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="Email (optional)" />
                     <div className="flex gap-2">
                       <Button type="button" onClick={() => void createAuthor()} className="flex-1">
-                        Tambah
+                        Add
                       </Button>
                       <Button type="button" variant="outline" onClick={() => setCreating(false)}>
-                        Batal
+                        Cancel
                       </Button>
                     </div>
                   </div>
@@ -278,7 +278,7 @@ export function AuthorPicker({
                   <div className="p-3">
                     <Button type="button" variant="outline" className="w-full" onClick={() => setCreating(true)}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Author
+                      Add author
                     </Button>
                   </div>
                 )}
@@ -288,7 +288,7 @@ export function AuthorPicker({
         </PopoverContent>
       </Popover>
 
-      <p className="text-xs text-muted-foreground">Klik untuk memilih, atau tambah/edit/hapus author.</p>
+      <p className="text-xs text-muted-foreground">Select an author, or add/edit/delete authors.</p>
     </div>
   );
 }
