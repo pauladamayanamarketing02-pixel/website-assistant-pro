@@ -23,6 +23,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { AuthorPicker } from "@/components/blog/AuthorPicker";
 import { CategoriesPanel, type BlogCategoryRow } from "@/components/blog/CategoriesPanel";
 import { TagsInput, type BlogTagRow } from "@/components/blog/TagsInput";
+import { WebsiteMediaPickerDialog } from "@/components/media/WebsiteMediaPickerDialog";
+
 
 type BlogPostStatus = Database["public"]["Enums"]["blog_post_status"];
 
@@ -69,9 +71,11 @@ export default function AdminWebsiteBlogCreate() {
 
   const [featuredImageUrl, setFeaturedImageUrl] = useState("");
   const [featuredImageAlt, setFeaturedImageAlt] = useState("");
+  const [featuredPickerOpen, setFeaturedPickerOpen] = useState(false);
 
   const [status, setStatus] = useState<BlogPostStatus>("draft");
   const [publishAt, setPublishAt] = useState<string>(""); // datetime-local
+
 
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
@@ -91,7 +95,10 @@ export default function AdminWebsiteBlogCreate() {
 
   const loadCatsTags = async () => {
     const [{ data: cats, error: catsErr }, { data: tagsData, error: tagsErr }] = await Promise.all([
-      supabase.from("blog_categories").select("id,name,slug,parent_id").order("name", { ascending: true }),
+      supabase
+        .from("blog_categories")
+        .select("id,name,slug,parent_id,is_locked")
+        .order("name", { ascending: true }),
       supabase.from("blog_tags").select("id,name,slug").order("name", { ascending: true }),
     ]);
 
@@ -325,6 +332,9 @@ export default function AdminWebsiteBlogCreate() {
               onCreated={() => {
                 void loadCatsTags();
               }}
+              onDeleted={() => {
+                void loadCatsTags();
+              }}
             />
 
             <TagsInput
@@ -348,8 +358,10 @@ export default function AdminWebsiteBlogCreate() {
                 showTopBar={false}
                 showSaveControls={false}
                 isEditing
+                enableImageInsert
               />
             </div>
+
 
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="excerpt">Excerpt / Summary*</Label>
@@ -364,14 +376,42 @@ export default function AdminWebsiteBlogCreate() {
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="featuredImageUrl">Featured Image URL</Label>
-              <Input
-                id="featuredImageUrl"
-                value={featuredImageUrl}
-                onChange={(e) => setFeaturedImageUrl(e.target.value)}
-                placeholder="https://..."
+              <Label>Featured Image</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" onClick={() => setFeaturedPickerOpen(true)}>
+                  Set Featured Image
+                </Button>
+                {featuredImageUrl ? (
+                  <Button type="button" variant="ghost" onClick={() => setFeaturedImageUrl("")}>
+                    Clear
+                  </Button>
+                ) : null}
+              </div>
+              {featuredImageUrl ? (
+                <div className="mt-3 overflow-hidden rounded-md border border-border bg-muted">
+                  <img
+                    src={featuredImageUrl}
+                    alt={featuredImageAlt || "Featured image preview"}
+                    loading="lazy"
+                    className="h-48 w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Belum ada featured image.</p>
+              )}
+
+              <WebsiteMediaPickerDialog
+                open={featuredPickerOpen}
+                onOpenChange={setFeaturedPickerOpen}
+                title="Set featured image"
+                accept="image/*"
+                onPick={(pick) => {
+                  setFeaturedImageUrl(pick.url);
+                  if (!featuredImageAlt.trim() && pick.name) setFeaturedImageAlt(pick.name);
+                }}
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="featuredImageAlt">Alt Text Image</Label>
               <Input
@@ -382,6 +422,7 @@ export default function AdminWebsiteBlogCreate() {
               />
             </div>
           </div>
+
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">

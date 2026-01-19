@@ -1,11 +1,11 @@
 import { useRef, useEffect, useState } from 'react';
-import { 
-  Bold, 
-  Italic, 
-  Underline, 
+import {
+  Bold,
+  Italic,
+  Underline,
   Strikethrough,
-  AlignLeft, 
-  AlignCenter, 
+  AlignLeft,
+  AlignCenter,
   AlignRight,
   AlignJustify,
   List,
@@ -31,7 +31,8 @@ import {
   RemoveFormatting,
   Copy,
   Check,
-  Pencil
+  Pencil,
+  Image,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
@@ -41,6 +42,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { WebsiteMediaPickerDialog } from '@/components/media/WebsiteMediaPickerDialog';
+
 
 interface RichTextEditorProps {
   value: string;
@@ -58,7 +61,10 @@ interface RichTextEditorProps {
   showTopBar?: boolean;
   /** Hide the Copy/Edit/Save buttons in the header row (keeps title/description). */
   showSaveControls?: boolean;
+  /** Enable image tools: upload / pick from Media Library and insert into content. */
+  enableImageInsert?: boolean;
 }
+
 
 const fontFamilies = [
   { value: 'Arial', label: 'Arial' },
@@ -101,6 +107,7 @@ export function RichTextEditor({
   onTitleChange,
   showTopBar = true,
   showSaveControls = true,
+  enableImageInsert = false,
 }: RichTextEditorProps) {
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -110,6 +117,8 @@ export function RichTextEditor({
   const [copied, setCopied] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [localTitle, setLocalTitle] = useState(title);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
@@ -125,6 +134,17 @@ export function RichTextEditor({
     editorRef.current?.focus();
     document.execCommand(command, false, commandValue);
     updateContent();
+  };
+
+  const escapeAttr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const insertImageAtCursor = (url: string, alt?: string) => {
+    const safeUrl = url.trim();
+    if (!safeUrl) return;
+
+    // Use insertHTML to control attributes
+    const html = `<img src="${escapeAttr(safeUrl)}" alt="${escapeAttr(alt || '')}" loading="lazy" />`;
+    execCommand('insertHTML', html);
   };
 
   const updateContent = () => {
@@ -459,6 +479,21 @@ export function RichTextEditor({
             <Unlink className="h-4 w-4" />
           </Toggle>
 
+          {/* Image (Media Library / Upload) */}
+          {enableImageInsert && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setMediaPickerOpen(true)}
+              aria-label="Insert image"
+              title="Insert image"
+            >
+              <Image className="h-4 w-4" />
+            </Button>
+          )}
+
           {/* Table */}
           <Popover>
             <PopoverTrigger asChild>
@@ -497,18 +532,31 @@ export function RichTextEditor({
               </Button>
             </PopoverContent>
           </Popover>
-          
+
           {/* Horizontal Rule */}
           <Toggle size="sm" aria-label="Horizontal Line" onPressedChange={insertHorizontalRule}>
             <Minus className="h-4 w-4" />
           </Toggle>
-          
+
           {/* Remove Formatting */}
           <Toggle size="sm" aria-label="Remove Formatting" onPressedChange={() => execCommand('removeFormat')}>
             <RemoveFormatting className="h-4 w-4" />
           </Toggle>
         </div>
-        
+
+        {enableImageInsert && (
+          <WebsiteMediaPickerDialog
+            open={mediaPickerOpen}
+            onOpenChange={setMediaPickerOpen}
+            title="Insert image"
+            accept="image/*"
+            onPick={(pick) => {
+              insertImageAtCursor(pick.url, pick.name);
+              setMediaPickerOpen(false);
+            }}
+          />
+        )}
+
         {/* Editor Area */}
         <div
           ref={editorRef}
@@ -528,3 +576,4 @@ export function RichTextEditor({
     </div>
   );
 }
+
