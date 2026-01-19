@@ -84,6 +84,15 @@ export function AuthorPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Preload authors when an existing value is set (so the trigger shows the saved author
+  // even before the popover is opened).
+  useEffect(() => {
+    if (!value) return;
+    if (authors.length) return;
+    void loadAuthors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   const pick = (a: BlogAuthorRow) => {
     onChange(a.id, a.email ? `${a.name} (${a.email})` : a.name);
     setOpen(false);

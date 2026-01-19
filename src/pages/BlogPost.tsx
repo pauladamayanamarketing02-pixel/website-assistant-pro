@@ -20,7 +20,9 @@ type BlogPostRow = {
   reading_time_minutes: number | null;
   featured_image_url: string | null;
   featured_image_alt: string | null;
-  content_type: string;
+  author: string;
+  categories: string[];
+  tags: string[];
   meta_title: string | null;
   meta_description: string | null;
   canonical_url: string | null;
@@ -44,7 +46,7 @@ export default function BlogPost() {
       const { data, error } = await supabase
         .from("blog_posts")
         .select(
-          "id,title,slug,content_html,excerpt,created_at,publish_at,reading_time_minutes,featured_image_url,featured_image_alt,content_type,meta_title,meta_description,canonical_url"
+          "id,title,slug,content_html,excerpt,created_at,publish_at,reading_time_minutes,featured_image_url,featured_image_alt,meta_title,meta_description,canonical_url,blog_authors(name),blog_post_categories(blog_categories(name)),blog_post_tags(blog_tags(name))"
         )
         .eq("slug", slug)
         .eq("status", "published")
@@ -63,7 +65,31 @@ export default function BlogPost() {
         setPost(null);
         setNotFound(true);
       } else {
-        setPost(data as BlogPostRow);
+        const row: any = data;
+        const author = row?.blog_authors?.name ?? "-";
+        const categories = (row?.blog_post_categories ?? [])
+          .map((x: any) => x?.blog_categories?.name)
+          .filter(Boolean);
+        const tags = (row?.blog_post_tags ?? []).map((x: any) => x?.blog_tags?.name).filter(Boolean);
+
+        setPost({
+          id: row.id,
+          title: row.title,
+          slug: row.slug,
+          content_html: row.content_html,
+          excerpt: row.excerpt,
+          created_at: row.created_at,
+          publish_at: row.publish_at,
+          reading_time_minutes: row.reading_time_minutes,
+          featured_image_url: row.featured_image_url,
+          featured_image_alt: row.featured_image_alt,
+          author,
+          categories,
+          tags,
+          meta_title: row.meta_title,
+          meta_description: row.meta_description,
+          canonical_url: row.canonical_url,
+        });
       }
 
       setLoading(false);
@@ -78,8 +104,56 @@ export default function BlogPost() {
 
   useEffect(() => {
     if (!post) return;
+
     const title = (post.meta_title || post.title).slice(0, 60);
     document.title = title;
+
+    const description = (post.meta_description || post.excerpt || "").slice(0, 160);
+
+    const ensureMetaByName = (name: string) => {
+      let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("name", name);
+        document.head.appendChild(el);
+      }
+      return el;
+    };
+
+    const ensureMetaByProperty = (property: string) => {
+      let el = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("property", property);
+        document.head.appendChild(el);
+      }
+      return el;
+    };
+
+    const canonicalHref = post.canonical_url || `${window.location.origin}/blog/${post.slug}`;
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", canonicalHref);
+
+    ensureMetaByName("description").setAttribute("content", description);
+
+    // Social previews
+    ensureMetaByProperty("og:title").setAttribute("content", title);
+    ensureMetaByProperty("og:description").setAttribute("content", description);
+    ensureMetaByProperty("og:url").setAttribute("content", canonicalHref);
+    ensureMetaByProperty("og:type").setAttribute("content", "article");
+
+    if (post.featured_image_url) {
+      ensureMetaByProperty("og:image").setAttribute("content", post.featured_image_url);
+      ensureMetaByProperty("og:image:alt").setAttribute(
+        "content",
+        post.featured_image_alt || post.title
+      );
+    }
   }, [post]);
 
   const publishedDate = useMemo(() => {
@@ -139,12 +213,18 @@ export default function BlogPost() {
           ) : post ? (
             <article>
               <header className="mx-auto max-w-3xl">
-                <Badge variant="secondary" className="w-fit text-xs">
-                  {post.content_type}
-                </Badge>
+                <div className="flex flex-wrap gap-2">
+                  {(post.categories.length ? post.categories : ["Uncategorized"]).slice(0, 3).map((c) => (
+                    <Badge key={c} variant="secondary" className="w-fit text-xs">
+                      {c}
+                    </Badge>
+                  ))}
+                </div>
                 <h1 className="mt-4 text-3xl md:text-4xl font-bold tracking-tight text-foreground">
                   {post.title}
                 </h1>
+
+                <div className="mt-3 text-sm text-muted-foreground">By {post.author}</div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                   {dateLabel ? (
@@ -160,6 +240,16 @@ export default function BlogPost() {
                     </span>
                   ) : null}
                 </div>
+
+                {post.tags.length ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {post.tags.slice(0, 10).map((t) => (
+                      <Badge key={t} variant="outline" className="text-xs">
+                        {t}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
 
                 {post.featured_image_url ? (
                   <div className="mt-8 overflow-hidden rounded-xl border border-border shadow-soft">
