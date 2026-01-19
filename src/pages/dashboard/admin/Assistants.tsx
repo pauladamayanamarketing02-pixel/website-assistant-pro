@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Eye, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ type AssistantRow = {
 };
 
 export default function AdminAssistants() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<AssistantRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,9 +82,7 @@ export default function AdminAssistants() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Assistants</h1>
-          <p className="text-sm text-muted-foreground">
-            View and manage marketing assistant accounts.
-          </p>
+          <p className="text-sm text-muted-foreground">View and manage marketing assistant accounts.</p>
         </div>
 
         <Button type="button" onClick={() => {}}>
@@ -122,16 +122,20 @@ export default function AdminAssistants() {
                       No assistants found.
                     </TableCell>
                   </TableRow>
-                  ) : (
-                    rows.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="font-medium">{row.assistId}</TableCell>
-                        <TableCell className="font-medium">{row.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.email}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.phone ?? "—"}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.country ?? "—"}</TableCell>
+                ) : (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">{row.assistId}</TableCell>
+                      <TableCell className="font-medium">{row.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.phone ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.country ?? "—"}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => {}}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/dashboard/admin/assistants/${row.id}`)}
+                        >
                           <Eye className="h-4 w-4" />
                           View Details
                         </Button>
