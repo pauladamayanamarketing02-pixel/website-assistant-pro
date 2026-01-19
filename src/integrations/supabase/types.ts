@@ -14,12 +14,40 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_authors: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_locked: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_locked?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_locked?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       blog_categories: {
         Row: {
           created_at: string
           id: string
           is_locked: boolean
           name: string
+          parent_id: string | null
           slug: string
         }
         Insert: {
@@ -27,6 +55,7 @@ export type Database = {
           id?: string
           is_locked?: boolean
           name: string
+          parent_id?: string | null
           slug: string
         }
         Update: {
@@ -34,9 +63,18 @@ export type Database = {
           id?: string
           is_locked?: boolean
           name?: string
+          parent_id?: string | null
           slug?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "blog_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       blog_post_categories: {
         Row: {
