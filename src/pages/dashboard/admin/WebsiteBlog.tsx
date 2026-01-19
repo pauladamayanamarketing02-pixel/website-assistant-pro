@@ -176,7 +176,11 @@ export default function AdminWebsiteBlog() {
                       <TableCell className="text-muted-foreground">{post.tags.join(", ") || "-"}</TableCell>
                       <TableCell className="text-muted-foreground">{post.date}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => {}}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/dashboard/admin/website/blog/${post.id}`)}
+                        >
                           <Eye className="h-4 w-4" />
                           View Details
                         </Button>
