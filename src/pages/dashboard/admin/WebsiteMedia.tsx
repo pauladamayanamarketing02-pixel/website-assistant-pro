@@ -95,8 +95,8 @@ export default function AdminWebsiteMedia() {
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal memuat media",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Failed to load media",
+        description: e?.message || "Something went wrong.",
       });
       setItems([]);
     } finally {
@@ -117,7 +117,7 @@ export default function AdminWebsiteMedia() {
       const { data: userData, error: userErr } = await supabase.auth.getUser();
       if (userErr) throw userErr;
       const uid = userData.user?.id;
-      if (!uid) throw new Error("User belum login.");
+      if (!uid) throw new Error("User is not logged in.");
 
       for (const f of Array.from(files)) {
         const mediaType = detectMediaType(f);
@@ -132,7 +132,7 @@ export default function AdminWebsiteMedia() {
 
         const { data: publicData } = supabase.storage.from("user-files").getPublicUrl(storagePath);
         const publicUrl = publicData?.publicUrl;
-        if (!publicUrl) throw new Error("Gagal membuat public URL.");
+        if (!publicUrl) throw new Error("Failed to create a public URL.");
 
         const { error: insertErr } = await supabase.from("website_media_items").insert({
           created_by: uid,
@@ -147,13 +147,13 @@ export default function AdminWebsiteMedia() {
         if (insertErr) throw insertErr;
       }
 
-      toast({ title: "Uploaded", description: `${files.length} file tersimpan ke Media Library.` });
+      toast({ title: "Uploaded", description: `${files.length} file(s) saved to the Media Library.` });
       await loadItems();
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Upload gagal",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Upload failed",
+        description: e?.message || "Something went wrong.",
       });
     } finally {
       setUploading(false);
@@ -187,8 +187,8 @@ export default function AdminWebsiteMedia() {
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Delete gagal",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Delete failed",
+        description: e?.message || "Something went wrong.",
       });
     }
   };

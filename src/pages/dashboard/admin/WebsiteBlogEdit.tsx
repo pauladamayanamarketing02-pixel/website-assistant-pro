@@ -399,7 +399,7 @@ export default function AdminWebsiteBlogEdit() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete this post?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Ini akan menghapus post secara permanen dari database (termasuk relasi kategori & tag).
+                  This will permanently delete the post from the database (including category and tag relations).
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
