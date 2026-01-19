@@ -143,9 +143,9 @@ export default function Contact() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    
+
     const result = contactSchema.safeParse(formData);
-    
+
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       result.error.errors.forEach((error) => {
@@ -158,17 +158,37 @@ export default function Contact() {
     }
 
     setIsSubmitting(true);
-    
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    toast({
-      title: 'Message sent!',
-      description: 'We\'ll get back to you as soon as possible.',
-    });
-    
-    setFormData({ name: '', email: '', subject: '', message: '' });
-    setIsSubmitting(false);
+
+    try {
+      const payload = {
+        name: result.data.name,
+        email: result.data.email,
+        subject: result.data.subject,
+        message: result.data.message,
+        source: "contact_page",
+        status: "new",
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      };
+
+      const { error } = await (supabase as any).from("website_inquiries").insert(payload);
+      if (error) throw error;
+
+      toast({
+        title: "Message sent!",
+        description: "We\"ll get back to you as soon as possible.",
+      });
+
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (err) {
+      console.error("Contact submit error:", err);
+      toast({
+        title: "Failed to send",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
