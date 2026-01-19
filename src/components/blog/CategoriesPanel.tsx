@@ -85,8 +85,8 @@ export function CategoriesPanel({
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal membuat category",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Failed to create category",
+        description: e?.message || "Something went wrong.",
       });
     } finally {
       setSaving(false);
@@ -95,7 +95,7 @@ export function CategoriesPanel({
 
   const deleteCategory = async (cat: BlogCategoryRow) => {
     if (cat.is_locked) return;
-    const ok = window.confirm(`Hapus kategori "${cat.name}"?`);
+    const ok = window.confirm(`Delete category "${cat.name}"?`);
     if (!ok) return;
 
     setDeletingId(cat.id);
@@ -109,12 +109,12 @@ export function CategoriesPanel({
       }
 
       onDeleted?.(cat.id);
-      toast({ title: "Kategori dihapus" });
+      toast({ title: "Category deleted" });
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal menghapus category",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Failed to delete category",
+        description: e?.message || "Something went wrong.",
       });
     } finally {
       setDeletingId(null);
@@ -151,14 +151,14 @@ export function CategoriesPanel({
                     disabled={!!c.is_locked || deletingId === c.id}
                     onClick={() => void deleteCategory(c)}
                     aria-label={`Delete category ${c.name}`}
-                    title={c.is_locked ? "Kategori terkunci" : "Delete"}
+                    title={c.is_locked ? "Category is locked" : "Delete"}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))
             ) : (
-              <div className="text-sm text-muted-foreground">Belum ada kategori.</div>
+              <div className="text-sm text-muted-foreground">No categories yet.</div>
             )}
 
             <div className="pt-1">
@@ -171,7 +171,7 @@ export function CategoriesPanel({
               <div className="space-y-3 pt-2 border-t border-border">
                 <div className="space-y-1">
                   <div className="text-xs font-medium text-muted-foreground">NEW CATEGORY NAME</div>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama kategori" />
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Category name" />
                 </div>
 
                 <div className="space-y-1">
