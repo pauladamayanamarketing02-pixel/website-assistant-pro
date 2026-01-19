@@ -19,7 +19,9 @@ type BlogListItem = {
   reading_time_minutes: number | null;
   featured_image_url: string | null;
   featured_image_alt: string | null;
-  content_type: string;
+  author: string;
+  categories: string[];
+  tags: string[];
 };
 
 export default function Blog() {
@@ -34,7 +36,7 @@ export default function Blog() {
       const { data, error } = await supabase
         .from("blog_posts")
         .select(
-          "id,slug,title,excerpt,created_at,publish_at,reading_time_minutes,featured_image_url,featured_image_alt,content_type"
+          "id,slug,title,excerpt,created_at,publish_at,reading_time_minutes,featured_image_url,featured_image_alt,blog_authors(name),blog_post_categories(blog_categories(name)),blog_post_tags(blog_tags(name))"
         )
         .eq("status", "published")
         .eq("visibility", "public")
@@ -49,7 +51,32 @@ export default function Blog() {
         console.error("Failed to load blog posts", error);
         setPosts([]);
       } else {
-        setPosts((data as BlogListItem[]) ?? []);
+        const mapped: BlogListItem[] = ((data as any[]) ?? []).map((row) => {
+          const author = row?.blog_authors?.name ?? "-";
+          const categories = (row?.blog_post_categories ?? [])
+            .map((x: any) => x?.blog_categories?.name)
+            .filter(Boolean);
+          const tags = (row?.blog_post_tags ?? [])
+            .map((x: any) => x?.blog_tags?.name)
+            .filter(Boolean);
+
+          return {
+            id: row.id,
+            slug: row.slug,
+            title: row.title,
+            excerpt: row.excerpt,
+            created_at: row.created_at,
+            publish_at: row.publish_at,
+            reading_time_minutes: row.reading_time_minutes,
+            featured_image_url: row.featured_image_url,
+            featured_image_alt: row.featured_image_alt,
+            author,
+            categories,
+            tags,
+          };
+        });
+
+        setPosts(mapped);
       }
       setLoading(false);
     };
@@ -126,17 +153,29 @@ export default function Blog() {
                       />
                     </div>
                     <CardHeader className="pb-2">
-                      <Badge variant="secondary" className="w-fit text-xs">
-                        {post.content_type}
-                      </Badge>
+                      <div className="flex flex-wrap gap-2">
+                        {(post.categories.length ? post.categories : ["Uncategorized"]).slice(0, 2).map((c) => (
+                          <Badge key={c} variant="secondary" className="w-fit text-xs">
+                            {c}
+                          </Badge>
+                        ))}
+                      </div>
                       <h3 className="text-xl font-semibold text-foreground mt-2 line-clamp-2">
                         {post.title}
                       </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">By {post.author}</p>
                     </CardHeader>
                     <CardContent className="pb-4">
-                      <p className="text-muted-foreground text-sm line-clamp-2">
-                        {post.excerpt ?? ""}
-                      </p>
+                      <p className="text-muted-foreground text-sm line-clamp-2">{post.excerpt ?? ""}</p>
+                      {post.tags.length ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {post.tags.slice(0, 6).map((t) => (
+                            <Badge key={t} variant="outline" className="text-xs">
+                              {t}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : null}
                     </CardContent>
                     <CardFooter className="pt-0 flex items-center justify-between text-xs text-muted-foreground">
                       <div className="flex items-center gap-4">
