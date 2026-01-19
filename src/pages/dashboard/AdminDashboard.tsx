@@ -16,7 +16,6 @@ import {
   MessageSquare,
   Newspaper,
   Phone,
-  Search,
   ShieldCheck,
   TrendingUp,
   User,
@@ -66,7 +65,6 @@ export default function AdminDashboard() {
           { title: "Pages", url: "/dashboard/admin/website/pages", icon: FileText },
           { title: "Blog", url: "/dashboard/admin/website/blog", icon: Newspaper },
           { title: "Media Library", url: "/dashboard/admin/website/media", icon: Image },
-          { title: "SEO", url: "/dashboard/admin/website/seo", icon: Search },
           { title: "Contact", url: "/dashboard/admin/website/contact", icon: Phone },
           { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
           { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
@@ -164,7 +162,6 @@ export default function AdminDashboard() {
               <Route path="website/blog" element={<AdminWebsiteBlog />} />
               <Route path="website/blog/new" element={<AdminWebsiteBlogCreate />} />
               <Route path="website/media" element={<AdminWebsiteMedia />} />
-              <Route path="website/seo" element={<AdminPlaceholder title="SEO" />} />
               <Route path="website/contact" element={<AdminPlaceholder title="Contact" />} />
               <Route path="website/services" element={<AdminPlaceholder title="Services" />} />
               <Route path="website/layout" element={<AdminPlaceholder title="Layout" />} />
