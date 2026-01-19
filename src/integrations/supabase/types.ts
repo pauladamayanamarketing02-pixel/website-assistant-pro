@@ -933,6 +933,54 @@ export type Database = {
         }
         Relationships: []
       }
+      website_media_items: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_published: boolean
+          media_type: string
+          mime_type: string
+          name: string
+          size: number | null
+          sort_order: number | null
+          storage_path: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_published?: boolean
+          media_type: string
+          mime_type: string
+          name: string
+          size?: number | null
+          sort_order?: number | null
+          storage_path: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_published?: boolean
+          media_type?: string
+          mime_type?: string
+          name?: string
+          size?: number | null
+          sort_order?: number | null
+          storage_path?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       work_log_delete_requests: {
         Row: {
           created_at: string
