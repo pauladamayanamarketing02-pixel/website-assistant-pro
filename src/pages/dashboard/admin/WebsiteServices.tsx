@@ -251,7 +251,7 @@ export default function WebsiteServices() {
             <div className="py-8 text-center text-sm text-muted-foreground">Belum ada service.</div>
           ) : (
             settings.services.map((svc, index) => {
-              const isCollapsed = collapsed[index] ?? false;
+              const isCollapsed = collapsed[index] ?? true;
 
               return (
                 <Collapsible

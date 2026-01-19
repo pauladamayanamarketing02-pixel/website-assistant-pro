@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Pencil, Save } from "lucide-react";
+import { ArrowLeft, Pencil, Save, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import type { Database } from "@/integrations/supabase/types";
 
@@ -83,6 +94,7 @@ export default function AdminWebsiteBlogEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // system author for RLS (must equal auth.uid())
   const [authorId, setAuthorId] = useState<string | null>(null);
@@ -325,6 +337,37 @@ export default function AdminWebsiteBlogEdit() {
     }
   };
 
+  const deletePostPermanently = async () => {
+    if (!postId) return;
+    if (saving) return;
+
+    setSaving(true);
+    try {
+      // delete relations first (safe even without FK cascades)
+      const [{ error: delCatsErr }, { error: delTagsErr }] = await Promise.all([
+        supabase.from("blog_post_categories").delete().eq("post_id", postId),
+        supabase.from("blog_post_tags").delete().eq("post_id", postId),
+      ]);
+      if (delCatsErr) throw delCatsErr;
+      if (delTagsErr) throw delTagsErr;
+
+      const { error: delPostErr } = await supabase.from("blog_posts").delete().eq("id", postId);
+      if (delPostErr) throw delPostErr;
+
+      toast({ title: "Post deleted" });
+      navigate("/dashboard/admin/website/blog", { replace: true });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to delete post",
+        description: e?.message || "Something went wrong.",
+      });
+    } finally {
+      setSaving(false);
+      setDeleteOpen(false);
+    }
+  };
+
   if (loading) {
     return <div className="py-8 text-sm text-muted-foreground">Loading...</div>;
   }
@@ -345,6 +388,29 @@ export default function AdminWebsiteBlogEdit() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" disabled={saving}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Ini akan menghapus post secara permanen dari database (termasuk relasi kategori & tag).
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void deletePostPermanently()} disabled={saving}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           {!editing ? (
             <Button type="button" onClick={() => setEditing(true)}>
               <Pencil className="h-4 w-4 mr-2" />
@@ -440,9 +506,6 @@ export default function AdminWebsiteBlogEdit() {
                   selectedIds={selectedCategoryIds}
                   onSelectedIdsChange={setSelectedCategoryIds}
                   onCreated={() => {
-                    void loadCatsTags();
-                  }}
-                  onDeleted={() => {
                     void loadCatsTags();
                   }}
                 />
