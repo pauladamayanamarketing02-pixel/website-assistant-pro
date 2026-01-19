@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Eye, FileIcon, ImageIcon, Plus, Trash2, Upload, Video } from "lucide-react";
+
+import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +9,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 
+import type { Database } from "@/integrations/supabase/types";
+
 type MediaType = "image" | "video" | "file";
 
 type MediaFilter = "all" | "image" | "video" | "file";
+
+type WebsiteMediaRow = Database["public"]["Tables"]["website_media_items"]["Row"];
 
 type MediaItem = {
   id: string;
@@ -17,6 +23,7 @@ type MediaItem = {
   type: MediaType;
   url: string;
   createdAt: string;
+  storagePath: string;
 };
 
 const filterLabel: Record<MediaFilter, string> = {
@@ -38,43 +45,22 @@ function iconFor(type: MediaType) {
   return <FileIcon className="h-4 w-4" />;
 }
 
+function safeFileName(name: string) {
+  return (name || "file")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "");
+}
+
 export default function AdminWebsiteMedia() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<MediaFilter>("all");
   const [preview, setPreview] = useState<MediaItem | null>(null);
 
-  const [items, setItems] = useState<MediaItem[]>(() => [
-    {
-      id: "m-1001",
-      name: "hero-image.jpg",
-      type: "image",
-      url: "https://images.unsplash.com/photo-1520975693415-35a7f8c1c0a3?auto=format&fit=crop&w=1400&q=80",
-      createdAt: "2026-01-10",
-    },
-    {
-      id: "m-1002",
-      name: "promo-video.mp4",
-      type: "video",
-      url: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-      createdAt: "2026-01-12",
-    },
-    {
-      id: "m-1003",
-      name: "brand-guidelines.pdf",
-      type: "file",
-      url: "https://example.com/brand-guidelines.pdf",
-      createdAt: "2026-01-14",
-    },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
-  // Cleanup object URLs created from uploads
-  useEffect(() => {
-    return () => {
-      items.forEach((it) => {
-        if (it.url.startsWith("blob:")) URL.revokeObjectURL(it.url);
-      });
-    };
-  }, [items]);
+  const [items, setItems] = useState<MediaItem[]>([]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return items;
@@ -83,30 +69,96 @@ export default function AdminWebsiteMedia() {
 
   const handleUploadClick = () => fileInputRef.current?.click();
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const loadItems = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("website_media_items")
+        .select("id,name,media_type,url,storage_path,created_at")
+        .order("created_at", { ascending: false })
+        .limit(300);
+
+      if (error) throw error;
+
+      const mapped = ((data ?? []) as WebsiteMediaRow[]).map(
+        (r): MediaItem => ({
+          id: r.id,
+          name: r.name,
+          type: (r.media_type as MediaType) ?? "file",
+          url: r.url,
+          storagePath: r.storage_path,
+          createdAt: (r.created_at ?? "").slice(0, 10),
+        })
+      );
+
+      setItems(mapped);
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal memuat media",
+        description: e?.message || "Terjadi kesalahan.",
+      });
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadItems();
+  }, [loadItems]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const next: MediaItem[] = Array.from(files).map((f) => {
-      const type = detectMediaType(f);
-      const url = URL.createObjectURL(f);
-      return {
-        id: `m-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        name: f.name,
-        type,
-        url,
-        createdAt: new Date().toISOString().slice(0, 10),
-      };
-    });
+    setUploading(true);
+    try {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+      const uid = userData.user?.id;
+      if (!uid) throw new Error("User belum login.");
 
-    setItems((prev) => [...next, ...prev]);
+      for (const f of Array.from(files)) {
+        const mediaType = detectMediaType(f);
+        const cleaned = safeFileName(f.name);
+        const storagePath = `website/${Date.now()}-${cleaned}`;
 
-    toast({
-      title: "Uploaded",
-      description: `${files.length} media file(s) added to the library (local preview).`,
-    });
+        const { error: uploadErr } = await supabase.storage.from("user-files").upload(storagePath, f, {
+          contentType: f.type || "application/octet-stream",
+          upsert: false,
+        });
+        if (uploadErr) throw uploadErr;
 
-    if (fileInputRef.current) fileInputRef.current.value = "";
+        const { data: publicData } = supabase.storage.from("user-files").getPublicUrl(storagePath);
+        const publicUrl = publicData?.publicUrl;
+        if (!publicUrl) throw new Error("Gagal membuat public URL.");
+
+        const { error: insertErr } = await supabase.from("website_media_items").insert({
+          created_by: uid,
+          name: f.name,
+          media_type: mediaType,
+          mime_type: f.type || "application/octet-stream",
+          size: f.size,
+          url: publicUrl,
+          storage_path: storagePath,
+        });
+
+        if (insertErr) throw insertErr;
+      }
+
+      toast({ title: "Uploaded", description: `${files.length} file tersimpan ke Media Library.` });
+      await loadItems();
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Upload gagal",
+        description: e?.message || "Terjadi kesalahan.",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleCopyUrl = async (url: string) => {
@@ -122,14 +174,23 @@ export default function AdminWebsiteMedia() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    setItems((prev) => {
-      const item = prev.find((x) => x.id === id);
-      if (item?.url.startsWith("blob:")) URL.revokeObjectURL(item.url);
-      return prev.filter((x) => x.id !== id);
-    });
+  const handleDelete = async (item: MediaItem) => {
+    try {
+      const { error: dbErr } = await supabase.from("website_media_items").delete().eq("id", item.id);
+      if (dbErr) throw dbErr;
 
-    toast({ title: "Deleted", description: "Media item removed." });
+      const { error: storageErr } = await supabase.storage.from("user-files").remove([item.storagePath]);
+      if (storageErr) throw storageErr;
+
+      setItems((prev) => prev.filter((x) => x.id !== item.id));
+      toast({ title: "Deleted", description: "Media item removed." });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete gagal",
+        description: e?.message || "Terjadi kesalahan.",
+      });
+    }
   };
 
   return (
@@ -149,9 +210,9 @@ export default function AdminWebsiteMedia() {
             onChange={handleUpload}
             accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip"
           />
-          <Button type="button" onClick={handleUploadClick}>
+          <Button type="button" onClick={handleUploadClick} disabled={uploading}>
             <Upload className="h-4 w-4" />
-            Add New Media Files
+            {uploading ? "Uploading..." : "Add New Media Files"}
           </Button>
         </div>
       </header>
@@ -177,7 +238,9 @@ export default function AdminWebsiteMedia() {
         </CardHeader>
 
         <CardContent>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">Loading...</div>
+          ) : filtered.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">No media files found.</div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -213,7 +276,7 @@ export default function AdminWebsiteMedia() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleCopyUrl(item.url)}>
+                      <Button variant="outline" size="sm" onClick={() => void handleCopyUrl(item.url)}>
                         <Copy className="h-4 w-4" />
                         Copy URL
                       </Button>
@@ -221,7 +284,7 @@ export default function AdminWebsiteMedia() {
                         <Eye className="h-4 w-4" />
                         Preview
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDelete(item.id)}>
+                      <Button variant="outline" size="sm" onClick={() => void handleDelete(item)}>
                         <Trash2 className="h-4 w-4" />
                         Delete
                       </Button>
@@ -256,7 +319,7 @@ export default function AdminWebsiteMedia() {
                 <span className="font-medium text-foreground">{preview.name}</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleCopyUrl(preview.url)}>
+                <Button variant="outline" size="sm" onClick={() => void handleCopyUrl(preview.url)}>
                   <Copy className="h-4 w-4" />
                   Copy URL
                 </Button>
