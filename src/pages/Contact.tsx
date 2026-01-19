@@ -20,37 +20,47 @@ const contactSchema = z.object({
 
 const SETTINGS_KEY = 'contact_other_ways';
 
+type ContactKey = "email" | "phone" | "whatsapp" | "location";
+
 type ContactInfoItem = {
+  key: ContactKey;
   icon: typeof Mail;
   title: string;
   detail: string;
   description: string;
+  /** Only used when key === "whatsapp" */
+  openingMessage?: string;
 };
 
 const defaultContactInfo: ContactInfoItem[] = [
   {
+    key: "email",
     icon: Mail,
-    title: 'Email Us',
-    detail: 'hello@easymarketingassist.com',
-    description: 'We typically respond within 24 hours',
+    title: "Email Us",
+    detail: "hello@easymarketingassist.com",
+    description: "We typically respond within 24 hours",
   },
   {
+    key: "phone",
     icon: Phone,
-    title: 'Call Us',
-    detail: '+1 (555) 123-4567',
-    description: 'Mon-Fri from 9am to 5pm EST',
+    title: "Call Us",
+    detail: "+1 (555) 123-4567",
+    description: "Mon-Fri from 9am to 5pm EST",
   },
   {
+    key: "whatsapp",
     icon: MessageCircle,
-    title: 'WhatsApp',
-    detail: '+1 (555) 123-4567',
-    description: 'Quick responses for existing clients',
+    title: "WhatsApp",
+    detail: "+1 (555) 123-4567",
+    description: "Quick responses for existing clients",
+    openingMessage: "Hallo !!!",
   },
   {
+    key: "location",
     icon: MapPin,
-    title: 'Location',
-    detail: 'Remote / Worldwide',
-    description: 'Available for global clients',
+    title: "Location",
+    detail: "Remote / Worldwide",
+    description: "Available for global clients",
   },
 ];
 
@@ -61,6 +71,24 @@ const iconByKey = {
   location: MapPin,
 } as const;
 
+function toWhatsAppPhone(input: string) {
+  // wa.me only supports digits (no +, spaces, (), -)
+  return (input ?? "").replace(/\D/g, "");
+}
+
+function buildWhatsAppUrl(phone: string, message: string) {
+  const normalized = toWhatsAppPhone(phone);
+  if (!normalized) return null;
+  const text = encodeURIComponent(message || "Hallo !!!");
+  return `https://wa.me/${normalized}?text=${text}`;
+}
+
+function buildOutlookComposeUrl(email: string) {
+  const to = (email ?? "").trim();
+  if (!to) return null;
+  return `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}`;
+}
+
 function parseContactInfo(value: unknown): ContactInfoItem[] {
   if (!Array.isArray(value)) return defaultContactInfo;
 
@@ -69,13 +97,15 @@ function parseContactInfo(value: unknown): ContactInfoItem[] {
       const obj = raw as any;
       const key = obj?.key as keyof typeof iconByKey | undefined;
       const Icon = key ? iconByKey[key] : undefined;
-      if (!Icon) return null;
+      if (!Icon || !key) return null;
 
       return {
+        key,
         icon: Icon,
-        title: typeof obj.title === 'string' ? obj.title : '',
-        detail: typeof obj.detail === 'string' ? obj.detail : '',
-        description: typeof obj.description === 'string' ? obj.description : '',
+        title: typeof obj.title === "string" ? obj.title : "",
+        detail: typeof obj.detail === "string" ? obj.detail : "",
+        description: typeof obj.description === "string" ? obj.description : "",
+        openingMessage: typeof obj.openingMessage === "string" ? obj.openingMessage : undefined,
       } satisfies ContactInfoItem;
     })
     .filter(Boolean) as ContactInfoItem[];
@@ -236,22 +266,46 @@ export default function Contact() {
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                {contactInfo.map((info) => (
-                  <Card key={info.title} className="shadow-soft">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <info.icon className="h-5 w-5" />
+                {contactInfo.map((info) => {
+                  const href =
+                    info.key === "email"
+                      ? buildOutlookComposeUrl(info.detail)
+                      : info.key === "whatsapp"
+                        ? buildWhatsAppUrl(info.detail, info.openingMessage ?? "Hallo !!!")
+                        : null;
+
+                  const CardInner = (
+                    <Card key={info.key} className="shadow-soft">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <info.icon className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-foreground">{info.title}</h3>
+                            <p className="text-foreground break-words">{info.detail}</p>
+                            <p className="text-sm text-muted-foreground break-words">{info.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-foreground">{info.title}</h3>
-                          <p className="text-foreground">{info.detail}</p>
-                          <p className="text-sm text-muted-foreground">{info.description}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+
+                  return href ? (
+                    <a
+                      key={info.key}
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block"
+                      aria-label={info.key === "email" ? `Email ke ${info.detail}` : `WhatsApp ke ${info.detail}`}
+                    >
+                      {CardInner}
+                    </a>
+                  ) : (
+                    CardInner
+                  );
+                })}
               </div>
 
               {/* Existing Client CTA */}
