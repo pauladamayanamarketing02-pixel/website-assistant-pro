@@ -457,7 +457,7 @@ export default function AIGenerator() {
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[3fr_7fr] min-w-0">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[3fr_7fr] min-w-0 items-stretch">
           {/* Left: Detail Automations */}
           <Card className="min-w-0">
             <CardHeader>
@@ -498,19 +498,19 @@ export default function AIGenerator() {
           </Card>
 
           {/* Right: Preview from Code Snippet */}
-          <Card className="min-w-0">
-            <CardHeader>
+          <Card className="min-w-0 flex flex-col">
+            <CardHeader className="shrink-0">
               <CardTitle>Preview</CardTitle>
               <CardDescription>Rendered from the saved Code Snippet</CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-hidden rounded-lg border border-border">
+            <CardContent className="p-0 flex-1 min-h-0">
+              <div className="h-full min-h-0 overflow-hidden rounded-lg border border-border">
                 <iframe
                   key={`${selectedTool.id}-${selectedTool.codeLanguage}`}
                   title={`${selectedTool.title} preview`}
                   srcDoc={buildPreviewSrcDoc()}
                   sandbox="allow-scripts allow-forms allow-modals"
-                  className="block w-full h-[60vh] md:h-[70vh] min-h-[420px] md:min-h-[520px] bg-background"
+                  className="block w-full h-full min-h-[60vh] lg:min-h-[70vh] bg-background"
                 />
               </div>
             </CardContent>
