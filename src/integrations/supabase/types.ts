@@ -372,6 +372,33 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_clears: {
+        Row: {
+          cleared_at: string
+          created_at: string
+          id: string
+          peer_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cleared_at?: string
+          created_at?: string
+          id?: string
+          peer_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cleared_at?: string
+          created_at?: string
+          id?: string
+          peer_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       content_categories: {
         Row: {
           created_at: string
