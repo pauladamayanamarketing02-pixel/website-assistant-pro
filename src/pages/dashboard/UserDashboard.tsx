@@ -49,6 +49,16 @@ export default function UserDashboard() {
   const navigate = useNavigate();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
+  const welcomeName = useMemo(() => {
+    if (!user) return '';
+    const meta: any = (user as any)?.user_metadata ?? {};
+    const fromMeta = (meta?.name as string | undefined)?.trim();
+    const first = (meta?.first_name as string | undefined)?.trim();
+    const last = (meta?.last_name as string | undefined)?.trim();
+    const combined = [first, last].filter(Boolean).join(' ').trim();
+    return (fromMeta || combined || user.email?.split('@')[0] || '');
+  }, [user]);
+
   useEffect(() => {
     if (!loading && (!user || role !== 'user')) {
       navigate('/auth');
@@ -86,6 +96,7 @@ export default function UserDashboard() {
 
   if (!user) return null;
 
+
   return (
     <SidebarProvider>
       <div className="h-screen flex w-full overflow-hidden">
@@ -95,7 +106,7 @@ export default function UserDashboard() {
           <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
             <SidebarTrigger />
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-foreground truncate">Business Dashboard</div>
+              <div className="text-sm font-semibold text-foreground truncate">Welcome {welcomeName}</div>
               <div className="text-xs text-muted-foreground truncate">Workspace</div>
             </div>
           </header>
