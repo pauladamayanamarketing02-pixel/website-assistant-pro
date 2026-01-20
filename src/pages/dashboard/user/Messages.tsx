@@ -20,6 +20,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useRealtimeContactActivity } from '@/hooks/useRealtimeContactActivity';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -59,6 +60,11 @@ export default function Messages() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { lastActivityById, bumpActivity } = useRealtimeContactActivity({
+    userId: user?.id,
+    contactIds: assists.map((a) => a.id),
+  });
 
   // Fetch assists
   useEffect(() => {
@@ -362,9 +368,10 @@ export default function Messages() {
 
     // Optimistic UI: show message immediately
     setMessages((prev) => [...prev, optimistic]);
-    setNewMessage('');
+    // Ensure contacts list jumps to top immediately
+    bumpActivity(selectedAssist.id, optimistic.created_at);
 
-    setSending(true);
+    setNewMessage('');
     setUploading(Boolean(uploadedFile));
 
     try {
@@ -478,6 +485,18 @@ export default function Messages() {
     a.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const sortedAssists = [...filteredAssists].sort((a, b) => {
+    const unreadA = unreadByAssistId[a.id] || 0;
+    const unreadB = unreadByAssistId[b.id] || 0;
+    if (unreadA !== unreadB) return unreadB - unreadA;
+
+    const tsA = lastActivityById[a.id] ? new Date(lastActivityById[a.id]).getTime() : 0;
+    const tsB = lastActivityById[b.id] ? new Date(lastActivityById[b.id]).getTime() : 0;
+    if (tsA !== tsB) return tsB - tsA;
+
+    return a.name.localeCompare(b.name, 'id-ID');
+  });
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -518,7 +537,7 @@ export default function Messages() {
                   <p className="text-sm">No assists available</p>
                 </div>
               ) : (
-                filteredAssists.map((assist) => {
+                sortedAssists.map((assist) => {
                   const unread = unreadByAssistId[assist.id] || 0;
 
                   return (
