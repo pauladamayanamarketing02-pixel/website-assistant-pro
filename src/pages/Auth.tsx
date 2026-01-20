@@ -130,9 +130,17 @@ export default function Auth() {
         return;
       }
 
+      const first = formData.firstName.trim();
+      const last = formData.lastName.trim();
+
       if (selectedRole === 'assist') {
-        sessionStorage.setItem('orientation_firstName', formData.firstName.trim());
-        sessionStorage.setItem('orientation_lastName', formData.lastName.trim());
+        sessionStorage.setItem('orientation_firstName', first);
+        sessionStorage.setItem('orientation_lastName', last);
+      }
+
+      if (selectedRole === 'user') {
+        sessionStorage.setItem('onboarding_firstName', first);
+        sessionStorage.setItem('onboarding_lastName', last);
       }
 
       toast({

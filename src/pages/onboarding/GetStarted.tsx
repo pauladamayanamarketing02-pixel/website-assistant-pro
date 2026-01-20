@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,18 @@ export default function GetStarted() {
     firstName: '',
     lastName: '',
   });
+
+  const [isPrefilled, setIsPrefilled] = useState(false);
+
+  useEffect(() => {
+    const first = sessionStorage.getItem('onboarding_firstName') ?? '';
+    const last = sessionStorage.getItem('onboarding_lastName') ?? '';
+
+    if (first.trim() || last.trim()) {
+      setFormData({ firstName: first, lastName: last });
+      setIsPrefilled(true);
+    }
+  }, []);
 
   const isFormValid = formData.firstName.trim() && formData.lastName.trim();
 
@@ -56,6 +68,7 @@ export default function GetStarted() {
                   placeholder="John"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  disabled={isPrefilled}
                 />
               </div>
 
@@ -66,6 +79,7 @@ export default function GetStarted() {
                   placeholder="Doe"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  disabled={isPrefilled}
                 />
               </div>
             </div>
