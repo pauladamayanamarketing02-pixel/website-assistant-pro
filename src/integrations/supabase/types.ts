@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       assist_ai_tools: {
         Row: {
+          code_content: string | null
+          code_language: string | null
           color: string
           created_at: string
           created_by: string
@@ -30,6 +32,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code_content?: string | null
+          code_language?: string | null
           color?: string
           created_at?: string
           created_by: string
@@ -44,6 +48,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code_content?: string | null
+          code_language?: string | null
           color?: string
           created_at?: string
           created_by?: string
