@@ -140,10 +140,10 @@ export default function AssistDashboard() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="h-screen flex w-full overflow-hidden">
         <AssistSidebar items={mainMenuItems} onLogout={signOut} />
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
             <SidebarTrigger />
             <div className="min-w-0">
@@ -152,7 +152,7 @@ export default function AssistDashboard() {
             </div>
           </header>
 
-          <main className="p-6 bg-background overflow-auto">
+          <main className="flex-1 p-6 bg-background overflow-auto">
             <Routes>
               <Route index element={<DashboardOverview />} />
               <Route path="profile" element={<AssistProfile />} />
