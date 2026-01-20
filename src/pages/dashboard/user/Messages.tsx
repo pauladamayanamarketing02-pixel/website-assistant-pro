@@ -452,6 +452,27 @@ export default function Messages() {
                     </div>
                   )}
                   <div className="flex items-end gap-2">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+
+                    {/* Upload button pinned to the left edge */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="h-10 w-10 shrink-0"
+                      aria-label="Upload file"
+                    >
+                      <Upload className="h-4 w-4" />
+                    </Button>
+
+                    {/* Message input */}
                     <div className="flex-1 flex flex-col gap-2">
                       <Textarea
                         placeholder="Type your message..."
@@ -464,34 +485,17 @@ export default function Messages() {
                         <span>Files are stored securely in your workspace.</span>
                       </div>
                     </div>
-                    <div className="flex items-end gap-2">
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={handleFileUpload}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                        className="h-10 w-10"
-                        aria-label="Upload file"
-                      >
-                        <Upload className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleSend}
-                        disabled={sending || (!newMessage.trim() && !uploadedFile)}
-                        className="h-10"
-                      >
-                        <Send className="h-4 w-4 mr-1" />
-                        Send
-                      </Button>
-                    </div>
+
+                    {/* Send button on the right */}
+                    <Button
+                      type="button"
+                      onClick={handleSend}
+                      disabled={sending || (!newMessage.trim() && !uploadedFile)}
+                      className="h-10 shrink-0"
+                    >
+                      <Send className="h-4 w-4 mr-1" />
+                      Send
+                    </Button>
                   </div>
                 </div>
               </CardContent>
