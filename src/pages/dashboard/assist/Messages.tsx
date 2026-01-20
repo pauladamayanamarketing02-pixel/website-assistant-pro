@@ -338,11 +338,22 @@ export default function AssistMessages() {
     };
   }, [user, selectedUser, toast]);
 
+  const scrollToBottom = () => {
+    const root = scrollRef.current;
+    if (!root) return;
+
+    // Radix ScrollArea: the scrollable element is the Viewport, not the Root
+    const viewport = root.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement | null;
+
+    const el = viewport ?? root;
+    el.scrollTop = el.scrollHeight;
+  };
+
   useEffect(() => {
     // Scroll to bottom when new messages arrive
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    requestAnimationFrame(scrollToBottom);
   }, [messages]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
