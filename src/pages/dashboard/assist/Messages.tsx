@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Send, MessageCircle, User, Search, Trash2, Upload, Download, Paperclip, X, Check, CheckCheck } from 'lucide-react';
+import { Send, MessageCircle, User, Search, Trash2, Download, Paperclip, X, Check, CheckCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -722,7 +722,7 @@ export default function AssistMessages() {
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
                     >
-                      <Upload className="h-4 w-4" />
+                      <Paperclip className="h-4 w-4" />
                     </Button>
                     <input
                       ref={fileInputRef}
