@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Send, Paperclip, MessageCircle, User, Search, Trash2, Upload, Download, X, Check, CheckCheck } from 'lucide-react';
+import { Send, Paperclip, MessageCircle, User, Search, Trash2, Download, X, Check, CheckCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -757,7 +757,7 @@ export default function Messages() {
                       className="h-10 w-10 shrink-0"
                       aria-label="Upload file"
                     >
-                      <Upload className="h-4 w-4" />
+                      <Paperclip className="h-4 w-4" />
                     </Button>
 
                     {/* Message input */}
