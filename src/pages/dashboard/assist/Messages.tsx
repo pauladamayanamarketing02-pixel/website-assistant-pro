@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Send, MessageCircle, User, Search, Trash2, Upload, Download, Paperclip, X, Check, CheckCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,6 @@ export default function AssistMessages() {
   const [users, setUsers] = useState<UserContact[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserContact | null>(null);
   const [unreadByUserId, setUnreadByUserId] = useState<Record<string, number>>({});
-  const [lastActivityByUserId, setLastActivityByUserId] = useState<Record<string, string>>({});
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -173,79 +172,6 @@ export default function AssistMessages() {
     };
   }, [user?.id, users, selectedUser?.id]);
 
-  // Last activity per contact (for realtime sorting)
-  useEffect(() => {
-    if (!user?.id) return;
-    if (users.length === 0) {
-      setLastActivityByUserId({});
-      return;
-    }
-
-    const userIds = users.map((u) => u.id);
-
-    const refreshLastActivity = async () => {
-      const [incomingRes, outgoingRes] = await Promise.all([
-        (supabase as any)
-          .from('messages')
-          .select('sender_id, created_at')
-          .eq('receiver_id', user.id)
-          .in('sender_id', userIds)
-          .order('created_at', { ascending: false })
-          .limit(1000),
-        (supabase as any)
-          .from('messages')
-          .select('receiver_id, created_at')
-          .eq('sender_id', user.id)
-          .in('receiver_id', userIds)
-          .order('created_at', { ascending: false })
-          .limit(1000),
-      ]);
-
-      const next: Record<string, string> = {};
-      const consider = (id: string, createdAt: string) => {
-        const prev = next[id];
-        if (!prev || new Date(createdAt).getTime() > new Date(prev).getTime()) next[id] = createdAt;
-      };
-
-      (incomingRes.data ?? []).forEach((row: any) => {
-        if (row?.sender_id && row?.created_at) consider(row.sender_id, row.created_at);
-      });
-      (outgoingRes.data ?? []).forEach((row: any) => {
-        if (row?.receiver_id && row?.created_at) consider(row.receiver_id, row.created_at);
-      });
-
-      setLastActivityByUserId(next);
-    };
-
-    refreshLastActivity();
-
-    const channel = supabase
-      .channel(`assist-messages-activity-${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          const row = payload.new as any;
-
-          // outgoing (assist -> user)
-          if (row?.sender_id === user.id && userIds.includes(row?.receiver_id)) {
-            setLastActivityByUserId((prev) => ({ ...prev, [row.receiver_id]: row.created_at }));
-            return;
-          }
-
-          // incoming (user -> assist)
-          if (row?.receiver_id === user.id && userIds.includes(row?.sender_id)) {
-            setLastActivityByUserId((prev) => ({ ...prev, [row.sender_id]: row.created_at }));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, users]);
-
   // Fetch messages for selected user
   useEffect(() => {
     const fetchMessages = async () => {
@@ -371,10 +297,6 @@ export default function AssistMessages() {
   const handleSend = async () => {
     if (!user || !selectedUser || (!newMessage.trim() && !uploadedFile)) return;
 
-    const nowIso = new Date().toISOString();
-    // Update last activity immediately so contact sorting feels instant
-    setLastActivityByUserId((prev) => ({ ...prev, [selectedUser.id]: nowIso }));
-
     const contentToSend = newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : '');
     const tempId = `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const optimistic: Message = {
@@ -384,7 +306,7 @@ export default function AssistMessages() {
       content: contentToSend,
       file_url: null,
       is_read: false,
-      created_at: nowIso,
+      created_at: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, optimistic]);
@@ -487,33 +409,10 @@ export default function AssistMessages() {
       day: 'numeric',
     });
 
-  const filteredUsers = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const base = users.filter((u) =>
-      q.length === 0
-        ? true
-        : u.name.toLowerCase().includes(q) ||
-          (u.business_name && u.business_name.toLowerCase().includes(q))
-    );
-
-    const toMs = (iso?: string) => (iso ? new Date(iso).getTime() : 0);
-
-    return [...base].sort((a, b) => {
-      const unreadA = unreadByUserId[a.id] || 0;
-      const unreadB = unreadByUserId[b.id] || 0;
-
-      // Unread first
-      if ((unreadA > 0) !== (unreadB > 0)) return unreadB > 0 ? 1 : -1;
-
-      // Then last activity
-      const aTime = toMs(lastActivityByUserId[a.id]);
-      const bTime = toMs(lastActivityByUserId[b.id]);
-      if (aTime !== bTime) return bTime - aTime;
-
-      // Fallback stable sort
-      return a.name.localeCompare(b.name);
-    });
-  }, [users, searchQuery, unreadByUserId, lastActivityByUserId]);
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.business_name && u.business_name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   if (loading) {
     return (
