@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      assist_ai_tools: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string
+          description: string
+          icon: string
+          id: string
+          iframe_url: string | null
+          is_active: boolean
+          json_config: Json
+          sort_order: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by: string
+          description?: string
+          icon?: string
+          id?: string
+          iframe_url?: string | null
+          is_active?: boolean
+          json_config?: Json
+          sort_order?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          icon?: string
+          id?: string
+          iframe_url?: string | null
+          is_active?: boolean
+          json_config?: Json
+          sort_order?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       blog_authors: {
         Row: {
           created_at: string
