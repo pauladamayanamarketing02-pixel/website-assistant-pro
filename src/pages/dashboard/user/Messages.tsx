@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Send, Paperclip, MessageCircle, User, Search, Trash2, Upload, Download, X } from 'lucide-react';
+import { Send, Paperclip, MessageCircle, User, Search, Trash2, Upload, Download, X, Check, CheckCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,14 +116,29 @@ export default function Messages() {
         .order('created_at', { ascending: true });
 
       if (data) {
-        setMessages(data);
-        // Mark messages as read
+        const normalized = (data as any[]).map((m) => ({
+          ...(m as any),
+          is_read: Boolean((m as any).is_read),
+        })) as Message[];
+
+        setMessages(normalized);
+
+        // Mark messages as read (incoming only)
         await supabase
           .from('messages')
           .update({ is_read: true })
           .eq('receiver_id', user.id)
           .eq('sender_id', selectedAssist.id)
           .eq('is_read', false);
+
+        // Optimistic local update
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.receiver_id === user.id && m.sender_id === selectedAssist.id
+              ? { ...m, is_read: true }
+              : m
+          )
+        );
       }
     };
 
@@ -131,7 +146,7 @@ export default function Messages() {
 
     // Set up real-time subscription
     if (!user || !selectedAssist) return;
-    
+
     const channel = supabase
       .channel('messages-changes')
       .on(
@@ -142,13 +157,50 @@ export default function Messages() {
           table: 'messages',
         },
         (payload) => {
-          const newMsg = payload.new as Message;
-          if (
-            (newMsg.sender_id === user?.id && newMsg.receiver_id === selectedAssist?.id) ||
-            (newMsg.sender_id === selectedAssist?.id && newMsg.receiver_id === user?.id)
-          ) {
-            setMessages((prev) => [...prev, newMsg]);
+          const newMsg = payload.new as any;
+          const belongsToThread =
+            (newMsg.sender_id === user.id && newMsg.receiver_id === selectedAssist.id) ||
+            (newMsg.sender_id === selectedAssist.id && newMsg.receiver_id === user.id);
+
+          if (!belongsToThread) return;
+
+          const normalized: Message = {
+            ...(newMsg as Message),
+            is_read: Boolean(newMsg.is_read),
+          };
+
+          // If chat is open and we receive a message, mark it read immediately
+          if (normalized.receiver_id === user.id && normalized.sender_id === selectedAssist.id && !normalized.is_read) {
+            setMessages((prev) => [...prev, { ...normalized, is_read: true }]);
+            supabase.from('messages').update({ is_read: true }).eq('id', normalized.id);
+            return;
           }
+
+          setMessages((prev) => [...prev, normalized]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          const belongsToThread =
+            (updated.sender_id === user.id && updated.receiver_id === selectedAssist.id) ||
+            (updated.sender_id === selectedAssist.id && updated.receiver_id === user.id);
+
+          if (!belongsToThread) return;
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === updated.id
+                ? ({ ...(updated as Message), is_read: Boolean(updated.is_read) } as Message)
+                : m
+            )
+          );
         }
       )
       .subscribe();
@@ -248,7 +300,18 @@ export default function Messages() {
     return fileName.replace(/^\d+-/, '');
   };
 
-  const filteredAssists = assists.filter(a => 
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+  const filteredAssists = assists.filter((a) =>
     a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -373,60 +436,91 @@ export default function Messages() {
                       <p className="text-sm">No messages yet. Start the conversation!</p>
                     </div>
                   ) : (
-                    messages.map((msg) => {
+                    messages.map((msg, idx) => {
                       const isOwn = msg.sender_id === user?.id;
-                      const isFileOnly = msg.file_url && (!msg.content || msg.content.startsWith('📎 '));
+
+                      const prev = messages[idx - 1];
+                      const showDateSeparator =
+                        !prev ||
+                        new Date(prev.created_at).toDateString() !==
+                          new Date(msg.created_at).toDateString();
+
                       return (
-                        <div
-                          key={msg.id}
-                          className={cn(
-                            "flex gap-2",
-                            isOwn ? 'justify-end' : 'justify-start'
+                        <div key={msg.id} className="space-y-2">
+                          {showDateSeparator && (
+                            <div className="flex justify-center">
+                              <span className="text-xs text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+                                {formatDate(msg.created_at)}
+                              </span>
+                            </div>
                           )}
-                        >
-                          {!isOwn && (
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={selectedAssist.avatar_url || undefined} />
-                              <AvatarFallback className="bg-primary/10 text-primary">
-                                {selectedAssist.name?.charAt(0)?.toUpperCase() || 'A'}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
+
                           <div
                             className={cn(
-                              "max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm",
-                              isOwn
-                                ? 'bg-primary text-primary-foreground rounded-br-sm'
-                                : 'bg-muted text-foreground rounded-bl-sm'
+                              "flex gap-2",
+                              isOwn ? 'justify-end' : 'justify-start'
                             )}
                           >
-                            {msg.content && (
-                              <p className="whitespace-pre-wrap break-words mb-1">{msg.content}</p>
+                            {!isOwn && (
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={selectedAssist.avatar_url || undefined} />
+                                <AvatarFallback className="bg-primary/10 text-primary">
+                                  {selectedAssist.name?.charAt(0)?.toUpperCase() || 'A'}
+                                </AvatarFallback>
+                              </Avatar>
                             )}
-                            {msg.file_url && (
-                              <div className={cn(
-                                "mt-1 flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
-                                isOwn ? 'border-primary/40 bg-primary/10' : 'border-muted-foreground/10 bg-background/60'
-                              )}>
-                                <Paperclip className="h-4 w-4" />
-                                <span className="truncate flex-1">{getFileName(msg.file_url)}</span>
-                                <a
-                                  href={msg.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+
+                            <div
+                              className={cn(
+                                "max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm",
+                                isOwn
+                                  ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                  : 'bg-muted text-foreground rounded-bl-sm'
+                              )}
+                            >
+                              {msg.content && (
+                                <p className="whitespace-pre-wrap break-words mb-1">{msg.content}</p>
+                              )}
+                              {msg.file_url && (
+                                <div
+                                  className={cn(
+                                    "mt-1 flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
+                                    isOwn
+                                      ? 'border-primary/40 bg-primary/10'
+                                      : 'border-muted-foreground/10 bg-background/60'
+                                  )}
                                 >
-                                  <Download className="h-3 w-3" />
-                                  Download
-                                </a>
-                              </div>
-                            )}
-                            <span className={cn(
-                              "mt-1 block text-[10px] opacity-70 text-right",
-                              isOwn ? 'text-primary-foreground' : 'text-muted-foreground'
-                            )}>
-                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                                  <Paperclip className="h-4 w-4" />
+                                  <span className="truncate flex-1">{getFileName(msg.file_url)}</span>
+                                  <a
+                                    href={msg.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                  >
+                                    <Download className="h-3 w-3" />
+                                    Download
+                                  </a>
+                                </div>
+                              )}
+
+                              <span
+                                className={cn(
+                                  "mt-1 block text-[10px] opacity-70",
+                                  isOwn ? 'text-primary-foreground' : 'text-muted-foreground'
+                                )}
+                              >
+                                <span className="inline-flex items-center justify-end gap-1 w-full">
+                                  <span>{formatTime(msg.created_at)}</span>
+                                  {isOwn &&
+                                    (msg.is_read ? (
+                                      <CheckCheck className="h-3 w-3" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    ))}
+                                </span>
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
