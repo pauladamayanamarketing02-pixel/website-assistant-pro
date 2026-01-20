@@ -372,6 +372,29 @@ export default function AIGenerator() {
             </div>
           </div>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Code Snippet</CardTitle>
+            <CardDescription>
+              Language: <span className="font-medium">{selectedTool.codeLanguage.toUpperCase()}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <pre className="p-4 bg-muted rounded-lg text-sm overflow-auto whitespace-pre-wrap">{selectedTool.codeContent || 'No code snippet saved for this tool.'}</pre>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                navigator.clipboard.writeText(selectedTool.codeContent || '');
+                toast({ title: 'Copied!', description: 'Code snippet copied to clipboard.' });
+              }}
+              disabled={!selectedTool.codeContent}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copy Code Snippet
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
@@ -386,8 +409,8 @@ export default function AIGenerator() {
                 onChange={(e) => setPrompt(e.target.value)}
                 className="min-h-[200px]"
               />
-              <Button 
-                onClick={handleToolGenerate} 
+              <Button
+                onClick={handleToolGenerate}
                 disabled={generating || !prompt}
                 className="w-full"
                 size="lg"
