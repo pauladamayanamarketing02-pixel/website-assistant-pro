@@ -464,7 +464,7 @@ export default function Messages() {
                         <span>Files are stored securely in your workspace.</span>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex items-end gap-2">
                       <input
                         type="file"
                         ref={fileInputRef}
@@ -477,6 +477,8 @@ export default function Messages() {
                         size="icon"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
+                        className="h-10 w-10"
+                        aria-label="Upload file"
                       >
                         <Upload className="h-4 w-4" />
                       </Button>
