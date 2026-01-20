@@ -356,12 +356,85 @@ export default function AIGenerator() {
 
   // Tool detail view
   if (viewMode === 'tool-detail' && selectedTool) {
+    const buildPreviewSrcDoc = () => {
+      const escaped = (selectedTool.codeContent ?? '').toString();
+
+      if (!escaped.trim()) {
+        return `<!doctype html><html><head><meta charset="utf-8" /></head><body style="font-family: system-ui; padding: 16px;">
+          <h3>No code snippet</h3>
+          <p>This tool has no saved snippet.</p>
+        </body></html>`;
+      }
+
+      if (selectedTool.codeLanguage === 'html') {
+        // Run HTML directly (scripts allowed, sandboxed on iframe).
+        return escaped;
+      }
+
+      if (selectedTool.codeLanguage === 'react') {
+        // React live preview using in-iframe Babel transform.
+        // Expected snippet examples:
+        // 1) function App(){ return <div>Hello</div> }
+        // 2) const App = () => (<div/>);
+        // Optionally: render(<App />)
+        return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { margin: 0; font-family: system-ui; }
+      #root { padding: 16px; }
+      .error { padding: 16px; color: #b91c1c; background: #fee2e2; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+      try {
+        ${escaped}
+
+        // Auto-mount if user defines App and doesn't mount manually.
+        if (typeof App !== 'undefined' && document.getElementById('root')?.childNodes?.length === 0) {
+          ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+        }
+      } catch (e) {
+        const el = document.getElementById('root');
+        if (el) el.innerHTML = '<div class="error"><strong>Preview error:</strong><br/>' + (e?.message ?? e) + '</div>';
+        console.error(e);
+      }
+    </script>
+  </body>
+</html>`;
+      }
+
+      // nextjs
+      return `<!doctype html><html><head><meta charset="utf-8" /></head><body style="font-family: system-ui; padding: 16px;">
+        <h3>Next.js preview is not supported</h3>
+        <p>This app runs on Vite + React. Next.js snippets are stored as text only.</p>
+      </body></html>`;
+    };
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => { setViewMode('tools'); setSelectedTool(null); setPrompt(''); setResult(''); }}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setViewMode('tools');
+              setSelectedTool(null);
+              setPrompt('');
+              setResult('');
+            }}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <div className="flex items-center gap-3">
             <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${selectedTool.color}`}>
               <Sparkles className="h-6 w-6" />
@@ -372,43 +445,41 @@ export default function AIGenerator() {
             </div>
           </div>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Code Snippet</CardTitle>
-            <CardDescription>
-              Language: <span className="font-medium">{selectedTool.codeLanguage.toUpperCase()}</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <pre className="p-4 bg-muted rounded-lg text-sm overflow-auto whitespace-pre-wrap">{selectedTool.codeContent || 'No code snippet saved for this tool.'}</pre>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                navigator.clipboard.writeText(selectedTool.codeContent || '');
-                toast({ title: 'Copied!', description: 'Code snippet copied to clipboard.' });
-              }}
-              disabled={!selectedTool.codeContent}
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              Copy Code Snippet
-            </Button>
-          </CardContent>
-        </Card>
 
         <div className="grid gap-6 lg:grid-cols-2">
+          {/* Left: Detail Automations */}
           <Card>
             <CardHeader>
-              <CardTitle>Your Prompt</CardTitle>
-              <CardDescription>Describe what you want to create</CardDescription>
+              <CardTitle>Detail Automations</CardTitle>
+              <CardDescription>
+                Tool Name, Description, and Generator
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Describe what you want to create..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="min-h-[200px]"
-              />
+              <div className="space-y-1">
+                <Label>Tool Name</Label>
+                <div className="text-sm text-foreground font-medium">{selectedTool.title}</div>
+              </div>
+              <div className="space-y-1">
+                <Label>Description</Label>
+                <div className="text-sm text-muted-foreground">{selectedTool.description || '-'}</div>
+              </div>
+              <div className="space-y-1">
+                <Label>Code Language</Label>
+                <div className="text-sm text-foreground font-medium">{selectedTool.codeLanguage.toUpperCase()}</div>
+              </div>
+
+              <div className="pt-2" />
+
+              <div className="space-y-2">
+                <Label>Your Prompt</Label>
+                <Textarea
+                  placeholder="Describe what you want to create..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="min-h-[160px]"
+                />
+              </div>
               <Button
                 onClick={handleToolGenerate}
                 disabled={generating || !prompt}
@@ -418,34 +489,51 @@ export default function AIGenerator() {
                 <Sparkles className="h-4 w-4 mr-2" />
                 {generating ? 'Generating...' : 'Generate Content'}
               </Button>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Result</CardTitle>
-              <CardDescription>Your generated content will appear here</CardDescription>
-            </CardHeader>
-            <CardContent>
               {result ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-muted rounded-lg min-h-[200px]">
+                <div className="space-y-3">
+                  <Label>Result</Label>
+                  <div className="p-4 bg-muted rounded-lg">
                     <pre className="whitespace-pre-wrap text-sm">{result}</pre>
                   </div>
                   <Button variant="outline" className="w-full" onClick={handleCopyResult}>
                     <Copy className="h-4 w-4 mr-2" />
-                    Copy to Clipboard
+                    Copy Result
                   </Button>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
-                  <p>Enter a prompt and click generate to see results</p>
-                </div>
-              )}
+              ) : null}
+            </CardContent>
+          </Card>
+
+          {/* Right: Preview from Code Snippet */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Preview</CardTitle>
+              <CardDescription>Rendered from the saved Code Snippet</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-lg overflow-hidden border border-border">
+                <iframe
+                  title={`${selectedTool.title} preview`}
+                  srcDoc={buildPreviewSrcDoc()}
+                  sandbox="allow-scripts allow-forms allow-modals"
+                  className="w-full h-[520px] bg-background"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedTool.codeContent || '');
+                  toast({ title: 'Copied!', description: 'Code snippet copied to clipboard.' });
+                }}
+                disabled={!selectedTool.codeContent}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Code Snippet
+              </Button>
             </CardContent>
           </Card>
         </div>
-
       </div>
     );
   }
