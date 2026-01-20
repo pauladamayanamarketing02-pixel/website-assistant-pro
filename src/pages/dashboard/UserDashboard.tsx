@@ -70,10 +70,12 @@ export default function UserDashboard() {
       return;
     }
 
-    // Check if user completed onboarding
-    const checkOnboarding = async () => {
-      if (!user) return;
+    if (!user || role !== 'user') return;
 
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    // Check if user completed onboarding + prime welcome name
+    const checkOnboarding = async () => {
       const { data: business } = await supabase
         .from('businesses')
         .select('onboarding_completed, first_name, last_name')
@@ -90,9 +92,31 @@ export default function UserDashboard() {
       setCheckingOnboarding(false);
     };
 
-    if (user && role === 'user') {
-      checkOnboarding();
-    }
+    checkOnboarding();
+
+    // Keep "Welcome First Name Last Name" in sync with edits from /dashboard/user/business
+    channel = supabase
+      .channel(`businesses-welcome-name-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'businesses',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const next = payload.new as any;
+          const first = (next?.first_name as string | null | undefined) ?? '';
+          const last = (next?.last_name as string | null | undefined) ?? '';
+          setBusinessWelcomeName([first, last].filter(Boolean).join(' '));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [user, role, loading, navigate]);
 
   if (loading || checkingOnboarding) {
