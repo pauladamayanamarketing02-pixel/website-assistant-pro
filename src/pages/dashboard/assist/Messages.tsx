@@ -112,7 +112,8 @@ export default function AssistMessages() {
         .from("messages")
         .select("sender_id")
         .eq("receiver_id", user.id)
-        .eq("is_read", false)
+        // treat NULL as unread too
+        .or("is_read.is.null,is_read.eq.false")
         .in("sender_id", userIds);
 
       const next: Record<string, number> = {};
@@ -153,7 +154,8 @@ export default function AssistMessages() {
           const nextRow = payload.new as any;
           const oldRow = payload.old as any;
           if (nextRow?.receiver_id !== user.id) return;
-          if (oldRow?.is_read === false && nextRow?.is_read === true) {
+          // handle NULL -> true as well
+          if (oldRow?.is_read !== true && nextRow?.is_read === true) {
             setUnreadByUserId((prev) => {
               const senderId = nextRow.sender_id as string;
               const current = prev[senderId] || 0;
@@ -195,7 +197,7 @@ export default function AssistMessages() {
           .update({ is_read: true })
           .eq('receiver_id', user.id)
           .eq('sender_id', selectedUser.id)
-          .eq('is_read', false);
+          .or('is_read.is.null,is_read.eq.false');
 
         // Optimistic local update
         setMessages((prev) =>
