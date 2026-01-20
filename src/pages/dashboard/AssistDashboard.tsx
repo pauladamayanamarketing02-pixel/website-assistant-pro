@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { AssistSidebar, type AssistNavItem } from '@/components/assist/AssistSidebar';
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 
 // Import components
 import ClientList from './assist/ClientList';
@@ -49,7 +50,7 @@ const mainMenuItems: AssistNavItem[] = [
   { title: 'Settings', url: '/dashboard/assist/settings', icon: Settings },
 ];
 
-function DashboardOverview() {
+function DashboardOverview({ unreadMessages }: { unreadMessages: number }) {
   return (
     <div className="space-y-6">
       <div>
@@ -86,7 +87,7 @@ function DashboardOverview() {
             <CardTitle className="text-lg">Unread Messages</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">5</p>
+            <p className="text-3xl font-bold">{unreadMessages}</p>
           </CardContent>
         </Card>
       </div>
@@ -98,6 +99,8 @@ export default function AssistDashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  const { unreadCount: unreadMessages } = useUnreadMessagesCount(user?.id);
 
   const welcomeName = useMemo(() => {
     if (!user) return '';
@@ -148,7 +151,6 @@ export default function AssistDashboard() {
 
   if (!user) return null;
 
-
   return (
     <SidebarProvider>
       <div className="h-screen flex w-full overflow-hidden">
@@ -165,7 +167,7 @@ export default function AssistDashboard() {
 
           <main className="flex-1 p-6 bg-background overflow-auto">
             <Routes>
-              <Route index element={<DashboardOverview />} />
+              <Route index element={<DashboardOverview unreadMessages={unreadMessages} />} />
               <Route path="profile" element={<AssistProfile />} />
               <Route path="clients" element={<ClientList />} />
               <Route path="tasks" element={<TaskManager />} />
