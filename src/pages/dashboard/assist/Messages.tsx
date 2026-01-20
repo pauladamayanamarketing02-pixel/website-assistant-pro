@@ -20,6 +20,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useRealtimeContactActivity } from '@/hooks/useRealtimeContactActivity';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -59,6 +60,11 @@ export default function AssistMessages() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { lastActivityById, bumpActivity } = useRealtimeContactActivity({
+    userId: user?.id,
+    contactIds: users.map((u) => u.id),
+  });
 
   // Fetch users (clients)
   useEffect(() => {
@@ -353,9 +359,10 @@ export default function AssistMessages() {
     };
 
     setMessages((prev) => [...prev, optimistic]);
-    setNewMessage('');
+    // Ensure contacts list jumps to top immediately
+    bumpActivity(selectedUser.id, optimistic.created_at);
 
-    setSending(true);
+    setNewMessage('');
     setUploading(Boolean(uploadedFile));
 
     try {
@@ -467,6 +474,18 @@ export default function AssistMessages() {
     (u.business_name && u.business_name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const unreadA = unreadByUserId[a.id] || 0;
+    const unreadB = unreadByUserId[b.id] || 0;
+    if (unreadA !== unreadB) return unreadB - unreadA;
+
+    const tsA = lastActivityById[a.id] ? new Date(lastActivityById[a.id]).getTime() : 0;
+    const tsB = lastActivityById[b.id] ? new Date(lastActivityById[b.id]).getTime() : 0;
+    if (tsA !== tsB) return tsB - tsA;
+
+    return a.name.localeCompare(b.name, 'id-ID');
+  });
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -507,7 +526,7 @@ export default function AssistMessages() {
                   <p className="text-sm">No clients available</p>
                 </div>
               ) : (
-                filteredUsers.map((client) => {
+                sortedUsers.map((client) => {
                   const unread = unreadByUserId[client.id] || 0;
 
                   return (
