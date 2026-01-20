@@ -867,7 +867,7 @@ export default function MyBusiness() {
                   value={formData.first_name}
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                   placeholder="John"
-                  disabled={!isEditing}
+                  disabled
                 />
               </div>
               <div className="space-y-2">
@@ -877,7 +877,7 @@ export default function MyBusiness() {
                   value={formData.last_name}
                   onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   placeholder="Doe"
-                  disabled={!isEditing}
+                  disabled
                 />
               </div>
             </div>
