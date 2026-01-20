@@ -42,12 +42,15 @@ export function AssistSidebar({
     let isMounted = true;
 
     const refreshUnread = async () => {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from("messages")
         .select("*", { count: "exact", head: true })
         .eq("receiver_id", user.id)
         // treat NULL as unread too
         .or("is_read.is.null,is_read.eq.false");
+
+      // Prevent badge from incorrectly clearing on transient query errors
+      if (error) return;
 
       if (!isMounted) return;
       setUnreadCount(count || 0);
