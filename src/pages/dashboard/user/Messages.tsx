@@ -57,30 +57,52 @@ export default function Messages() {
   // Fetch assists
   useEffect(() => {
     const fetchAssists = async () => {
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'assist');
+      try {
+        // Get Assist accounts (role = 'assist') using a DB function (more reliable than client-side joins)
+        const { data: assistAccounts, error: rpcError } = await supabase.rpc('get_assist_accounts');
+        if (rpcError) throw rpcError;
 
-      if (roles) {
-        const assistIds = roles.map(r => r.user_id);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, name, email, avatar_url')
-          .in('id', assistIds);
-
-        if (profiles) {
-          setAssists(profiles as AssistContact[]);
-          if (profiles.length > 0) {
-            setSelectedAssist(profiles[0] as AssistContact);
-          }
+        const assistIds = (assistAccounts ?? []).map((a: any) => a.id);
+        if (assistIds.length === 0) {
+          setAssists([]);
+          setSelectedAssist(null);
+          return;
         }
+
+        // Fetch optional profile fields for display (email/avatar)
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email, avatar_url')
+          .in('id', assistIds);
+        if (profilesError) throw profilesError;
+
+        const merged = (assistAccounts ?? []).map((a: any) => {
+          const p = (profiles ?? []).find((x: any) => x.id === a.id);
+          return {
+            id: a.id,
+            name: a.name,
+            email: p?.email ?? '',
+            avatar_url: p?.avatar_url ?? null,
+          } as AssistContact;
+        });
+
+        setAssists(merged);
+        if (merged.length > 0) setSelectedAssist(merged[0]);
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Gagal memuat kontak Assist',
+          description: error?.message ?? 'Terjadi kesalahan.',
+        });
+        setAssists([]);
+        setSelectedAssist(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchAssists();
-  }, []);
+  }, [toast]);
 
   // Fetch messages for selected assist
   useEffect(() => {
