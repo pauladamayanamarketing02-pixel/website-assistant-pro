@@ -5,6 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -435,18 +446,18 @@ export default function AIGenerator() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-3">
-            <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${selectedTool.color}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${selectedTool.color} shrink-0`}>
               <Sparkles className="h-6 w-6" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">{selectedTool.title}</h1>
-              <p className="text-muted-foreground">{selectedTool.description}</p>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-foreground break-words">{selectedTool.title}</h1>
+              <p className="text-muted-foreground break-words">{selectedTool.description}</p>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[3fr_7fr]">
+        <div className="grid gap-6 grid-cols-[3fr_7fr]">
           {/* Left: Detail Automations */}
           <Card>
             <CardHeader>
@@ -456,15 +467,15 @@ export default function AIGenerator() {
             <CardContent className="space-y-4">
               <div className="space-y-1">
                 <Label>Tool Name</Label>
-                <div className="text-sm text-foreground font-medium">{selectedTool.title}</div>
+                <div className="text-sm text-foreground font-medium break-words">{selectedTool.title}</div>
               </div>
               <div className="space-y-1">
                 <Label>Description</Label>
-                <div className="text-sm text-muted-foreground">{selectedTool.description || '-'}</div>
+                <div className="text-sm text-muted-foreground break-words">{selectedTool.description || '-'}</div>
               </div>
               <div className="space-y-1">
                 <Label>Code Language</Label>
-                <div className="text-sm text-foreground font-medium">{selectedTool.codeLanguage.toUpperCase()}</div>
+                <div className="text-sm text-foreground font-medium break-words">{selectedTool.codeLanguage.toUpperCase()}</div>
               </div>
 
               <div className="pt-2" />
@@ -537,31 +548,69 @@ export default function AIGenerator() {
                   className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
                 >
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div 
-                        className="flex items-center gap-3 flex-1"
-                        onClick={() => { setSelectedTool(tool); setViewMode('tool-detail'); }}
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                      <div
+                        className="flex items-center gap-3 flex-1 min-w-0"
+                        onClick={() => {
+                          setSelectedTool(tool);
+                          setViewMode('tool-detail');
+                        }}
                       >
-                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tool.color}`}>
+                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tool.color} shrink-0`}>
                           <Sparkles className="h-5 w-5" />
                         </div>
-                        <div>
-                          <CardTitle className="text-base">{tool.title}</CardTitle>
-                          <CardDescription className="text-xs">{tool.description}</CardDescription>
+                        <div className="min-w-0">
+                          <CardTitle className="text-base break-words">{tool.title}</CardTitle>
+                          <CardDescription className="text-xs break-words">{tool.description}</CardDescription>
                         </div>
                       </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEditTool(tool); }}>
+
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditTool(tool);
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive" 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteTool(tool.id); }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label={`Delete ${tool.title}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus tool ini?</AlertDialogTitle>
+                              <AlertDialogDescription className="break-words">
+                                Tool "{tool.title}" akan dihapus permanen dan tidak bisa dikembalikan.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDeleteTool(tool.id);
+                                }}
+                              >
+                                Ya, hapus
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </CardHeader>
