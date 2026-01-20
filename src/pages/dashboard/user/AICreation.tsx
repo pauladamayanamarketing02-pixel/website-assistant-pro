@@ -207,9 +207,9 @@ export default function AICreation() {
           </CardHeader>
           <CardContent>
             {tools.length === 0 ? (
-              <p className="text-muted-foreground">
-                Belum ada tools yang tersedia (atau akses kamu dibatasi oleh RLS).
-              </p>
+              <div className="py-10 text-muted-foreground">
+                Belum ada tools yang dipublish.
+              </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {tools.map((tool) => {
