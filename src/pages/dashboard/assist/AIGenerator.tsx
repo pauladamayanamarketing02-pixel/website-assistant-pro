@@ -452,14 +452,13 @@ export default function AIGenerator() {
             </div>
             <div className="min-w-0">
               <h1 className="text-3xl font-bold text-foreground break-words">{selectedTool.title}</h1>
-              <p className="text-muted-foreground break-words">{selectedTool.description}</p>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-[3fr_7fr]">
+        <div className="grid gap-6 grid-cols-[3fr_7fr] min-w-0">
           {/* Left: Detail Automations */}
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <CardTitle>Detail Automations</CardTitle>
               <CardDescription>Tool Name and Description</CardDescription>
@@ -498,7 +497,7 @@ export default function AIGenerator() {
           </Card>
 
           {/* Right: Preview from Code Snippet */}
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <CardTitle>Preview</CardTitle>
               <CardDescription>Rendered from the saved Code Snippet</CardDescription>
@@ -545,7 +544,7 @@ export default function AIGenerator() {
               {tools.map((tool) => (
                 <Card 
                   key={tool.id}
-                  className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
+                  className="min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between gap-2 min-w-0">
@@ -561,7 +560,7 @@ export default function AIGenerator() {
                         </div>
                         <div className="min-w-0">
                           <CardTitle className="text-base break-words">{tool.title}</CardTitle>
-                          <CardDescription className="text-xs break-words">{tool.description}</CardDescription>
+                          <CardDescription className="text-sm break-words whitespace-pre-wrap">{tool.description || '-'}</CardDescription>
                         </div>
                       </div>
 
