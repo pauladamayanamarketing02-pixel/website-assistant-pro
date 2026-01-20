@@ -163,12 +163,12 @@ export default function AssistMessages() {
 
           // If chat is open and we receive a message, mark it read immediately
           if (normalized.receiver_id === user.id && normalized.sender_id === selectedUser.id && !normalized.is_read) {
-            setMessages((prev) => [...prev, { ...normalized, is_read: true }]);
+            setMessages((prev) => (prev.some((m) => m.id === normalized.id) ? prev : [...prev, { ...normalized, is_read: true }]));
             (supabase as any).from('messages').update({ is_read: true }).eq('id', normalized.id);
             return;
           }
 
-          setMessages((prev) => [...prev, normalized]);
+          setMessages((prev) => (prev.some((m) => m.id === normalized.id) ? prev : [...prev, normalized]));
         }
       )
       .on(
@@ -218,8 +218,23 @@ export default function AssistMessages() {
   const handleSend = async () => {
     if (!user || !selectedUser || (!newMessage.trim() && !uploadedFile)) return;
 
+    const contentToSend = newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : '');
+    const tempId = `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const optimistic: Message = {
+      id: tempId,
+      sender_id: user.id,
+      receiver_id: selectedUser.id,
+      content: contentToSend,
+      file_url: null,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimistic]);
+    setNewMessage('');
+
     setSending(true);
-    setUploading(true);
+    setUploading(Boolean(uploadedFile));
 
     try {
       let fileUrl: string | null = null;
@@ -231,25 +246,36 @@ export default function AssistMessages() {
           .from('user-files')
           .upload(filePath, uploadedFile);
 
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage
-            .from('user-files')
-            .getPublicUrl(filePath);
-          fileUrl = urlData.publicUrl;
-        }
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from('user-files').getPublicUrl(filePath);
+        fileUrl = urlData.publicUrl;
       }
 
-      const { error } = await (supabase as any).from('messages').insert({
-        sender_id: user.id,
-        receiver_id: selectedUser.id,
-        content: newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : ''),
-        file_url: fileUrl,
-      });
+      const { data: inserted, error } = await (supabase as any)
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          receiver_id: selectedUser.id,
+          content: contentToSend,
+          file_url: fileUrl,
+        })
+        .select('*')
+        .single();
 
       if (error) throw error;
-      setNewMessage('');
+
+      if (inserted) {
+        const normalized: Message = {
+          ...(inserted as Message),
+          is_read: Boolean((inserted as any).is_read),
+        };
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? normalized : m)));
+      }
+
       setUploadedFile(null);
     } catch (error: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast({
         variant: 'destructive',
         title: 'Error sending message',
