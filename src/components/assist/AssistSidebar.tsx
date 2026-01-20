@@ -46,7 +46,8 @@ export function AssistSidebar({
         .from("messages")
         .select("*", { count: "exact", head: true })
         .eq("receiver_id", user.id)
-        .eq("is_read", false);
+        // treat NULL as unread too
+        .or("is_read.is.null,is_read.eq.false");
 
       if (!isMounted) return;
       setUnreadCount(count || 0);
