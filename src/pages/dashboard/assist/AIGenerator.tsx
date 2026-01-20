@@ -5,19 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  Plus,
-  Trash2,
-  Pencil,
-  Sparkles,
-  ArrowLeft,
-  Code,
-  Copy,
-} from 'lucide-react';
+import { Plus, Trash2, Pencil, Sparkles, ArrowLeft, Copy } from 'lucide-react';
 
 type ToolLanguage = 'html' | 'react' | 'nextjs';
 
@@ -27,12 +18,11 @@ interface AITool {
   description: string;
   icon: string;
   color: string;
-  jsonConfig: string;
   codeLanguage: ToolLanguage;
   codeContent: string;
 }
 
-type ViewMode = 'tools' | 'tool-detail';
+type ViewMode = 'tools' | 'tool-detail' | 'tool-create';
 
 export default function AIGenerator() {
   const { toast } = useToast();
@@ -46,7 +36,6 @@ export default function AIGenerator() {
   const [viewMode, setViewMode] = useState<ViewMode>('tools');
   const [tools, setTools] = useState<AITool[]>([]);
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
-  const [showToolDialog, setShowToolDialog] = useState(false);
   const [editingTool, setEditingTool] = useState<AITool | null>(null);
   const [loadingTools, setLoadingTools] = useState(false);
   const [savingTool, setSavingTool] = useState(false);
@@ -57,7 +46,6 @@ export default function AIGenerator() {
     description: '',
     icon: 'Sparkles',
     color: 'bg-primary/10 text-primary',
-    jsonConfig: '{}',
     codeLanguage: 'html' as ToolLanguage,
     codeContent: '',
   });
@@ -70,7 +58,7 @@ export default function AIGenerator() {
     try {
       const { data, error } = await (supabase as any)
         .from('assist_ai_tools')
-        .select('id,title,description,icon,color,json_config,code_language,code_content')
+        .select('id,title,description,icon,color,code_language,code_content')
         .eq('created_by', user.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
@@ -83,7 +71,6 @@ export default function AIGenerator() {
         description: row.description ?? '',
         icon: row.icon ?? 'Sparkles',
         color: row.color ?? 'bg-primary/10 text-primary',
-        jsonConfig: JSON.stringify(row.json_config ?? {}, null, 0),
         codeLanguage: (row.code_language ?? 'html') as ToolLanguage,
         codeContent: row.code_content ?? '',
       }));
@@ -125,11 +112,10 @@ export default function AIGenerator() {
       description: '',
       icon: 'Sparkles',
       color: 'bg-primary/10 text-primary',
-      jsonConfig: '{}',
       codeLanguage: 'html',
       codeContent: '',
     });
-    setShowToolDialog(true);
+    setViewMode('tool-create');
   };
 
   const handleEditTool = (tool: AITool) => {
@@ -139,11 +125,10 @@ export default function AIGenerator() {
       description: tool.description,
       icon: tool.icon,
       color: tool.color,
-      jsonConfig: tool.jsonConfig,
       codeLanguage: tool.codeLanguage,
       codeContent: tool.codeContent,
     });
-    setShowToolDialog(true);
+    setViewMode('tool-create');
   };
 
   const handleSaveTool = async () => {
@@ -157,15 +142,6 @@ export default function AIGenerator() {
       return;
     }
 
-    // Validate JSON
-    let parsedConfig: any;
-    try {
-      parsedConfig = JSON.parse(toolForm.jsonConfig || '{}');
-    } catch {
-      toast({ variant: 'destructive', title: 'Error', description: 'Invalid JSON configuration.' });
-      return;
-    }
-
     setSavingTool(true);
     try {
       if (editingTool) {
@@ -176,7 +152,7 @@ export default function AIGenerator() {
             description: toolForm.description ?? '',
             icon: toolForm.icon,
             color: toolForm.color,
-            json_config: parsedConfig,
+            json_config: {},
             code_language: toolForm.codeLanguage,
             code_content: toolForm.codeContent,
           })
@@ -194,7 +170,7 @@ export default function AIGenerator() {
             description: toolForm.description ?? '',
             icon: toolForm.icon,
             color: toolForm.color,
-            json_config: parsedConfig,
+            json_config: {},
             code_language: toolForm.codeLanguage,
             code_content: toolForm.codeContent,
             is_active: true,
@@ -204,7 +180,8 @@ export default function AIGenerator() {
         toast({ title: 'Tool Created', description: 'Tool berhasil dibuat.' });
       }
 
-      setShowToolDialog(false);
+      setViewMode('tools');
+      setEditingTool(null);
       await loadTools();
     } catch (e: any) {
       console.error(e);
@@ -240,6 +217,142 @@ export default function AIGenerator() {
     navigator.clipboard.writeText(result);
     toast({ title: 'Copied!', description: 'Content copied to clipboard.' });
   };
+
+  // Create/edit tool view (full page)
+  if (viewMode === 'tool-create') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setViewMode('tools');
+              setEditingTool(null);
+            }}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">{editingTool ? 'Edit Tool' : 'Create New Tool'}</h1>
+            <p className="text-muted-foreground">Simpan tool ke database</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Tool Details</CardTitle>
+            <CardDescription>Masukkan info tool + code snippet (HTML/React/Next.js)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tool Name *</Label>
+              <Input
+                placeholder="Enter tool name..."
+                value={toolForm.title}
+                onChange={(e) => setToolForm((prev) => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                placeholder="Enter tool description..."
+                value={toolForm.description}
+                onChange={(e) => setToolForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <Select value={toolForm.icon} onValueChange={(value) => setToolForm((prev) => ({ ...prev, icon: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sparkles">Sparkles</SelectItem>
+                    <SelectItem value="FileText">FileText</SelectItem>
+                    <SelectItem value="User">User</SelectItem>
+                    <SelectItem value="Users">Users</SelectItem>
+                    <SelectItem value="PenTool">PenTool</SelectItem>
+                    <SelectItem value="Image">Image</SelectItem>
+                    <SelectItem value="MessageSquare">MessageSquare</SelectItem>
+                    <SelectItem value="Lightbulb">Lightbulb</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Color Theme</Label>
+                <Select value={toolForm.color} onValueChange={(value) => setToolForm((prev) => ({ ...prev, color: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bg-primary/10 text-primary">Primary</SelectItem>
+                    <SelectItem value="bg-blue-500/10 text-blue-500">Blue</SelectItem>
+                    <SelectItem value="bg-purple-500/10 text-purple-500">Purple</SelectItem>
+                    <SelectItem value="bg-green-500/10 text-green-500">Green</SelectItem>
+                    <SelectItem value="bg-orange-500/10 text-orange-500">Orange</SelectItem>
+                    <SelectItem value="bg-pink-500/10 text-pink-500">Pink</SelectItem>
+                    <SelectItem value="bg-cyan-500/10 text-cyan-500">Cyan</SelectItem>
+                    <SelectItem value="bg-yellow-500/10 text-yellow-500">Yellow</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Code Language</Label>
+                <Select
+                  value={toolForm.codeLanguage}
+                  onValueChange={(value) => setToolForm((prev) => ({ ...prev, codeLanguage: value as ToolLanguage }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="html">HTML</SelectItem>
+                    <SelectItem value="react">React</SelectItem>
+                    <SelectItem value="nextjs">Next.js</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Code Snippet</Label>
+              <Textarea
+                placeholder="Paste your HTML / React / Next.js code here..."
+                value={toolForm.codeContent}
+                onChange={(e) => setToolForm((prev) => ({ ...prev, codeContent: e.target.value }))}
+                rows={12}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setViewMode('tools');
+                  setEditingTool(null);
+                }}
+                disabled={savingTool}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveTool} disabled={savingTool}>
+                {savingTool ? 'Saving...' : editingTool ? 'Update Tool' : 'Create Tool'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Tool detail view
   if (viewMode === 'tool-detail' && selectedTool) {
@@ -310,19 +423,6 @@ export default function AIGenerator() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Code className="h-5 w-5" />
-              JSON Configuration
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="p-4 bg-muted rounded-lg text-sm overflow-auto">
-              {JSON.stringify(JSON.parse(selectedTool.jsonConfig), null, 2)}
-            </pre>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -389,127 +489,6 @@ export default function AIGenerator() {
           </CardContent>
         </Card>
 
-        {/* Tool Dialog */}
-        <Dialog open={showToolDialog} onOpenChange={setShowToolDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{editingTool ? 'Edit Tool' : 'Create New Tool'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Tool Name *</Label>
-                <Input
-                  placeholder="Enter tool name..."
-                  value={toolForm.title}
-                  onChange={(e) => setToolForm(prev => ({ ...prev, title: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input
-                  placeholder="Enter tool description..."
-                  value={toolForm.description}
-                  onChange={(e) => setToolForm(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Icon</Label>
-                  <Select 
-                    value={toolForm.icon} 
-                    onValueChange={(value) => setToolForm(prev => ({ ...prev, icon: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Sparkles">Sparkles</SelectItem>
-                      <SelectItem value="FileText">FileText</SelectItem>
-                      <SelectItem value="User">User</SelectItem>
-                      <SelectItem value="Users">Users</SelectItem>
-                      <SelectItem value="PenTool">PenTool</SelectItem>
-                      <SelectItem value="Image">Image</SelectItem>
-                      <SelectItem value="MessageSquare">MessageSquare</SelectItem>
-                      <SelectItem value="Lightbulb">Lightbulb</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Color Theme</Label>
-                  <Select 
-                    value={toolForm.color} 
-                    onValueChange={(value) => setToolForm(prev => ({ ...prev, color: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bg-primary/10 text-primary">Primary</SelectItem>
-                      <SelectItem value="bg-blue-500/10 text-blue-500">Blue</SelectItem>
-                      <SelectItem value="bg-purple-500/10 text-purple-500">Purple</SelectItem>
-                      <SelectItem value="bg-green-500/10 text-green-500">Green</SelectItem>
-                      <SelectItem value="bg-orange-500/10 text-orange-500">Orange</SelectItem>
-                      <SelectItem value="bg-pink-500/10 text-pink-500">Pink</SelectItem>
-                      <SelectItem value="bg-cyan-500/10 text-cyan-500">Cyan</SelectItem>
-                      <SelectItem value="bg-yellow-500/10 text-yellow-500">Yellow</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Code Language</Label>
-                  <Select
-                    value={toolForm.codeLanguage}
-                    onValueChange={(value) =>
-                      setToolForm((prev) => ({ ...prev, codeLanguage: value as ToolLanguage }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="html">HTML</SelectItem>
-                      <SelectItem value="react">React</SelectItem>
-                      <SelectItem value="nextjs">Next.js</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Code Snippet</Label>
-                <Textarea
-                  placeholder="Paste your HTML / React / Next.js code here..."
-                  value={toolForm.codeContent}
-                  onChange={(e) => setToolForm((prev) => ({ ...prev, codeContent: e.target.value }))}
-                  rows={8}
-                  className="font-mono text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>JSON Configuration</Label>
-                <Textarea
-                  placeholder='{"systemPrompt": "...", "temperature": 0.7}'
-                  value={toolForm.jsonConfig}
-                  onChange={(e) => setToolForm((prev) => ({ ...prev, jsonConfig: e.target.value }))}
-                  rows={6}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">Enter valid JSON for tool configuration</p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowToolDialog(false)} disabled={savingTool}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveTool} disabled={savingTool}>
-                {savingTool ? 'Saving...' : editingTool ? 'Update Tool' : 'Create Tool'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     );
   }
