@@ -446,14 +446,12 @@ export default function AIGenerator() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-[3fr_7fr]">
           {/* Left: Detail Automations */}
           <Card>
             <CardHeader>
               <CardTitle>Detail Automations</CardTitle>
-              <CardDescription>
-                Tool Name, Description, and Generator
-              </CardDescription>
+              <CardDescription>Tool Name and Description</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1">
@@ -471,24 +469,7 @@ export default function AIGenerator() {
 
               <div className="pt-2" />
 
-              <div className="space-y-2">
-                <Label>Your Prompt</Label>
-                <Textarea
-                  placeholder="Describe what you want to create..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="min-h-[160px]"
-                />
-              </div>
-              <Button
-                onClick={handleToolGenerate}
-                disabled={generating || !prompt}
-                className="w-full"
-                size="lg"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                {generating ? 'Generating...' : 'Generate Content'}
-              </Button>
+              {/* Generator UI removed per request */}
 
               {result ? (
                 <div className="space-y-3">
@@ -514,23 +495,13 @@ export default function AIGenerator() {
             <CardContent className="space-y-3">
               <div className="rounded-lg overflow-hidden border border-border">
                 <iframe
+                  key={`${selectedTool.id}-${selectedTool.codeLanguage}`}
                   title={`${selectedTool.title} preview`}
                   srcDoc={buildPreviewSrcDoc()}
                   sandbox="allow-scripts allow-forms allow-modals"
-                  className="w-full h-[520px] bg-background"
+                  className="w-full h-[70vh] min-h-[520px] bg-background"
                 />
               </div>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(selectedTool.codeContent || '');
-                  toast({ title: 'Copied!', description: 'Code snippet copied to clipboard.' });
-                }}
-                disabled={!selectedTool.codeContent}
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                Copy Code Snippet
-              </Button>
             </CardContent>
           </Card>
         </div>
