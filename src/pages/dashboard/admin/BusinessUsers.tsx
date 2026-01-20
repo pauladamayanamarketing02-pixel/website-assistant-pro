@@ -307,11 +307,12 @@ export default function AdminBusinessUsers() {
                             </Button>
                             <Button
                               variant="outline"
-                              size="sm"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="View"
                               onClick={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
                             >
                               <Eye className="h-4 w-4" />
-                              View
                             </Button>
                           </div>
                         </TableCell>

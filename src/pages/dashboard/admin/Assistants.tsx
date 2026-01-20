@@ -174,11 +174,12 @@ export default function AdminAssistants() {
 
                           <Button
                             variant="outline"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="View"
                             onClick={() => navigate(`/dashboard/admin/assistants/${row.id}`)}
                           >
                             <Eye className="h-4 w-4" />
-                            View
                           </Button>
                         </div>
                       </TableCell>
