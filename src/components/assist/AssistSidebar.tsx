@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LogOut, type LucideIcon } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
@@ -14,8 +14,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 
 export type AssistNavItem = {
   title: string;
@@ -32,9 +32,58 @@ export function AssistSidebar({
 }) {
   const { open } = useSidebar();
   const { user } = useAuth();
-  const { unreadCount } = useUnreadMessagesCount(user?.id);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const showMessagesBadge = useMemo(() => unreadCount > 0, [unreadCount]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let isMounted = true;
+
+    const refreshUnread = async () => {
+      const { count } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("receiver_id", user.id)
+        // treat NULL as unread too
+        .or("is_read.is.null,is_read.eq.false");
+
+      if (!isMounted) return;
+      setUnreadCount(count || 0);
+    };
+
+    refreshUnread();
+
+    const channel = supabase
+      .channel(`sidebar-unread-messages-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.receiver_id !== user.id) return;
+          if (row?.is_read) return;
+          refreshUnread();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.receiver_id !== user.id) return;
+          refreshUnread();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   return (
     <Sidebar
       className={

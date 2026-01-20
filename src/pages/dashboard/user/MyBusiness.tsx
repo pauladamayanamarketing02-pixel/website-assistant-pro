@@ -245,13 +245,10 @@ export default function MyBusiness() {
           phoneSecondaryNumber = phoneSecondaryMatch[2];
         }
 
-        // Determine first/last name: prefer onboarding sync -> businesses columns -> profile name
-        const nameParts = (profileData?.name || '').trim().split(' ').filter(Boolean);
-        const businessFirst = ((data as any).first_name as string | null | undefined) ?? '';
-        const businessLast = ((data as any).last_name as string | null | undefined) ?? '';
-        const firstName = syncFirstName || businessFirst || nameParts[0] || '';
-        const lastName = syncLastName || businessLast || nameParts.slice(1).join(' ') || '';
-
+        // Parse name into first and last
+        const nameParts = (profileData?.name || '').split(' ');
+        const firstName = syncFirstName || nameParts[0] || '';
+        const lastName = syncLastName || nameParts.slice(1).join(' ') || '';
 
         const businessNumber = (data as any).business_number as number | null;
         const businessId = businessNumber ? `B${businessNumber.toString().padStart(5, '0')}` : '';
@@ -596,9 +593,6 @@ export default function MyBusiness() {
           gmb_link: formData.gmb_link || null,
           email: formData.email || null,
           email_secondary: formData.email_secondary || null,
-          // Keep Welcome name in sync (UserDashboard subscribes to this table)
-          first_name: formData.first_name || null,
-          last_name: formData.last_name || null,
           social_links: validSocialLinks as any,
           hours: formData.hours as any,
         })

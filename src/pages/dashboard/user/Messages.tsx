@@ -118,22 +118,7 @@ export default function Messages() {
     fetchAssists();
   }, [toast]);
 
-  // Mark all incoming messages as read when user opens Messages page
-  // This ensures the sidebar "Messages" badge disappears immediately upon clicking the menu.
-  useEffect(() => {
-    if (!user?.id) return;
-
-    // Fire-and-forget (badge will update via realtime UPDATE subscription)
-    (async () => {
-      await supabase
-        .from("messages")
-        .update({ is_read: true })
-        .eq("receiver_id", user.id)
-        .or("is_read.is.null,is_read.eq.false");
-    })();
-  }, [user?.id]);
-
-
+  // Unread notifications per contact (for contacts list badge)
   useEffect(() => {
     if (!user?.id) return;
     if (assists.length === 0) {

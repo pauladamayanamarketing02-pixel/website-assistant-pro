@@ -1,24 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Activity, Package, CheckCircle, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 
 interface DashboardData {
   activePackage: string | null;
   taskStats: { pending: number; inProgress: number; completed: number };
+  unreadMessages: number;
 }
 
 export default function DashboardOverview() {
   const { user } = useAuth();
-  const { unreadCount } = useUnreadMessagesCount(user?.id);
-
   const [data, setData] = useState<DashboardData>({
     activePackage: null,
     taskStats: { pending: 0, inProgress: 0, completed: 0 },
+    unreadMessages: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +46,13 @@ export default function DashboardOverview() {
           completed: tasks?.filter(t => t.status === 'completed').length || 0,
         };
 
+        // Fetch unread messages
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', user.id)
+          .eq('is_read', false);
+
         const pkgObj = Array.isArray((userPackage as any)?.packages)
           ? (userPackage as any).packages[0]
           : (userPackage as any)?.packages;
@@ -54,6 +60,7 @@ export default function DashboardOverview() {
         setData({
           activePackage: (pkgObj as any)?.name || null,
           taskStats,
+          unreadMessages: count || 0,
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -68,7 +75,6 @@ export default function DashboardOverview() {
   const totalTasks = data.taskStats.pending + data.taskStats.inProgress + data.taskStats.completed;
   const progressPercent = totalTasks > 0 ? (data.taskStats.completed / totalTasks) * 100 : 0;
 
-  const unreadMessages = useMemo(() => unreadCount, [unreadCount]);
   if (loading) {
     return (
       <div className="space-y-6">
@@ -146,9 +152,11 @@ export default function DashboardOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {unreadMessages}
+              {data.unreadMessages}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Unread messages</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Unread messages
+            </p>
           </CardContent>
         </Card>
       </div>
