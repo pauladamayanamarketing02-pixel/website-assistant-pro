@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Send, MessageCircle, User, Search, Trash2, Upload, Download, Paperclip, X } from 'lucide-react';
+import { Send, MessageCircle, User, Search, Trash2, Upload, Download, Paperclip, X, Check, CheckCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,14 +108,29 @@ export default function AssistMessages() {
         .order('created_at', { ascending: true });
 
       if (data) {
-        setMessages((data as unknown as Message[]) ?? []);
-        // Mark messages as read
+        const normalized = (data as any[]).map((m) => ({
+          ...(m as any),
+          is_read: Boolean((m as any).is_read),
+        })) as Message[];
+
+        setMessages(normalized);
+
+        // Mark messages as read (incoming only)
         await (supabase as any)
           .from('messages')
           .update({ is_read: true })
           .eq('receiver_id', user.id)
           .eq('sender_id', selectedUser.id)
           .eq('is_read', false);
+
+        // Optimistic local update
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.receiver_id === user.id && m.sender_id === selectedUser.id
+              ? { ...m, is_read: true }
+              : m
+          )
+        );
       }
     };
 
@@ -123,7 +138,7 @@ export default function AssistMessages() {
 
     // Set up real-time subscription
     if (!user || !selectedUser) return;
-    
+
     const channel = supabase
       .channel('assist-messages-changes')
       .on(
@@ -134,13 +149,50 @@ export default function AssistMessages() {
           table: 'messages',
         },
         (payload) => {
-          const newMsg = payload.new as Message;
-          if (
-            (newMsg.sender_id === user?.id && newMsg.receiver_id === selectedUser?.id) ||
-            (newMsg.sender_id === selectedUser?.id && newMsg.receiver_id === user?.id)
-          ) {
-            setMessages((prev) => [...prev, newMsg]);
+          const newMsg = payload.new as any;
+          const belongsToThread =
+            (newMsg.sender_id === user.id && newMsg.receiver_id === selectedUser.id) ||
+            (newMsg.sender_id === selectedUser.id && newMsg.receiver_id === user.id);
+
+          if (!belongsToThread) return;
+
+          const normalized: Message = {
+            ...(newMsg as Message),
+            is_read: Boolean(newMsg.is_read),
+          };
+
+          // If chat is open and we receive a message, mark it read immediately
+          if (normalized.receiver_id === user.id && normalized.sender_id === selectedUser.id && !normalized.is_read) {
+            setMessages((prev) => [...prev, { ...normalized, is_read: true }]);
+            (supabase as any).from('messages').update({ is_read: true }).eq('id', normalized.id);
+            return;
           }
+
+          setMessages((prev) => [...prev, normalized]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          const belongsToThread =
+            (updated.sender_id === user.id && updated.receiver_id === selectedUser.id) ||
+            (updated.sender_id === selectedUser.id && updated.receiver_id === user.id);
+
+          if (!belongsToThread) return;
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === updated.id
+                ? ({ ...(updated as Message), is_read: Boolean(updated.is_read) } as Message)
+                : m
+            )
+          );
         }
       )
       .subscribe();
@@ -240,6 +292,17 @@ export default function AssistMessages() {
     // Remove timestamp prefix
     return fileName.replace(/^\d+-/, '');
   };
+
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -368,56 +431,78 @@ export default function AssistMessages() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={cn(
-                            "flex",
-                            message.sender_id === user?.id ? "justify-end" : "justify-start"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "max-w-[70%] rounded-lg px-4 py-2",
-                              message.sender_id === user?.id
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-foreground"
+                      {messages.map((message, idx) => {
+                        const isOwn = message.sender_id === user?.id;
+
+                        const prev = messages[idx - 1];
+                        const showDateSeparator =
+                          !prev ||
+                          new Date(prev.created_at).toDateString() !==
+                            new Date(message.created_at).toDateString();
+
+                        return (
+                          <div key={message.id} className="space-y-2">
+                            {showDateSeparator && (
+                              <div className="flex justify-center">
+                                <span className="text-xs text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+                                  {formatDate(message.created_at)}
+                                </span>
+                              </div>
                             )}
-                          >
-                            <p className="text-sm">{message.content}</p>
-                            {message.file_url && (
-                              <a
-                                href={message.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                download
-                                className={cn(
-                                  "flex items-center gap-1 text-xs mt-2 underline",
-                                  message.sender_id === user?.id
-                                    ? "text-primary-foreground/80"
-                                    : "text-primary"
-                                )}
-                              >
-                                <Download className="h-3 w-3" />
-                                {getFileName(message.file_url)}
-                              </a>
-                            )}
-                            <p
+
+                            <div
                               className={cn(
-                                "text-xs mt-1",
-                                message.sender_id === user?.id
-                                  ? "text-primary-foreground/70"
-                                  : "text-muted-foreground"
+                                "flex",
+                                isOwn ? "justify-end" : "justify-start"
                               )}
                             >
-                              {new Date(message.created_at).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
+                              <div
+                                className={cn(
+                                  "max-w-[70%] rounded-lg px-4 py-2",
+                                  isOwn
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-foreground"
+                                )}
+                              >
+                                <p className="text-sm">{message.content}</p>
+                                {message.file_url && (
+                                  <a
+                                    href={message.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download
+                                    className={cn(
+                                      "flex items-center gap-1 text-xs mt-2 underline",
+                                      isOwn
+                                        ? "text-primary-foreground/80"
+                                        : "text-primary"
+                                    )}
+                                  >
+                                    <Download className="h-3 w-3" />
+                                    {getFileName(message.file_url)}
+                                  </a>
+                                )}
+                                <p
+                                  className={cn(
+                                    "text-xs mt-1 inline-flex items-center justify-end gap-1 w-full",
+                                    isOwn
+                                      ? "text-primary-foreground/70"
+                                      : "text-muted-foreground"
+                                  )}
+                                >
+                                  <span>{formatTime(message.created_at)}</span>
+                                  {isOwn &&
+                                    (message.is_read ? (
+                                      <CheckCheck className="h-3 w-3" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    ))}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </ScrollArea>
