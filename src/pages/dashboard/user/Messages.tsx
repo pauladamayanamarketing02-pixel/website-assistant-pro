@@ -45,6 +45,7 @@ export default function Messages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [assists, setAssists] = useState<AssistContact[]>([]);
   const [selectedAssist, setSelectedAssist] = useState<AssistContact | null>(null);
+  const [unreadByAssistId, setUnreadByAssistId] = useState<Record<string, number>>({});
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -104,6 +105,79 @@ export default function Messages() {
     fetchAssists();
   }, [toast]);
 
+  // Unread notifications per contact (for contacts list badge)
+  useEffect(() => {
+    if (!user?.id) return;
+    if (assists.length === 0) {
+      setUnreadByAssistId({});
+      return;
+    }
+
+    const assistIds = assists.map((a) => a.id);
+
+    const refreshUnreadByAssist = async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("sender_id")
+        .eq("receiver_id", user.id)
+        .eq("is_read", false)
+        .in("sender_id", assistIds);
+
+      const next: Record<string, number> = {};
+      (data ?? []).forEach((row: any) => {
+        const sid = row?.sender_id;
+        if (!sid) return;
+        next[sid] = (next[sid] || 0) + 1;
+      });
+
+      setUnreadByAssistId(next);
+    };
+
+    refreshUnreadByAssist();
+
+    const channel = supabase
+      .channel(`user-messages-unread-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.receiver_id !== user.id) return;
+          if (row?.is_read) return;
+
+          // If this chat is currently open, it will be marked read immediately by the thread handler.
+          if (row?.sender_id === selectedAssist?.id) return;
+
+          setUnreadByAssistId((prev) => ({
+            ...prev,
+            [row.sender_id]: (prev[row.sender_id] || 0) + 1,
+          }));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const nextRow = payload.new as any;
+          const oldRow = payload.old as any;
+          if (nextRow?.receiver_id !== user.id) return;
+          if (oldRow?.is_read === false && nextRow?.is_read === true) {
+            setUnreadByAssistId((prev) => {
+              const senderId = nextRow.sender_id as string;
+              const current = prev[senderId] || 0;
+              const updated = Math.max(0, current - 1);
+              return { ...prev, [senderId]: updated };
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, assists, selectedAssist?.id]);
+
   // Fetch messages for selected assist
   useEffect(() => {
     const fetchMessages = async () => {
@@ -139,6 +213,9 @@ export default function Messages() {
               : m
           )
         );
+
+        // Remove unread badge for this contact
+        setUnreadByAssistId((prev) => ({ ...prev, [selectedAssist.id]: 0 }));
       }
     };
 
@@ -386,29 +463,40 @@ export default function Messages() {
                   <p className="text-sm">No assists available</p>
                 </div>
               ) : (
-                filteredAssists.map((assist) => (
-                  <div
-                    key={assist.id}
-                    onClick={() => setSelectedAssist(assist)}
-                    className={cn(
-                      "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
-                      selectedAssist?.id === assist.id && "bg-muted"
-                    )}
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={assist.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {assist.name?.charAt(0)?.toUpperCase() || 'A'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">{assist.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {assist.email}
-                      </p>
+                filteredAssists.map((assist) => {
+                  const unread = unreadByAssistId[assist.id] || 0;
+
+                  return (
+                    <div
+                      key={assist.id}
+                      onClick={() => {
+                        setSelectedAssist(assist);
+                        setUnreadByAssistId((prev) => ({ ...prev, [assist.id]: 0 }));
+                      }}
+                      className={cn(
+                        "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
+                        selectedAssist?.id === assist.id && "bg-muted"
+                      )}
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={assist.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {assist.name?.charAt(0)?.toUpperCase() || 'A'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">{assist.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{assist.email}</p>
+                      </div>
+
+                      {unread > 0 && (
+                        <span className="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs tabular-nums">
+                          {unread > 99 ? '99+' : unread}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </ScrollArea>
           </CardContent>
