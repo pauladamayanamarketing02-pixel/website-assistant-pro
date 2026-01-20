@@ -156,8 +156,8 @@ export default function AssistMessages() {
 
           const sender = users.find((u) => u.id === row.sender_id);
           toast({
-            title: `Pesan baru dari ${sender?.name ?? 'Client'}`,
-            description: (row?.content as string | undefined) ?? 'Anda menerima pesan baru.',
+            title: `New message from ${sender?.name ?? 'Client'}`,
+            description: (row?.content as string | undefined) ?? 'You have received a new message.',
           });
 
           setUnreadByUserId((prev) => ({
@@ -459,7 +459,7 @@ export default function AssistMessages() {
 
       toast({
         title: 'Chat cleared (local)',
-        description: 'Chat disembunyikan untuk akun Anda saja.',
+        description: 'This chat is hidden for your account only.',
       });
     } catch (error: any) {
       toast({
@@ -478,10 +478,10 @@ export default function AssistMessages() {
   };
 
   const formatTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('id-ID', {
+    new Date(iso).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -502,7 +502,7 @@ export default function AssistMessages() {
     const tsB = lastActivityById[b.id] ? new Date(lastActivityById[b.id]).getTime() : 0;
     if (tsA !== tsB) return tsB - tsA;
 
-    return a.name.localeCompare(b.name, 'id-ID');
+    return a.name.localeCompare(b.name, 'en-US');
   });
 
   if (loading) {
@@ -614,7 +614,7 @@ export default function AssistMessages() {
                       <AlertDialogHeader>
                       <AlertDialogTitle>Clear Chat</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Ini hanya akan menyembunyikan chat untuk akun Anda (tidak menghapus database / lawan chat).
+                        This only hides the chat for your account (it does not delete messages from the database or for the other person).
                       </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -634,11 +634,11 @@ export default function AssistMessages() {
                     <div className="h-full flex flex-col items-center justify-center text-center py-12">
                       <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
                       <h3 className="font-medium text-foreground">
-                        {clearedAt ? 'Chat sudah di-clear' : 'No messages yet'}
+                        {clearedAt ? 'Chat cleared' : 'No messages yet'}
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {clearedAt
-                          ? 'Chat disembunyikan untuk akun Anda. Pesan baru akan muncul di sini.'
+                          ? 'This chat is hidden for your account. New messages will appear here.'
                           : `Start a conversation with ${selectedUser.name}`}
                       </p>
                     </div>
