@@ -437,15 +437,15 @@ export default function Messages() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="h-full flex flex-col gap-6">
+      <div className="shrink-0">
         <h1 className="text-3xl font-bold text-foreground">Messages</h1>
         <p className="text-muted-foreground">Chat with your Marketing Assist</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Contacts List */}
-        <Card className="md:col-span-1">
+        <Card className="md:col-span-1 flex flex-col min-h-0">
           <CardHeader className="border-b py-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -457,8 +457,8 @@ export default function Messages() {
               />
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
+          <CardContent className="p-0 flex-1 min-h-0">
+            <ScrollArea className="h-full">
               {filteredAssists.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <User className="h-8 w-8 mx-auto mb-2" />
@@ -505,7 +505,7 @@ export default function Messages() {
         </Card>
 
         {/* Chat Area */}
-        <Card className="md:col-span-2 flex flex-col">
+        <Card className="md:col-span-2 flex flex-col min-h-0">
           {selectedAssist ? (
             <>
               <CardHeader className="border-b py-3">
@@ -519,9 +519,7 @@ export default function Messages() {
                     </Avatar>
                     <div>
                       <CardTitle className="text-lg">{selectedAssist.name}</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        Marketing Assist
-                      </p>
+                      <p className="text-xs text-muted-foreground">Marketing Assist</p>
                     </div>
                   </div>
                   <AlertDialog>
@@ -548,8 +546,8 @@ export default function Messages() {
                 </div>
               </CardHeader>
 
-              <CardContent className="flex-1 flex flex-col p-0">
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+              <CardContent className="flex-1 min-h-0 flex flex-col p-0">
+                <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
                   {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                       <MessageCircle className="h-10 w-10 mb-2" />
@@ -562,8 +560,7 @@ export default function Messages() {
                       const prev = messages[idx - 1];
                       const showDateSeparator =
                         !prev ||
-                        new Date(prev.created_at).toDateString() !==
-                          new Date(msg.created_at).toDateString();
+                        new Date(prev.created_at).toDateString() !== new Date(msg.created_at).toDateString();
 
                       return (
                         <div key={msg.id} className="space-y-2">
@@ -575,12 +572,7 @@ export default function Messages() {
                             </div>
                           )}
 
-                          <div
-                            className={cn(
-                              "flex gap-2",
-                              isOwn ? 'justify-end' : 'justify-start'
-                            )}
-                          >
+                          <div className={cn("flex gap-2", isOwn ? 'justify-end' : 'justify-start')}>
                             {!isOwn && (
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={selectedAssist.avatar_url || undefined} />
@@ -605,9 +597,7 @@ export default function Messages() {
                                 <div
                                   className={cn(
                                     "mt-1 flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
-                                    isOwn
-                                      ? 'border-primary/40 bg-primary/10'
-                                      : 'border-muted-foreground/10 bg-background/60'
+                                    isOwn ? 'border-primary/40 bg-primary/10' : 'border-muted-foreground/10 bg-background/60'
                                   )}
                                 >
                                   <Paperclip className="h-4 w-4" />
