@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Send, Paperclip, MessageCircle, User, Search, Trash2, Upload, Download, X, Check, CheckCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,9 +61,11 @@ export default function Messages() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const assistContactIds = useMemo(() => assists.map((a) => a.id), [assists]);
+
   const { lastActivityById, bumpActivity } = useRealtimeContactActivity({
     userId: user?.id,
-    contactIds: assists.map((a) => a.id),
+    contactIds: assistContactIds,
   });
 
   // Fetch assists
@@ -159,6 +161,12 @@ export default function Messages() {
 
           // If this chat is currently open, it will be marked read immediately by the thread handler.
           if (row?.sender_id === selectedAssist?.id) return;
+
+          const sender = assists.find((a) => a.id === row.sender_id);
+          toast({
+            title: `Pesan baru dari ${sender?.name ?? 'Assist'}`,
+            description: (row?.content as string | undefined) ?? 'Anda menerima pesan baru.',
+          });
 
           setUnreadByAssistId((prev) => ({
             ...prev,

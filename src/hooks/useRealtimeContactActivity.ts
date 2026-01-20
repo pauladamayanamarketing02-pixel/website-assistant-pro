@@ -16,9 +16,11 @@ export function useRealtimeContactActivity(params: {
   const [lastActivityById, setLastActivityById] = useState<ActivityMap>({});
   const contactIdSetRef = useRef<Set<string>>(new Set());
 
+  const contactIdsKey = useMemo(() => contactIds.join("|"), [contactIds]);
+
   useEffect(() => {
     contactIdSetRef.current = new Set(contactIds);
-  }, [contactIds]);
+  }, [contactIdsKey]);
 
   const bumpActivity = useMemo(() => {
     return (peerId: string, iso: string) => {
@@ -64,8 +66,8 @@ export function useRealtimeContactActivity(params: {
     };
 
     run();
-    // contactIds is intentionally a dependency (re-fetch when list changes)
-  }, [userId, contactIds]);
+    // Re-fetch only when the contact set changes
+  }, [userId, contactIdsKey]);
 
   // Realtime updates: keep activity up-to-date for both incoming and outgoing messages
   useEffect(() => {
