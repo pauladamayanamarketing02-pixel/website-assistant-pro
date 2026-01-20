@@ -8,7 +8,6 @@ import {
   Image,
   MessageSquare,
   Lightbulb,
-  ArrowRight,
   ArrowLeft,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +28,8 @@ interface AITool {
   codeContent: string;
 }
 
+type ViewMode = 'tools' | 'tool-detail';
+
 const iconMap: Record<string, any> = {
   Sparkles,
   FileText,
@@ -44,9 +45,10 @@ export default function AICreation() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  const [viewMode, setViewMode] = useState<ViewMode>('tools');
   const [tools, setTools] = useState<AITool[]>([]);
-  const [loadingTools, setLoadingTools] = useState(false);
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
+  const [loadingTools, setLoadingTools] = useState(false);
 
   const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
 
@@ -90,8 +92,8 @@ export default function AICreation() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Tool detail view (with preview)
-  if (selectedTool) {
+  // Tool detail view (match /dashboard/assist/ai-generator)
+  if (viewMode === 'tool-detail' && selectedTool) {
     const ToolIcon = iconMap[selectedTool.icon] ?? Sparkles;
 
     return (
@@ -101,6 +103,7 @@ export default function AICreation() {
             variant="ghost"
             size="icon"
             onClick={() => {
+              setViewMode('tools');
               setSelectedTool(null);
             }}
           >
@@ -118,11 +121,11 @@ export default function AICreation() {
         </div>
 
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-[3fr_7fr] min-w-0 items-stretch">
-          {/* Left: Tool details */}
+          {/* Left: Detail Automations */}
           <Card className="min-w-0">
             <CardHeader>
-              <CardTitle>Tool Details</CardTitle>
-              <CardDescription>Informasi tool</CardDescription>
+              <CardTitle>Detail Automations</CardTitle>
+              <CardDescription>Tool Name and Description</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1">
@@ -143,10 +146,12 @@ export default function AICreation() {
                   {selectedTool.codeLanguage.toUpperCase()}
                 </div>
               </div>
+
+              <div className="pt-2" />
             </CardContent>
           </Card>
 
-          {/* Right: Preview */}
+          {/* Right: Preview from Code Snippet */}
           <Card className="min-w-0 flex flex-col">
             <CardHeader className="shrink-0">
               <CardTitle>Preview</CardTitle>
@@ -172,15 +177,14 @@ export default function AICreation() {
     );
   }
 
-  // Tools list view
+  // Tools management view (match /dashboard/assist/ai-generator)
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-          <Sparkles className="h-8 w-8 text-primary" />
-          AI Creation
-        </h1>
-        <p className="text-muted-foreground">All Tools</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">AI Creation</h1>
+          <p className="text-muted-foreground">All Tools</p>
+        </div>
       </div>
 
       {!canUsePage ? (
@@ -195,42 +199,50 @@ export default function AICreation() {
             <p className="text-muted-foreground">Memuat tools...</p>
           </CardContent>
         </Card>
-      ) : tools.length === 0 ? (
+      ) : (
         <Card>
-          <CardContent className="py-10">
-            <p className="text-muted-foreground">
-              Belum ada tools yang tersedia (atau akses kamu dibatasi oleh RLS).
-            </p>
+          <CardHeader>
+            <CardTitle>All Tools</CardTitle>
+            <CardDescription>Click on a tool to use it</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {tools.length === 0 ? (
+              <p className="text-muted-foreground">
+                Belum ada tools yang tersedia (atau akses kamu dibatasi oleh RLS).
+              </p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {tools.map((tool) => {
+                  const ToolIcon = iconMap[tool.icon] ?? Sparkles;
+                  return (
+                    <Card
+                      key={tool.id}
+                      className="min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
+                      onClick={() => {
+                        setSelectedTool(tool);
+                        setViewMode('tool-detail');
+                      }}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tool.color} shrink-0`}>
+                              <ToolIcon className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <CardTitle className="text-base break-words">{tool.title}</CardTitle>
+                              {/* NOTE: match assist page: do NOT show description in the card list */}
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {tools.map((tool) => {
-            const ToolIcon = iconMap[tool.icon] ?? Sparkles;
-            return (
-              <Card
-                key={tool.id}
-                className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
-                onClick={() => setSelectedTool(tool)}
-              >
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${tool.color} shrink-0`}>
-                      <ToolIcon className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg break-words">{tool.title}</CardTitle>
-                      <CardDescription className="break-words whitespace-pre-wrap">
-                        {tool.description || '-'}
-                      </CardDescription>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
-                  </div>
-                </CardHeader>
-              </Card>
-            );
-          })}
-        </div>
       )}
     </div>
   );
