@@ -52,6 +52,11 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Per-user clear chat marker (do NOT delete from DB)
+  const [clearedAt, setClearedAt] = useState<string | null>(null);
+  const clearedAtRef = useRef<string | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -180,16 +185,38 @@ export default function Messages() {
     };
   }, [user?.id, assists, selectedAssist?.id]);
 
-  // Fetch messages for selected assist
+  // Fetch messages for selected assist (respect per-user clear marker)
   useEffect(() => {
     const fetchMessages = async () => {
       if (!user || !selectedAssist) return;
 
-      const { data } = await supabase
+      // Load per-user clear marker (if exists)
+      const { data: clearRow, error: clearErr } = await (supabase as any)
+        .from('chat_clears')
+        .select('cleared_at')
+        .eq('user_id', user.id)
+        .eq('peer_id', selectedAssist.id)
+        .maybeSingle();
+
+      if (!clearErr) {
+        const ts = (clearRow as any)?.cleared_at ?? null;
+        setClearedAt(ts);
+        clearedAtRef.current = ts;
+      }
+
+      const clearedAtLocal = (clearRow as any)?.cleared_at as string | undefined;
+
+      let query = supabase
         .from('messages')
         .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedAssist.id}),and(sender_id.eq.${selectedAssist.id},receiver_id.eq.${user.id})`)
+        .or(
+          `and(sender_id.eq.${user.id},receiver_id.eq.${selectedAssist.id}),and(sender_id.eq.${selectedAssist.id},receiver_id.eq.${user.id})`
+        )
         .order('created_at', { ascending: true });
+
+      if (clearedAtLocal) query = (query as any).gt('created_at', clearedAtLocal);
+
+      const { data } = await query;
 
       if (data) {
         const normalized = (data as any[]).map((m) => ({
@@ -243,14 +270,26 @@ export default function Messages() {
 
           if (!belongsToThread) return;
 
+          // Hide messages older than the local clear marker
+          const clearedAtIso = clearedAtRef.current;
+          if (clearedAtIso && new Date(newMsg.created_at).getTime() <= new Date(clearedAtIso).getTime()) return;
+
           const normalized: Message = {
             ...(newMsg as Message),
             is_read: Boolean(newMsg.is_read),
           };
 
           // If chat is open and we receive a message, mark it read immediately
-          if (normalized.receiver_id === user.id && normalized.sender_id === selectedAssist.id && !normalized.is_read) {
-            setMessages((prev) => (prev.some((m) => m.id === normalized.id) ? prev : [...prev, { ...normalized, is_read: true }]));
+          if (
+            normalized.receiver_id === user.id &&
+            normalized.sender_id === selectedAssist.id &&
+            !normalized.is_read
+          ) {
+            setMessages((prev) =>
+              prev.some((m) => m.id === normalized.id)
+                ? prev
+                : [...prev, { ...normalized, is_read: true }]
+            );
             supabase.from('messages').update({ is_read: true }).eq('id', normalized.id);
             return;
           }
@@ -273,6 +312,10 @@ export default function Messages() {
 
           if (!belongsToThread) return;
 
+          // Hide messages older than the local clear marker
+          const clearedAtIso = clearedAtRef.current;
+          if (clearedAtIso && new Date(updated.created_at).getTime() <= new Date(clearedAtIso).getTime()) return;
+
           setMessages((prev) =>
             prev.map((m) =>
               m.id === updated.id
@@ -287,7 +330,7 @@ export default function Messages() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedAssist]);
+  }, [user, selectedAssist, toast]);
 
   useEffect(() => {
     // Scroll to bottom when new messages arrive
@@ -382,17 +425,27 @@ export default function Messages() {
     if (!user || !selectedAssist) return;
 
     try {
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedAssist.id}),and(sender_id.eq.${selectedAssist.id},receiver_id.eq.${user.id})`);
+      const nowIso = new Date().toISOString();
+      const { error } = await (supabase as any)
+        .from('chat_clears')
+        .upsert(
+          {
+            user_id: user.id,
+            peer_id: selectedAssist.id,
+            cleared_at: nowIso,
+          },
+          { onConflict: 'user_id,peer_id' }
+        );
 
       if (error) throw error;
 
+      clearedAtRef.current = nowIso;
+      setClearedAt(nowIso);
       setMessages([]);
+
       toast({
-        title: 'Chat cleared',
-        description: 'All messages have been deleted.',
+        title: 'Chat cleared (local)',
+        description: 'Chat disembunyikan untuk akun Anda saja.',
       });
     } catch (error: any) {
       toast({
@@ -532,7 +585,7 @@ export default function Messages() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Clear Chat</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will delete all messages with {selectedAssist.name}. This action cannot be undone.
+                          Ini hanya akan menyembunyikan chat untuk akun Anda (tidak menghapus database / lawan chat).
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -551,7 +604,11 @@ export default function Messages() {
                   {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                       <MessageCircle className="h-10 w-10 mb-2" />
-                      <p className="text-sm">No messages yet. Start the conversation!</p>
+                      <p className="text-sm">
+                        {clearedAt
+                          ? 'Chat sudah Anda clear. Pesan baru akan muncul di sini.'
+                          : 'No messages yet. Start the conversation!'}
+                      </p>
                     </div>
                   ) : (
                     messages.map((msg, idx) => {

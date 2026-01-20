@@ -52,6 +52,11 @@ export default function AssistMessages() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Per-user clear chat marker (do NOT delete from DB)
+  const [clearedAt, setClearedAt] = useState<string | null>(null);
+  const clearedAtRef = useRef<string | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,16 +177,38 @@ export default function AssistMessages() {
     };
   }, [user?.id, users, selectedUser?.id]);
 
-  // Fetch messages for selected user
+  // Fetch messages for selected user (respect per-user clear marker)
   useEffect(() => {
     const fetchMessages = async () => {
       if (!user || !selectedUser) return;
 
-      const { data } = await (supabase as any)
+      // Load per-user clear marker (if exists)
+      const { data: clearRow, error: clearErr } = await (supabase as any)
+        .from('chat_clears')
+        .select('cleared_at')
+        .eq('user_id', user.id)
+        .eq('peer_id', selectedUser.id)
+        .maybeSingle();
+
+      if (!clearErr) {
+        const ts = (clearRow as any)?.cleared_at ?? null;
+        setClearedAt(ts);
+        clearedAtRef.current = ts;
+      }
+
+      const clearedAtLocal = (clearRow as any)?.cleared_at as string | undefined;
+
+      let query = (supabase as any)
         .from('messages')
         .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${user.id})`)
+        .or(
+          `and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${user.id})`
+        )
         .order('created_at', { ascending: true });
+
+      if (clearedAtLocal) query = query.gt('created_at', clearedAtLocal);
+
+      const { data } = await query;
 
       if (data) {
         const normalized = (data as any[]).map((m) => ({
@@ -235,14 +262,26 @@ export default function AssistMessages() {
 
           if (!belongsToThread) return;
 
+          // Hide messages older than the local clear marker
+          const clearedAtIso = clearedAtRef.current;
+          if (clearedAtIso && new Date(newMsg.created_at).getTime() <= new Date(clearedAtIso).getTime()) return;
+
           const normalized: Message = {
             ...(newMsg as Message),
             is_read: Boolean(newMsg.is_read),
           };
 
           // If chat is open and we receive a message, mark it read immediately
-          if (normalized.receiver_id === user.id && normalized.sender_id === selectedUser.id && !normalized.is_read) {
-            setMessages((prev) => (prev.some((m) => m.id === normalized.id) ? prev : [...prev, { ...normalized, is_read: true }]));
+          if (
+            normalized.receiver_id === user.id &&
+            normalized.sender_id === selectedUser.id &&
+            !normalized.is_read
+          ) {
+            setMessages((prev) =>
+              prev.some((m) => m.id === normalized.id)
+                ? prev
+                : [...prev, { ...normalized, is_read: true }]
+            );
             (supabase as any).from('messages').update({ is_read: true }).eq('id', normalized.id);
             return;
           }
@@ -265,6 +304,10 @@ export default function AssistMessages() {
 
           if (!belongsToThread) return;
 
+          // Hide messages older than the local clear marker
+          const clearedAtIso = clearedAtRef.current;
+          if (clearedAtIso && new Date(updated.created_at).getTime() <= new Date(clearedAtIso).getTime()) return;
+
           setMessages((prev) =>
             prev.map((m) =>
               m.id === updated.id
@@ -279,7 +322,7 @@ export default function AssistMessages() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedUser]);
+  }, [user, selectedUser, toast]);
 
   useEffect(() => {
     // Scroll to bottom when new messages arrive
@@ -370,17 +413,27 @@ export default function AssistMessages() {
     if (!user || !selectedUser) return;
 
     try {
+      const nowIso = new Date().toISOString();
       const { error } = await (supabase as any)
-        .from('messages')
-        .delete()
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${user.id})`);
+        .from('chat_clears')
+        .upsert(
+          {
+            user_id: user.id,
+            peer_id: selectedUser.id,
+            cleared_at: nowIso,
+          },
+          { onConflict: 'user_id,peer_id' }
+        );
 
       if (error) throw error;
 
+      clearedAtRef.current = nowIso;
+      setClearedAt(nowIso);
       setMessages([]);
+
       toast({
-        title: 'Chat cleared',
-        description: 'All messages have been deleted.',
+        title: 'Chat cleared (local)',
+        description: 'Chat disembunyikan untuk akun Anda saja.',
       });
     } catch (error: any) {
       toast({
@@ -521,10 +574,10 @@ export default function AssistMessages() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Clear Chat</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will delete all messages with {selectedUser.name}. This action cannot be undone.
-                        </AlertDialogDescription>
+                      <AlertDialogTitle>Clear Chat</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Ini hanya akan menyembunyikan chat untuk akun Anda (tidak menghapus database / lawan chat).
+                      </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -542,9 +595,13 @@ export default function AssistMessages() {
                   {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center py-12">
                       <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="font-medium text-foreground">No messages yet</h3>
+                      <h3 className="font-medium text-foreground">
+                        {clearedAt ? 'Chat sudah di-clear' : 'No messages yet'}
+                      </h3>
                       <p className="text-sm text-muted-foreground">
-                        Start a conversation with {selectedUser.name}
+                        {clearedAt
+                          ? 'Chat disembunyikan untuk akun Anda. Pesan baru akan muncul di sini.'
+                          : `Start a conversation with ${selectedUser.name}`}
                       </p>
                     </div>
                   ) : (
