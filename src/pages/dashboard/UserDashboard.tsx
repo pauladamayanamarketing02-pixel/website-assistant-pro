@@ -48,16 +48,21 @@ export default function UserDashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [businessWelcomeName, setBusinessWelcomeName] = useState<string>('');
 
   const welcomeName = useMemo(() => {
+    // Primary source: businesses.first_name + businesses.last_name (from /dashboard/user/business fields)
+    if (businessWelcomeName.trim()) return businessWelcomeName.trim();
+
+    // Fallbacks: auth metadata -> email
     if (!user) return '';
     const meta: any = (user as any)?.user_metadata ?? {};
-    const fromMeta = (meta?.name as string | undefined)?.trim();
     const first = (meta?.first_name as string | undefined)?.trim();
     const last = (meta?.last_name as string | undefined)?.trim();
     const combined = [first, last].filter(Boolean).join(' ').trim();
-    return (fromMeta || combined || user.email?.split('@')[0] || '');
-  }, [user]);
+    const fromMeta = (meta?.name as string | undefined)?.trim();
+    return (combined || fromMeta || user.email?.split('@')[0] || '');
+  }, [businessWelcomeName, user]);
 
   useEffect(() => {
     if (!loading && (!user || role !== 'user')) {
@@ -71,11 +76,15 @@ export default function UserDashboard() {
 
       const { data: business } = await supabase
         .from('businesses')
-        .select('onboarding_completed')
+        .select('onboarding_completed, first_name, last_name')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!business || !business.onboarding_completed) {
+      const first = (business as any)?.first_name as string | null | undefined;
+      const last = (business as any)?.last_name as string | null | undefined;
+      setBusinessWelcomeName([first, last].filter(Boolean).join(' '));
+
+      if (!business || !(business as any).onboarding_completed) {
         navigate('/onboarding/welcome');
       }
       setCheckingOnboarding(false);
