@@ -171,7 +171,7 @@ export default function AdminWebsiteBlogEdit() {
             .from("profiles")
             .select("name,email")
             .eq("id", uid)
-            .maybeSingle<Pick<ProfileRow, "name" | "email">>();
+            .maybeSingle();
 
           setAuthorDisplay(profile?.name || profile?.email || userData.user?.email || uid);
         } else {
