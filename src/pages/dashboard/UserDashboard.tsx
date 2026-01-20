@@ -48,21 +48,16 @@ export default function UserDashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
-  const [businessWelcomeName, setBusinessWelcomeName] = useState<string>('');
 
   const welcomeName = useMemo(() => {
-    // Primary source: businesses.first_name + businesses.last_name (from /dashboard/user/business fields)
-    if (businessWelcomeName.trim()) return businessWelcomeName.trim();
-
-    // Fallbacks: auth metadata -> email
     if (!user) return '';
     const meta: any = (user as any)?.user_metadata ?? {};
+    const fromMeta = (meta?.name as string | undefined)?.trim();
     const first = (meta?.first_name as string | undefined)?.trim();
     const last = (meta?.last_name as string | undefined)?.trim();
     const combined = [first, last].filter(Boolean).join(' ').trim();
-    const fromMeta = (meta?.name as string | undefined)?.trim();
-    return (combined || fromMeta || user.email?.split('@')[0] || '');
-  }, [businessWelcomeName, user]);
+    return (fromMeta || combined || user.email?.split('@')[0] || '');
+  }, [user]);
 
   useEffect(() => {
     if (!loading && (!user || role !== 'user')) {
@@ -70,53 +65,25 @@ export default function UserDashboard() {
       return;
     }
 
-    if (!user || role !== 'user') return;
-
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    // Check if user completed onboarding + prime welcome name
+    // Check if user completed onboarding
     const checkOnboarding = async () => {
+      if (!user) return;
+
       const { data: business } = await supabase
         .from('businesses')
-        .select('onboarding_completed, first_name, last_name')
+        .select('onboarding_completed')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const first = (business as any)?.first_name as string | null | undefined;
-      const last = (business as any)?.last_name as string | null | undefined;
-      setBusinessWelcomeName([first, last].filter(Boolean).join(' '));
-
-      if (!business || !(business as any).onboarding_completed) {
+      if (!business || !business.onboarding_completed) {
         navigate('/onboarding/welcome');
       }
       setCheckingOnboarding(false);
     };
 
-    checkOnboarding();
-
-    // Keep "Welcome First Name Last Name" in sync with edits from /dashboard/user/business
-    channel = supabase
-      .channel(`businesses-welcome-name-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'businesses',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const next = payload.new as any;
-          const first = (next?.first_name as string | null | undefined) ?? '';
-          const last = (next?.last_name as string | null | undefined) ?? '';
-          setBusinessWelcomeName([first, last].filter(Boolean).join(' '));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-    };
+    if (user && role === 'user') {
+      checkOnboarding();
+    }
   }, [user, role, loading, navigate]);
 
   if (loading || checkingOnboarding) {
