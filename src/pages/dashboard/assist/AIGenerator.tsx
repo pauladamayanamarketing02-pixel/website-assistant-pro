@@ -4,14 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Globe, FileText, Mail, Share2, Video, Plus, Trash2, Pencil, 
-  ArrowRight, Sparkles, ArrowLeft, Code, Settings2, Copy
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  Sparkles,
+  ArrowLeft,
+  Code,
+  Copy,
 } from 'lucide-react';
 
 interface AITool {
@@ -82,32 +86,17 @@ const defaultTools: AITool[] = [
   },
 ];
 
-const socialMediaPlatforms = [
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'x', label: 'X/Twitter' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'threads', label: 'Threads' },
-];
 
-const videoPlatforms = [
-  { value: 'youtube', label: 'YouTube' },
-  { value: 'tiktok', label: 'TikTok' },
-];
-
-type ViewMode = 'tabs' | 'tools' | 'tool-detail';
+type ViewMode = 'tools' | 'tool-detail';
 
 export default function AIGenerator() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('gmb');
-  const [socialPlatform, setSocialPlatform] = useState('');
-  const [videoPlatform, setVideoPlatform] = useState('');
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState('');
   const [generating, setGenerating] = useState(false);
-  
-  // Tools management
-  const [viewMode, setViewMode] = useState<ViewMode>('tabs');
+
+  // Tools management (default screen)
+  const [viewMode, setViewMode] = useState<ViewMode>('tools');
   const [tools, setTools] = useState<AITool[]>([]);
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
   const [showToolDialog, setShowToolDialog] = useState(false);
@@ -137,18 +126,6 @@ export default function AIGenerator() {
     localStorage.setItem('assist_ai_tools', JSON.stringify(newTools));
   };
 
-  const handleGenerate = () => {
-    console.log('Generating content for:', activeTab, { socialPlatform, videoPlatform, prompt });
-    setGenerating(true);
-    setTimeout(() => {
-      setResult(`Generated content for ${activeTab}:\n\n"${prompt}"\n\nThis is a placeholder for AI-generated content.`);
-      setGenerating(false);
-      toast({
-        title: 'Generated!',
-        description: 'Content has been generated.',
-      });
-    }, 2000);
-  };
 
   const handleToolGenerate = () => {
     if (!selectedTool) return;
@@ -240,9 +217,9 @@ export default function AIGenerator() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => { setViewMode('tools'); setSelectedTool(null); setPrompt(''); setResult(''); }}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+            <Button variant="ghost" size="icon" onClick={() => { setViewMode('tools'); setSelectedTool(null); setPrompt(''); setResult(''); }}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
           <div className="flex items-center gap-3">
             <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${selectedTool.color}`}>
               <Sparkles className="h-6 w-6" />
@@ -326,14 +303,9 @@ export default function AIGenerator() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => setViewMode('tabs')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">AI Tools Management</h1>
-              <p className="text-muted-foreground">Create and manage AI-powered content tools</p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">AI Generator</h1>
+            <p className="text-muted-foreground">All Tools</p>
           </div>
           <Button onClick={handleAddTool}>
             <Plus className="h-4 w-4 mr-2" />
@@ -479,214 +451,6 @@ export default function AIGenerator() {
     );
   }
 
-  // Main tabs view
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">AI Generator</h1>
-          <p className="text-muted-foreground">Generate marketing content using AI.</p>
-        </div>
-        <Button onClick={() => setViewMode('tools')}>
-          <Settings2 className="h-4 w-4 mr-2" />
-          Manage Tools
-        </Button>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="gmb" className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            GMB Posts
-          </TabsTrigger>
-          <TabsTrigger value="blogs" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Blogs
-          </TabsTrigger>
-          <TabsTrigger value="email" className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            Email Marketing
-          </TabsTrigger>
-          <TabsTrigger value="social" className="flex items-center gap-2">
-            <Share2 className="h-4 w-4" />
-            Social Media
-          </TabsTrigger>
-          <TabsTrigger value="video" className="flex items-center gap-2">
-            <Video className="h-4 w-4" />
-            Video Marketing
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="gmb" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>GMB Posts Generator</CardTitle>
-              <CardDescription>Generate Google My Business posts for your clients.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Prompt</Label>
-                <Textarea
-                  placeholder="Describe what kind of GMB post you want to generate..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <Button onClick={handleGenerate} disabled={generating}>
-                {generating ? 'Generating...' : 'Generate GMB Post'}
-              </Button>
-              {result && activeTab === 'gmb' && (
-                <div className="p-4 bg-muted rounded-lg mt-4">
-                  <pre className="whitespace-pre-wrap text-sm">{result}</pre>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="blogs" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Blog Generator</CardTitle>
-              <CardDescription>Generate blog articles for your clients.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Prompt</Label>
-                <Textarea
-                  placeholder="Describe the blog topic and key points..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <Button onClick={handleGenerate} disabled={generating}>
-                {generating ? 'Generating...' : 'Generate Blog'}
-              </Button>
-              {result && activeTab === 'blogs' && (
-                <div className="p-4 bg-muted rounded-lg mt-4">
-                  <pre className="whitespace-pre-wrap text-sm">{result}</pre>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="email" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Marketing Generator</CardTitle>
-              <CardDescription>Generate email marketing content.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Prompt</Label>
-                <Textarea
-                  placeholder="Describe the email campaign purpose and target audience..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <Button onClick={handleGenerate} disabled={generating}>
-                {generating ? 'Generating...' : 'Generate Email'}
-              </Button>
-              {result && activeTab === 'email' && (
-                <div className="p-4 bg-muted rounded-lg mt-4">
-                  <pre className="whitespace-pre-wrap text-sm">{result}</pre>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="social" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Social Media Generator</CardTitle>
-              <CardDescription>Generate social media posts for various platforms.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Platform</Label>
-                <Select value={socialPlatform} onValueChange={setSocialPlatform}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select platform" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {socialMediaPlatforms.map((platform) => (
-                      <SelectItem key={platform.value} value={platform.value}>
-                        {platform.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Prompt</Label>
-                <Textarea
-                  placeholder="Describe the social media post content..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <Button onClick={handleGenerate} disabled={!socialPlatform || generating}>
-                {generating ? 'Generating...' : 'Generate Social Post'}
-              </Button>
-              {result && activeTab === 'social' && (
-                <div className="p-4 bg-muted rounded-lg mt-4">
-                  <pre className="whitespace-pre-wrap text-sm">{result}</pre>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="video" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Video Marketing Generator</CardTitle>
-              <CardDescription>Generate video scripts and content ideas.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Platform</Label>
-                <Select value={videoPlatform} onValueChange={setVideoPlatform}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select platform" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {videoPlatforms.map((platform) => (
-                      <SelectItem key={platform.value} value={platform.value}>
-                        {platform.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Prompt</Label>
-                <Textarea
-                  placeholder="Describe the video content or script you want..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <Button onClick={handleGenerate} disabled={!videoPlatform || generating}>
-                {generating ? 'Generating...' : 'Generate Video Content'}
-              </Button>
-              {result && activeTab === 'video' && (
-                <div className="p-4 bg-muted rounded-lg mt-4">
-                  <pre className="whitespace-pre-wrap text-sm">{result}</pre>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+  // No other view modes.
+  return null;
 }
