@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { LogOut, type LucideIcon } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
@@ -13,6 +14,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type UserNavItem = {
   title: string;
@@ -28,6 +31,57 @@ export function UserSidebar({
   onLogout: () => void;
 }) {
   const { open } = useSidebar();
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const showMessagesBadge = useMemo(() => unreadCount > 0, [unreadCount]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let isMounted = true;
+
+    const refreshUnread = async () => {
+      const { count } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("receiver_id", user.id)
+        .eq("is_read", false);
+
+      if (!isMounted) return;
+      setUnreadCount(count || 0);
+    };
+
+    refreshUnread();
+
+    const channel = supabase
+      .channel(`sidebar-unread-messages-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.receiver_id !== user.id) return;
+          if (row?.is_read) return;
+          refreshUnread();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.receiver_id !== user.id) return;
+          refreshUnread();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   return (
     <Sidebar
@@ -59,21 +113,36 @@ export function UserSidebar({
           {open && <SidebarGroupLabel>Menu</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/dashboard/user"}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span className="truncate">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const isMessages = item.url === "/dashboard/user/messages";
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/dashboard/user"}
+                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {open && <span className="truncate flex-1">{item.title}</span>}
+
+                        {/* Unread messages badge */}
+                        {isMessages && showMessagesBadge && (
+                          open ? (
+                            <span className="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs tabular-nums">
+                              {unreadCount > 99 ? "99+" : unreadCount}
+                            </span>
+                          ) : (
+                            <span className="ml-auto h-2 w-2 rounded-full bg-destructive" />
+                          )
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
