@@ -561,7 +561,6 @@ export default function AIGenerator() {
                         </div>
                         <div className="min-w-0">
                           <CardTitle className="text-base break-words">{tool.title}</CardTitle>
-                          <CardDescription className="text-sm break-words whitespace-pre-wrap">{tool.description || '-'}</CardDescription>
                         </div>
                       </div>
 
