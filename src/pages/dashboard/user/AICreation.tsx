@@ -1,185 +1,170 @@
-import { useState } from 'react';
-import { 
-  Sparkles, FileText, User, Users, PenTool, Image, 
-  MessageSquare, Lightbulb, ArrowRight, ArrowLeft, Copy
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Sparkles,
+  FileText,
+  User,
+  Users,
+  PenTool,
+  Image,
+  MessageSquare,
+  Lightbulb,
+  ArrowRight,
+  ArrowLeft,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { buildToolPreviewSrcDoc, type ToolLanguage } from '@/lib/aiToolPreview';
 
 interface AITool {
   id: string;
   title: string;
   description: string;
-  icon: any;
+  icon: string;
   color: string;
+  codeLanguage: ToolLanguage;
+  codeContent: string;
 }
 
-const aiTools: AITool[] = [
-  {
-    id: 'bkb',
-    title: 'Business Knowledge Base',
-    description: 'Generate comprehensive business documentation',
-    icon: FileText,
-    color: 'bg-blue-500/10 text-blue-500',
-  },
-  {
-    id: 'be',
-    title: 'Brand Expert',
-    description: 'Create brand voice and messaging guidelines',
-    icon: User,
-    color: 'bg-purple-500/10 text-purple-500',
-  },
-  {
-    id: 'persona',
-    title: 'Customer Persona',
-    description: 'Build detailed customer personas',
-    icon: Users,
-    color: 'bg-green-500/10 text-green-500',
-  },
-  {
-    id: 'blog',
-    title: 'Content Blogs',
-    description: 'Generate SEO-optimized blog content',
-    icon: PenTool,
-    color: 'bg-orange-500/10 text-orange-500',
-  },
-  {
-    id: 'image',
-    title: 'Generate Images',
-    description: 'Create AI-powered visuals for your brand',
-    icon: Image,
-    color: 'bg-pink-500/10 text-pink-500',
-  },
-  {
-    id: 'social',
-    title: 'Social Media Posts',
-    description: 'Generate engaging social media content',
-    icon: MessageSquare,
-    color: 'bg-cyan-500/10 text-cyan-500',
-  },
-  {
-    id: 'ideas',
-    title: 'Content Ideas',
-    description: 'Get AI-powered content suggestions',
-    icon: Lightbulb,
-    color: 'bg-yellow-500/10 text-yellow-500',
-  },
-];
+const iconMap: Record<string, any> = {
+  Sparkles,
+  FileText,
+  User,
+  Users,
+  PenTool,
+  Image,
+  MessageSquare,
+  Lightbulb,
+};
 
 export default function AICreation() {
   const { toast } = useToast();
-  const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
-  const [prompt, setPrompt] = useState('');
-  const [result, setResult] = useState('');
-  const [generating, setGenerating] = useState(false);
+  const { user } = useAuth();
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) {
+  const [tools, setTools] = useState<AITool[]>([]);
+  const [loadingTools, setLoadingTools] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
+
+  const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
+
+  const loadTools = async () => {
+    setLoadingTools(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .from('assist_ai_tools')
+        .select('id,title,description,icon,color,code_language,code_content')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: AITool[] = (data ?? []).map((row: any) => ({
+        id: row.id,
+        title: row.title ?? '',
+        description: row.description ?? '',
+        icon: row.icon ?? 'Sparkles',
+        color: row.color ?? 'bg-primary/10 text-primary',
+        codeLanguage: (row.code_language ?? 'html') as ToolLanguage,
+        codeContent: row.code_content ?? '',
+      }));
+
+      setTools(mapped);
+    } catch (e: any) {
+      console.error(e);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Please enter a prompt',
+        title: 'Gagal memuat tools',
+        description: e?.message ?? 'Terjadi kesalahan.',
       });
-      return;
+    } finally {
+      setLoadingTools(false);
     }
-
-    setGenerating(true);
-    // Simulate AI generation - in production, this would call an AI API
-    setTimeout(() => {
-      setResult(`Generated ${selectedTool?.title} content based on your prompt:\n\n"${prompt}"\n\nThis is a placeholder for AI-generated content. Connect to an AI service to enable real generation.`);
-      setGenerating(false);
-      toast({
-        title: 'Generated!',
-        description: 'Your content has been generated successfully.',
-      });
-    }, 2000);
   };
 
-  const handleBack = () => {
-    setSelectedTool(null);
-    setPrompt('');
-    setResult('');
-  };
+  useEffect(() => {
+    if (!user?.id) return;
+    void loadTools();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(result);
-    toast({ title: 'Copied!', description: 'Content copied to clipboard' });
-  };
-
-  // Full page tool view
+  // Tool detail view (with preview)
   if (selectedTool) {
-    const ToolIcon = selectedTool.icon;
+    const ToolIcon = iconMap[selectedTool.icon] ?? Sparkles;
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setSelectedTool(null);
+            }}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-3">
-            <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${selectedTool.color}`}>
+
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${selectedTool.color} shrink-0`}>
               <ToolIcon className="h-6 w-6" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">{selectedTool.title}</h1>
-              <p className="text-muted-foreground">{selectedTool.description}</p>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-foreground break-words">{selectedTool.title}</h1>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[3fr_7fr] min-w-0 items-stretch">
+          {/* Left: Tool details */}
+          <Card className="min-w-0">
             <CardHeader>
-              <CardTitle>Your Prompt</CardTitle>
-              <CardDescription>Describe what you want to create</CardDescription>
+              <CardTitle>Tool Details</CardTitle>
+              <CardDescription>Informasi tool</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="prompt">Prompt</Label>
-                <Textarea
-                  id="prompt"
-                  placeholder="Describe what you want to create..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="min-h-[200px]"
-                />
+              <div className="space-y-1">
+                <Label>Tool Name</Label>
+                <div className="text-sm text-foreground font-medium break-words">{selectedTool.title}</div>
               </div>
-              
-              <Button 
-                onClick={handleGenerate} 
-                disabled={generating}
-                className="w-full"
-                size="lg"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                {generating ? 'Generating...' : 'Generate Content'}
-              </Button>
+
+              <div className="space-y-1">
+                <Label>Description</Label>
+                <div className="text-sm text-muted-foreground break-words whitespace-pre-wrap">
+                  {selectedTool.description || '-'}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label>Code Language</Label>
+                <div className="text-sm text-foreground font-medium break-words">
+                  {selectedTool.codeLanguage.toUpperCase()}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Result</CardTitle>
-              <CardDescription>Your generated content will appear here</CardDescription>
+          {/* Right: Preview */}
+          <Card className="min-w-0 flex flex-col">
+            <CardHeader className="shrink-0">
+              <CardTitle>Preview</CardTitle>
+              <CardDescription>Rendered from the saved Code Snippet</CardDescription>
             </CardHeader>
-            <CardContent>
-              {result ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-muted rounded-lg min-h-[200px]">
-                    <pre className="whitespace-pre-wrap text-sm">{result}</pre>
-                  </div>
-                  <Button variant="outline" className="w-full" onClick={handleCopy}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy to Clipboard
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
-                  <p>Enter a prompt and click generate to see results</p>
-                </div>
-              )}
+            <CardContent className="p-0 flex-1 min-h-0">
+              <div className="h-full min-h-0 overflow-hidden rounded-lg border border-border">
+                <iframe
+                  key={`${selectedTool.id}-${selectedTool.codeLanguage}`}
+                  title={`${selectedTool.title} preview`}
+                  srcDoc={buildToolPreviewSrcDoc({
+                    codeLanguage: selectedTool.codeLanguage,
+                    codeContent: selectedTool.codeContent,
+                  })}
+                  sandbox="allow-scripts allow-forms allow-modals"
+                  className="block w-full h-full min-h-[60vh] lg:min-h-[70vh] bg-background"
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -187,7 +172,7 @@ export default function AICreation() {
     );
   }
 
-  // Tool selection grid view
+  // Tools list view
   return (
     <div className="space-y-6">
       <div>
@@ -195,35 +180,58 @@ export default function AICreation() {
           <Sparkles className="h-8 w-8 text-primary" />
           AI Creation
         </h1>
-        <p className="text-muted-foreground">Create content with AI-powered tools</p>
+        <p className="text-muted-foreground">All Tools</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {aiTools.map((tool) => (
-          <Card 
-            key={tool.id}
-            className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
-            onClick={() => {
-              setSelectedTool(tool);
-              setPrompt('');
-              setResult('');
-            }}
-          >
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${tool.color}`}>
-                  <tool.icon className="h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{tool.title}</CardTitle>
-                  <CardDescription>{tool.description}</CardDescription>
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
+      {!canUsePage ? (
+        <Card>
+          <CardContent className="py-10">
+            <p className="text-muted-foreground">Silakan login untuk melihat tools.</p>
+          </CardContent>
+        </Card>
+      ) : loadingTools ? (
+        <Card>
+          <CardContent className="py-10">
+            <p className="text-muted-foreground">Memuat tools...</p>
+          </CardContent>
+        </Card>
+      ) : tools.length === 0 ? (
+        <Card>
+          <CardContent className="py-10">
+            <p className="text-muted-foreground">
+              Belum ada tools yang tersedia (atau akses kamu dibatasi oleh RLS).
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {tools.map((tool) => {
+            const ToolIcon = iconMap[tool.icon] ?? Sparkles;
+            return (
+              <Card
+                key={tool.id}
+                className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
+                onClick={() => setSelectedTool(tool)}
+              >
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${tool.color} shrink-0`}>
+                      <ToolIcon className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg break-words">{tool.title}</CardTitle>
+                      <CardDescription className="break-words whitespace-pre-wrap">
+                        {tool.description || '-'}
+                      </CardDescription>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                  </div>
+                </CardHeader>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
