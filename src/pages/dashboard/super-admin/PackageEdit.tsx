@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
+import PackageAddOnsEditor, { type PackageAddOnDraft } from "@/components/super-admin/PackageAddOnsEditor";
 
 type PackageRow = {
   id: string;
@@ -42,6 +43,8 @@ export default function SuperAdminPackageEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pkg, setPkg] = useState<PackageRow | null>(null);
+  const [addOns, setAddOns] = useState<PackageAddOnDraft[]>([]);
+  const [removedAddOnIds, setRemovedAddOnIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!id) {
@@ -74,6 +77,28 @@ export default function SuperAdminPackageEdit() {
           features: normalizeFeatures(data.features),
           is_active: Boolean(data.is_active),
         });
+
+        // Load add-ons for this package
+        const { data: addOnRows, error: addOnErr } = await (supabase as any)
+          .from("package_add_ons")
+          .select("id,add_on_key,label,price_per_unit,unit_step,unit,is_active")
+          .eq("package_id", String(data.id))
+          .order("created_at", { ascending: true });
+
+        if (addOnErr) throw addOnErr;
+
+        setAddOns(
+          ((addOnRows as any[]) || []).map((r) => ({
+            id: String(r.id),
+            add_on_key: String(r.add_on_key ?? ""),
+            label: String(r.label ?? ""),
+            price_per_unit: Number(r.price_per_unit ?? 0),
+            unit_step: Number(r.unit_step ?? 1),
+            unit: String(r.unit ?? "unit"),
+            is_active: Boolean(r.is_active ?? true),
+          }))
+        );
+        setRemovedAddOnIds([]);
       } catch (err) {
         console.error("Error fetching package:", err);
         toast.error("Gagal memuat package");
@@ -105,6 +130,35 @@ export default function SuperAdminPackageEdit() {
 
       const { error } = await (supabase as any).from("packages").update(payload).eq("id", pkg.id);
       if (error) throw error;
+
+      // Save add-ons (upsert active/inactive rows) + delete removed ones
+      const toUpsert = addOns
+        .filter((a) => a.add_on_key.trim() && a.label.trim())
+        .map((a) => ({
+          id: a.id,
+          package_id: pkg.id,
+          add_on_key: a.add_on_key.trim(),
+          label: a.label.trim(),
+          price_per_unit: Number(a.price_per_unit ?? 0),
+          unit_step: Number(a.unit_step ?? 1),
+          unit: String(a.unit ?? "unit").trim() || "unit",
+          is_active: Boolean(a.is_active ?? true),
+        }));
+
+      if (toUpsert.length > 0) {
+        const { error: upsertErr } = await (supabase as any)
+          .from("package_add_ons")
+          .upsert(toUpsert, { onConflict: "package_id,add_on_key" });
+        if (upsertErr) throw upsertErr;
+      }
+
+      if (removedAddOnIds.length > 0) {
+        const { error: delErr } = await (supabase as any)
+          .from("package_add_ons")
+          .delete()
+          .in("id", removedAddOnIds);
+        if (delErr) throw delErr;
+      }
 
       toast.success("Package berhasil disimpan");
       navigate("/dashboard/super-admin/packages");
@@ -191,6 +245,13 @@ export default function SuperAdminPackageEdit() {
                   rows={8}
                 />
               </div>
+
+              <PackageAddOnsEditor
+                value={addOns}
+                onChange={setAddOns}
+                onRemove={(idToRemove) => setRemovedAddOnIds((prev) => (prev.includes(idToRemove) ? prev : [...prev, idToRemove]))}
+                disabled={saving}
+              />
 
               <div className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
