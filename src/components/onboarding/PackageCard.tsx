@@ -131,7 +131,7 @@ export default function PackageCard({
                   <p className="text-sm font-semibold">{addOn.addOnKey ?? addOn.id}</p>
                   <p className="text-xs text-muted-foreground">{addOn.label}</p>
                   <p className="text-xs text-muted-foreground">
-                    +${addOn.pricePerUnit} per {addOn.unitStep} {addOn.unit}
+                    +${addOn.pricePerUnit} for {addOn.unitStep} {addOn.unit}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

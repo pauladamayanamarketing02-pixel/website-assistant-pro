@@ -94,7 +94,7 @@ export default function PackageAddOnsEditor({
                       placeholder="e.g. extra_gmb_posts"
                       disabled={disabled}
                     />
-                    <p className="text-xs text-muted-foreground">Unique per package (used as identifier).</p>
+                    <p className="text-xs text-muted-foreground">Unique for this package (used as identifier).</p>
                   </div>
 
                   <div className="grid gap-2">
