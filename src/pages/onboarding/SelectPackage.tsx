@@ -6,9 +6,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import PackageCard from '@/components/onboarding/PackageCard';
-import { growingPackages, growingPackageAddOns, type GrowingPackage } from '@/data/growingPackages';
+import { growingPackages, type GrowingPackage } from '@/data/growingPackages';
 
-type DbAddOn = { id: string; label: string; pricePerUnit: number; unitStep: number; unit: string };
+type DbAddOn = { id: string; addOnKey: string; label: string; pricePerUnit: number; unitStep: number; unit: string };
 
 interface Package {
   id: string;
@@ -19,19 +19,8 @@ interface Package {
   features: string[];
 }
 
-// Add-ons for new business packages
-const newBusinessAddOns: Record<string, { id: string; label: string; pricePerUnit: number; unitStep: number; unit: string }[]> = {
-  starter: [],
-  growth: [
-    { id: 'extra_gmb_posts', label: 'Extra GMB posts', pricePerUnit: 100, unitStep: 4, unit: 'posts' },
-    { id: 'extra_social_posts', label: 'Extra social media posts', pricePerUnit: 100, unitStep: 2, unit: 'posts' },
-  ],
-  pro: [
-    { id: 'extra_gmb_posts', label: 'Extra GMB posts', pricePerUnit: 100, unitStep: 5, unit: 'posts' },
-    { id: 'extra_social_posts', label: 'Extra social media posts', pricePerUnit: 100, unitStep: 4, unit: 'posts' },
-    { id: 'extra_seo_content', label: 'Extra local SEO content', pricePerUnit: 150, unitStep: 2, unit: 'posts' },
-  ],
-};
+// NOTE: Optional Add-ons are intentionally DB-driven.
+// If the DB has no active add-ons for a package, we show none.
 
 export default function SelectPackage() {
   const navigate = useNavigate();
@@ -94,6 +83,7 @@ export default function SelectPackage() {
                if (!grouped[pid]) grouped[pid] = [];
                grouped[pid].push({
                  id: String(r.add_on_key),
+                  addOnKey: String(r.add_on_key),
                  label: String(r.label),
                  pricePerUnit: Number(r.price_per_unit ?? 0),
                  unitStep: Number(r.unit_step ?? 1),
@@ -147,6 +137,7 @@ export default function SelectPackage() {
                if (!grouped[pid]) grouped[pid] = [];
                grouped[pid].push({
                  id: String(r.add_on_key),
+                  addOnKey: String(r.add_on_key),
                  label: String(r.label),
                  pricePerUnit: Number(r.price_per_unit ?? 0),
                  unitStep: Number(r.unit_step ?? 1),
@@ -298,13 +289,7 @@ export default function SelectPackage() {
   const getAddOns = (pkg: any) => {
     const pkgId = String(pkg?.id ?? '');
     const fromDb = pkgId && dbAddOnsByPackageId[pkgId];
-    if (fromDb && fromDb.length > 0) return fromDb;
-
-    // Fallback to existing hardcoded config
-    if (businessStage === 'new') {
-      return newBusinessAddOns[String(pkg?.type) as keyof typeof newBusinessAddOns] || [];
-    }
-    return growingPackageAddOns[String(pkg?.type) as keyof typeof growingPackageAddOns] || [];
+    return fromDb && fromDb.length > 0 ? fromDb : [];
   };
 
   return (

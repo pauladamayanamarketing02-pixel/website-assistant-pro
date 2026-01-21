@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 interface AddOn {
   id: string;
+  addOnKey?: string;
   label: string;
   pricePerUnit: number;
   unitStep: number;
@@ -127,7 +128,8 @@ export default function PackageCard({
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex-1">
-                  <p className="text-sm font-medium">{addOn.label}</p>
+                  <p className="text-sm font-semibold">{addOn.addOnKey ?? addOn.id}</p>
+                  <p className="text-xs text-muted-foreground">{addOn.label}</p>
                   <p className="text-xs text-muted-foreground">
                     +${addOn.pricePerUnit} per {addOn.unitStep} {addOn.unit}
                   </p>
