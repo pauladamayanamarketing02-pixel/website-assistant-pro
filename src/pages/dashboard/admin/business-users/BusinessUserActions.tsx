@@ -5,6 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,9 +29,10 @@ type Props = {
   userId: string;
   email: string;
   onView: () => void;
+  onDeleted?: () => void;
 };
 
-export function BusinessUserActions({ userId, email, onView }: Props) {
+export function BusinessUserActions({ userId, email, onView, onDeleted }: Props) {
   const { toast } = useToast();
   const [sendingReset, setSendingReset] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -30,6 +41,9 @@ export function BusinessUserActions({ userId, email, onView }: Props) {
   const [currentAuthEmail, setCurrentAuthEmail] = useState<string | null>(null);
   const [pendingAuthEmail, setPendingAuthEmail] = useState<string | null>(null);
   const [loadingAuthEmail, setLoadingAuthEmail] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const canTrigger = useMemo(() => Boolean(userId) && Boolean(email && email !== "—"), [email, userId]);
 
@@ -110,6 +124,36 @@ export function BusinessUserActions({ userId, email, onView }: Props) {
     }
   };
 
+  const onDeleteUser = async () => {
+    if (!userId) return;
+    if (deleteConfirm.trim().toUpperCase() !== "DELETE") return;
+
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-account-actions", {
+        body: { action: "delete_user", user_id: userId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error(String((data as any).error));
+
+      toast({
+        title: "Akun dihapus",
+        description: "User Auth dan semua data terkait sudah dihapus permanen.",
+      });
+      setDeleteOpen(false);
+      setDeleteConfirm("");
+      onDeleted?.();
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: e?.message ?? "Gagal menghapus akun.",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-center gap-1">
@@ -143,7 +187,14 @@ export function BusinessUserActions({ userId, email, onView }: Props) {
           <UserX className="h-4 w-4 text-muted-foreground" />
         </Button>
 
-        <Button variant="ghost" size="icon" className="h-8 w-8" title="Delete" disabled>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="Delete"
+          onClick={() => setDeleteOpen(true)}
+          disabled={!userId || sendingReset || sendingEmailChange || deleting}
+        >
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
 
@@ -189,6 +240,46 @@ export function BusinessUserActions({ userId, email, onView }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus akun permanen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ini akan menghapus user di Supabase Authentication serta semua data terkait (profiles, businesses, roles, dan data aktivitas).
+              Aksi ini tidak bisa dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor={`delete-confirm-${userId}`}>Ketik DELETE untuk konfirmasi</Label>
+            <Input
+              id={`delete-confirm-${userId}`}
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="DELETE"
+              disabled={deleting}
+            />
+            <p className="text-xs text-muted-foreground">Target: {currentAuthEmail ?? email}</p>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                // Keep dialog open while we run deletion.
+                e.preventDefault();
+                if (deleteConfirm.trim().toUpperCase() !== "DELETE") return;
+                void onDeleteUser();
+              }}
+              disabled={deleting || deleteConfirm.trim().toUpperCase() !== "DELETE"}
+            >
+              <span className="sr-only">Konfirmasi hapus</span>
+              {deleting ? "Menghapus..." : "Hapus"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
