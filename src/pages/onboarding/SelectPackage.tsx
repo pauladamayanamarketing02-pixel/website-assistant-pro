@@ -46,6 +46,7 @@ export default function SelectPackage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [businessStage, setBusinessStage] = useState<'new' | 'growing'>('new');
   const [dbAddOnsByPackageId, setDbAddOnsByPackageId] = useState<Record<string, DbAddOn[]>>({});
+  const [growingUsesDb, setGrowingUsesDb] = useState(false);
 
   useEffect(() => {
     // Get the business stage from session storage
@@ -65,7 +66,7 @@ export default function SelectPackage() {
 
           if (error) throw error;
 
-          const mapped: GrowingPackage[] = (data || []).map((pkg: any) => ({
+           const mapped: GrowingPackage[] = (data || []).map((pkg: any) => ({
             id: pkg.id,
             name: pkg.name,
             type: pkg.type,
@@ -74,7 +75,9 @@ export default function SelectPackage() {
             features: Array.isArray(pkg.features) ? pkg.features : JSON.parse((pkg.features as string) || '[]'),
           }));
 
-           setGrowingDbPackages(mapped);
+            setGrowingDbPackages(mapped);
+            // If DB call succeeded, we must respect DB result (even if empty) so only Active packages appear.
+            setGrowingUsesDb(true);
 
            // Load DB add-ons for growing packages
            const pkgIds = mapped.map((p) => String(p.id)).filter(Boolean);
@@ -103,6 +106,7 @@ export default function SelectPackage() {
           console.error('Error fetching growing packages:', error);
           // Fallback to frontend-defined growing packages
           setGrowingDbPackages([]);
+          setGrowingUsesDb(false);
         } finally {
           setIsLoading(false);
         }
@@ -290,7 +294,7 @@ export default function SelectPackage() {
   }
 
   const displayPackages =
-    businessStage === 'new' ? packages : (growingDbPackages.length > 0 ? growingDbPackages : growingPackages);
+    businessStage === 'new' ? packages : (growingUsesDb ? growingDbPackages : growingPackages);
   const getAddOns = (pkg: any) => {
     const pkgId = String(pkg?.id ?? '');
     const fromDb = pkgId && dbAddOnsByPackageId[pkgId];
