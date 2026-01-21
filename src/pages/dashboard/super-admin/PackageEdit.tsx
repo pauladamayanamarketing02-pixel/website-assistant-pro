@@ -119,16 +119,21 @@ export default function SuperAdminPackageEdit() {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Edit Package</h1>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/dashboard/super-admin/packages")}
+              aria-label="Kembali"
+              title="Kembali"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-3xl font-bold text-foreground">Edit Package</h1>
+          </div>
           <p className="text-muted-foreground">Perubahan di sini akan tampil di halaman onboarding.</p>
         </div>
-
-        <Button variant="outline" onClick={() => navigate("/dashboard/super-admin/packages")}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Kembali
-        </Button>
       </div>
 
       <Card>
