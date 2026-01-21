@@ -52,6 +52,8 @@ export default function RecommendedPackage() {
           .from('packages')
           .select('*')
           .eq('type', packageType)
+          .eq('is_active', true)
+          .eq('show_on_public', true)
           .single();
 
         if (pkg) {
