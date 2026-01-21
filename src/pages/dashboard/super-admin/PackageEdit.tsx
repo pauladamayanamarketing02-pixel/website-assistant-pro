@@ -134,16 +134,22 @@ export default function SuperAdminPackageEdit() {
       // Save add-ons (upsert active/inactive rows) + delete removed ones
       const toUpsert = addOns
         .filter((a) => a.add_on_key.trim() && a.label.trim())
-        .map((a) => ({
-          id: a.id,
-          package_id: pkg.id,
-          add_on_key: a.add_on_key.trim(),
-          label: a.label.trim(),
-          price_per_unit: Number(a.price_per_unit ?? 0),
-          unit_step: Number(a.unit_step ?? 1),
-          unit: String(a.unit ?? "unit").trim() || "unit",
-          is_active: Boolean(a.is_active ?? true),
-        }));
+        .map((a) => {
+          // IMPORTANT:
+          // Do not send `id: null/undefined` for new rows.
+          // The table has a default `gen_random_uuid()` but an explicit null violates NOT NULL.
+          const base = {
+            package_id: pkg.id,
+            add_on_key: a.add_on_key.trim(),
+            label: a.label.trim(),
+            price_per_unit: Number(a.price_per_unit ?? 0),
+            unit_step: Number(a.unit_step ?? 1),
+            unit: String(a.unit ?? "unit").trim() || "unit",
+            is_active: Boolean(a.is_active ?? true),
+          };
+
+          return a.id ? { id: a.id, ...base } : base;
+        });
 
       if (toUpsert.length > 0) {
         const { error: upsertErr } = await (supabase as any)
