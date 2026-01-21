@@ -248,6 +248,9 @@ export default function Messages() {
           .eq('sender_id', selectedAssist.id)
           .or('is_read.is.null,is_read.eq.false');
 
+        // Tell sidebar badge to refresh immediately (no reload needed)
+        window.dispatchEvent(new CustomEvent('messages:refresh-unread'));
+
         // Optimistic local update
         setMessages((prev) =>
           prev.map((m) =>
@@ -305,6 +308,7 @@ export default function Messages() {
                 : [...prev, { ...normalized, is_read: true }]
             );
             supabase.from('messages').update({ is_read: true }).eq('id', normalized.id);
+            window.dispatchEvent(new CustomEvent('messages:refresh-unread'));
             return;
           }
 
