@@ -13,6 +13,7 @@ import BlogPost from "./pages/BlogPost";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import AssistDashboard from "./pages/dashboard/AssistDashboard";
 import SuperAdminLogin from "./pages/super-admin/SuperAdminLogin";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/reset-password" element={<ResetPassword />} />
 
             {/* Super Admin */}
             <Route path="/super-admin/login" element={<SuperAdminLogin />} />

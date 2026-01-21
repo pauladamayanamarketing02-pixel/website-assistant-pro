@@ -6,6 +6,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +40,9 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<AppRole>('user');
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -151,6 +163,32 @@ export default function Auth() {
     }
     
     setIsSubmitting(false);
+  };
+
+  const handleForgotPassword = async () => {
+    const email = forgotEmail.trim();
+    if (!email) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please enter your email.' });
+      return;
+    }
+
+    setForgotSubmitting(true);
+    try {
+      const redirectTo = `${window.location.origin}/auth/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+
+      toast({
+        title: 'Email sent',
+        description: 'Please check your inbox for the password reset link.',
+      });
+      setForgotOpen(false);
+      setForgotEmail('');
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Failed', description: e?.message ?? 'Failed to send reset email.' });
+    } finally {
+      setForgotSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -299,6 +337,58 @@ export default function Auth() {
                   </button>
                 </div>
                 {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+
+                {isLogin && (
+                  <div className="pt-1 text-right">
+                    <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+                      <DialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-xs text-primary hover:underline font-medium"
+                        >
+                          Forgot password?
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Reset password</DialogTitle>
+                          <DialogDescription>
+                            Enter your email and we’ll send you a link to set a new password.
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="forgotEmail">Email</Label>
+                          <Input
+                            id="forgotEmail"
+                            type="email"
+                            placeholder="your@email.com"
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                          />
+                        </div>
+
+                        <DialogFooter>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setForgotOpen(false)}
+                            disabled={forgotSubmitting}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleForgotPassword}
+                            disabled={forgotSubmitting}
+                          >
+                            {forgotSubmitting ? 'Sending...' : 'Send reset link'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password (signup only) */}
