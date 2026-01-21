@@ -84,11 +84,16 @@ export default function Packages() {
           ) : packages.length === 0 ? (
             <p className="text-center text-muted-foreground">No packages available.</p>
           ) : (
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-              {packages.map((pkg, i) => {
-                const features = Array.isArray(pkg.features) ? pkg.features : [];
-                return (
-                  <Card key={pkg.id} className="relative flex flex-col shadow-soft animate-fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
+            <div className="mx-auto max-w-6xl">
+              <div className="grid gap-8 justify-items-center sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {packages.map((pkg, i) => {
+                  const features = Array.isArray(pkg.features) ? pkg.features : [];
+                  return (
+                    <Card
+                      key={pkg.id}
+                      className="relative flex w-full max-w-sm flex-col shadow-soft animate-fade-in"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    >
                     {!!pkg.is_recommended && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                         <Badge variant="default" className="gap-1">
@@ -120,9 +125,10 @@ export default function Packages() {
                         <Link to="/auth">Get Started<ArrowRight className="ml-2 h-4 w-4" /></Link>
                       </Button>
                     </CardFooter>
-                  </Card>
-                );
-              })}
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
