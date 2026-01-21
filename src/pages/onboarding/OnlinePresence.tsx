@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,33 @@ export default function OnlinePresence() {
     gmbLink: '',
   });
   const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>([]);
+
+  useEffect(() => {
+    const websiteUrl = sessionStorage.getItem('onboarding_websiteUrl') ?? '';
+    const gmbLink = sessionStorage.getItem('onboarding_gmbLink') ?? '';
+    const socialRaw = sessionStorage.getItem('onboarding_socialLinks') ?? '[]';
+    let social: SocialMediaLink[] = [];
+    try {
+      const parsed = JSON.parse(socialRaw);
+      if (Array.isArray(parsed)) social = parsed;
+    } catch {
+      // ignore
+    }
+
+    if (websiteUrl || gmbLink) {
+      setFormData({ websiteUrl, gmbLink });
+    }
+    if (social.length > 0) setSocialMediaLinks(social);
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem('onboarding_websiteUrl', formData.websiteUrl ?? '');
+    sessionStorage.setItem('onboarding_gmbLink', formData.gmbLink ?? '');
+  }, [formData.websiteUrl, formData.gmbLink]);
+
+  useEffect(() => {
+    sessionStorage.setItem('onboarding_socialLinks', JSON.stringify(socialMediaLinks ?? []));
+  }, [socialMediaLinks]);
 
   const saveAndContinue = async (skip: boolean = false) => {
     if (!user) {

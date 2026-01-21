@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Rocket, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,11 @@ type BusinessStageType = 'new' | 'growing';
 export default function BusinessStage() {
   const [selected, setSelected] = useState<BusinessStageType | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const stored = (sessionStorage.getItem('onboarding_businessStage') as BusinessStageType | null) ?? null;
+    if (stored === 'new' || stored === 'growing') setSelected(stored);
+  }, []);
 
   const handleContinue = () => {
     if (selected) {
