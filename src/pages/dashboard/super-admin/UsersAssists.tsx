@@ -49,6 +49,11 @@ export default function SuperAdminUsersAssists() {
     return r;
   };
 
+  const canLoginAs = (role: string) => {
+    // Super Admin accounts should not be impersonated from this list.
+    return normalizeRole(role) !== "super_admin";
+  };
+
   const fetchAccounts = async () => {
     setLoading(true);
     try {
@@ -201,9 +206,13 @@ export default function SuperAdminUsersAssists() {
                       <TableCell className="capitalize">{r.role.replace("_", " ")}</TableCell>
                       <TableCell className="capitalize">{r.account_status}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>
-                          Login
-                        </Button>
+                        {canLoginAs(r.role) ? (
+                          <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>
+                            Login
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
