@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye } from "lucide-react";
+import { CheckCircle2, Eye, KeyRound, Mail, Trash2, UserX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -241,7 +241,7 @@ export default function AdminBusinessUsers() {
                     <TableHead className="min-w-[120px] lg:min-w-0">Contact</TableHead>
                     <TableHead className="min-w-[180px] lg:min-w-0">Email</TableHead>
                     <TableHead className="min-w-[100px] lg:min-w-0">Status</TableHead>
-                    <TableHead className="text-center min-w-[120px] lg:min-w-0">View</TableHead>
+                     <TableHead className="text-center min-w-[220px] lg:min-w-0">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -262,17 +262,69 @@ export default function AdminBusinessUsers() {
                         <TableCell>
                           <Badge variant="secondary">{statusLabel[row.status]}</Badge>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="View"
-                            onClick={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+                         <TableCell className="text-center">
+                           <div className="flex items-center justify-center gap-1">
+                             <Button
+                               variant="ghost"
+                               size="icon"
+                               className="h-8 w-8"
+                               title="Set Active"
+                               disabled
+                             >
+                               <CheckCircle2 className="h-4 w-4 text-primary" />
+                             </Button>
+
+                             <Button
+                               variant="ghost"
+                               size="icon"
+                               className="h-8 w-8"
+                               title="Reset Password"
+                               disabled
+                             >
+                               <KeyRound className="h-4 w-4 text-muted-foreground" />
+                             </Button>
+
+                             <Button
+                               variant="ghost"
+                               size="icon"
+                               className="h-8 w-8"
+                               title="Reset Email"
+                               disabled
+                             >
+                               <Mail className="h-4 w-4 text-muted-foreground" />
+                             </Button>
+
+                             <Button
+                               variant="ghost"
+                               size="icon"
+                               className="h-8 w-8"
+                               title="Set Nonactive"
+                               disabled
+                             >
+                               <UserX className="h-4 w-4 text-muted-foreground" />
+                             </Button>
+
+                             <Button
+                               variant="ghost"
+                               size="icon"
+                               className="h-8 w-8"
+                               title="Delete"
+                               disabled
+                             >
+                               <Trash2 className="h-4 w-4 text-destructive" />
+                             </Button>
+
+                             <Button
+                               variant="outline"
+                               size="icon"
+                               className="h-8 w-8"
+                               title="View"
+                               onClick={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
+                             >
+                               <Eye className="h-4 w-4" />
+                             </Button>
+                           </div>
+                         </TableCell>
                       </TableRow>
                     ))
                   )}
