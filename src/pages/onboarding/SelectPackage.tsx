@@ -62,7 +62,6 @@ export default function SelectPackage() {
             .select('*')
             .in('type', ['optimize', 'scale', 'dominate'])
             .eq('is_active', true)
-            .eq('show_on_public', true)
             .order('price');
 
           if (error) throw error;
@@ -120,7 +119,6 @@ export default function SelectPackage() {
           .select('*')
           .in('type', ['starter', 'growth', 'pro'])
           .eq('is_active', true)
-          .eq('show_on_public', true)
           .order('price');
 
         if (error) throw error;
@@ -209,7 +207,6 @@ export default function SelectPackage() {
               .select('id')
               .eq('type', selectedGrowingPkg.type)
               .eq('is_active', true)
-              .eq('show_on_public', true)
               .maybeSingle();
 
             let packageId = existingPkg?.id;
@@ -224,7 +221,6 @@ export default function SelectPackage() {
                   price: selectedGrowingPkg.price,
                   features: selectedGrowingPkg.features,
                   is_active: true,
-                  show_on_public: true,
                 })
                 .select('id')
                 .single();
