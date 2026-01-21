@@ -91,7 +91,7 @@ export default function Packages() {
                   return (
                     <Card
                       key={pkg.id}
-                      className="relative flex w-full max-w-sm flex-col shadow-soft animate-fade-in"
+                      className="relative flex w-full max-w-sm flex-col shadow-soft animate-fade-in sm:basis-[calc(50%-1rem)] lg:basis-[calc(33.333%-1.34rem)]"
                       style={{ animationDelay: `${i * 0.1}s` }}
                     >
                     {!!pkg.is_recommended && (
