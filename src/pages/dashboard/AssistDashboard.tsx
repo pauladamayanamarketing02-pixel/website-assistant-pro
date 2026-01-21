@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, Routes, Route } from 'react-router-dom';
+import { useNavigate, Routes, Route, Navigate } from 'react-router-dom';
 import {
   Home,
   Users,
@@ -42,7 +42,7 @@ const mainMenuItems: AssistNavItem[] = [
   { title: 'Content Creation', url: '/dashboard/assist/content-creation', icon: PenLine },
   { title: 'Media Library', url: '/dashboard/assist/media-library', icon: Images },
   { title: 'Calendar', url: '/dashboard/assist/calendar', icon: CalendarDays },
-  { title: 'AI Generator', url: '/dashboard/assist/ai-generator', icon: Sparkles },
+  { title: 'AI Agents', url: '/dashboard/assist/ai-agents', icon: Sparkles },
   { title: 'Messages', url: '/dashboard/assist/messages', icon: MessageCircle },
   { title: 'Reports', url: '/dashboard/assist/reports', icon: BarChart3 },
   { title: 'Log Activity', url: '/dashboard/assist/log-activity', icon: Activity },
@@ -173,7 +173,9 @@ export default function AssistDashboard() {
               <Route path="media-library" element={<AssistMediaLibrary />} />
               <Route path="calendar" element={<AssistCalendar />} />
               <Route path="calendar/view/:id" element={<AssistScheduledContentView />} />
-              <Route path="ai-generator" element={<AIGenerator />} />
+              {/* Backward-compatible route */}
+              <Route path="ai-generator" element={<Navigate to="/dashboard/assist/ai-agents" replace />} />
+              <Route path="ai-agents" element={<AIGenerator />} />
               <Route path="messages" element={<AssistMessages />} />
               <Route path="reports" element={<Reports />} />
               <Route path="log-activity" element={<LogActivity />} />

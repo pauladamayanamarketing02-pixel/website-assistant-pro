@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, Routes, Route } from 'react-router-dom';
+import { useNavigate, Routes, Route, Navigate } from 'react-router-dom';
 import {
   Home,
   Building2,
@@ -35,7 +35,7 @@ const menuItems: UserNavItem[] = [
   { title: 'My Business', url: '/dashboard/user/business', icon: Building2 },
   { title: 'Content Planner', url: '/dashboard/user/content-planner', icon: CalendarDays },
   { title: 'Tasks & Progress', url: '/dashboard/user/tasks', icon: CheckSquare },
-  { title: 'AI Creation', url: '/dashboard/user/ai-creation', icon: Sparkles },
+  { title: 'AI Agents', url: '/dashboard/user/ai-agents', icon: Sparkles },
   { title: 'My Gallery', url: '/dashboard/user/gallery', icon: ImageIcon },
   { title: 'Reporting & Visibility', url: '/dashboard/user/reporting', icon: BarChart3 },
   { title: 'Messages', url: '/dashboard/user/messages', icon: MessageCircle },
@@ -117,7 +117,9 @@ export default function UserDashboard() {
               <Route path="business" element={<MyBusiness />} />
               <Route path="content-planner" element={<ContentPlanner />} />
               <Route path="tasks" element={<TasksProgress />} />
-              <Route path="ai-creation" element={<AICreation />} />
+              {/* Backward-compatible route */}
+              <Route path="ai-creation" element={<Navigate to="/dashboard/user/ai-agents" replace />} />
+              <Route path="ai-agents" element={<AICreation />} />
               <Route path="gallery" element={<MyGallery />} />
               <Route path="messages" element={<Messages />} />
               <Route path="package" element={<MyPackage />} />
