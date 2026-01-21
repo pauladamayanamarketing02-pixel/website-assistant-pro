@@ -113,6 +113,23 @@ export default function SuperAdminUsersAssists() {
     });
   };
 
+  const openLoginAs = async (targetUserId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("super-admin-login-link", {
+        body: { target_user_id: targetUserId },
+      });
+      if (error) throw error;
+
+      const link = (data as any)?.action_link as string | undefined;
+      if (!link) throw new Error("Missing action_link");
+
+      window.open(link, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Failed to generate login link");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -166,12 +183,13 @@ export default function SuperAdminUsersAssists() {
                     </button>
                   </TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sorted.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-muted-foreground">
+                    <TableCell colSpan={5} className="text-muted-foreground">
                       No accounts found.
                     </TableCell>
                   </TableRow>
@@ -182,6 +200,11 @@ export default function SuperAdminUsersAssists() {
                       <TableCell>{r.email}</TableCell>
                       <TableCell className="capitalize">{r.role.replace("_", " ")}</TableCell>
                       <TableCell className="capitalize">{r.account_status}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>
+                          Login
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

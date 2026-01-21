@@ -28,6 +28,7 @@ import SuperAdminPackages from "./super-admin/Packages";
 import SuperAdminPackageEdit from "./super-admin/PackageEdit";
 import SuperAdminUsersAssists from "./super-admin/UsersAssists";
 import SuperAdminAccessControl from "./super-admin/AccessControl";
+import SuperAdminCms from "./super-admin/Cms";
 
 function LoadingScreen() {
   return (
@@ -144,7 +145,7 @@ export default function SuperAdminDashboard() {
               <Route path="audit-logs" element={<SuperAdminPlaceholder title="Audit Logs" />} />
               <Route path="system-settings" element={<SuperAdminPlaceholder title="System Settings" />} />
               <Route path="reports" element={<SuperAdminPlaceholder title="Reports" />} />
-              <Route path="cms" element={<SuperAdminPlaceholder title="CMS" />} />
+              <Route path="cms" element={<SuperAdminCms />} />
               <Route path="emergency" element={<SuperAdminPlaceholder title="Emergency Tools" />} />
               <Route path="my-account" element={<SuperAdminPlaceholder title="My Account" />} />
             </Routes>
