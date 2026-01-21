@@ -13,6 +13,7 @@ export type PackageAddOnDraft = {
   unit_step: number;
   unit: string;
   is_active: boolean;
+  sort_order?: number;
 };
 
 export default function PackageAddOnsEditor({
@@ -26,28 +27,45 @@ export default function PackageAddOnsEditor({
   onRemove: (id: string) => void;
   disabled?: boolean;
 }) {
+  const normalizeSort = (rows: PackageAddOnDraft[]) =>
+    rows.map((r, idx) => ({
+      ...r,
+      sort_order: idx,
+    }));
+
   const addRow = () => {
-    onChange([
-      ...value,
-      {
-        add_on_key: "",
-        label: "",
-        price_per_unit: 0,
-        unit_step: 1,
-        unit: "unit",
-        is_active: true,
-      },
-    ]);
+    onChange(
+      normalizeSort([
+        ...value,
+        {
+          add_on_key: "",
+          label: "",
+          price_per_unit: 0,
+          unit_step: 1,
+          unit: "unit",
+          is_active: true,
+          sort_order: value.length,
+        },
+      ])
+    );
   };
 
   const update = (index: number, patch: Partial<PackageAddOnDraft>) => {
-    onChange(value.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    onChange(normalizeSort(value.map((row, i) => (i === index ? { ...row, ...patch } : row))));
   };
 
   const remove = (index: number) => {
     const row = value[index];
     if (row?.id) onRemove(row.id);
-    onChange(value.filter((_, i) => i !== index));
+    onChange(normalizeSort(value.filter((_, i) => i !== index)));
+  };
+
+  const move = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= value.length) return;
+    const next = [...value];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    onChange(normalizeSort(next));
   };
 
   return (
@@ -79,10 +97,35 @@ export default function PackageAddOnsEditor({
                     />
                   </div>
 
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(idx)} disabled={disabled}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Remove</span>
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => move(idx, idx - 1)}
+                      disabled={disabled || idx === 0}
+                      title="Move up"
+                      aria-label="Move up"
+                    >
+                      <span className="text-sm font-semibold">↑</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => move(idx, idx + 1)}
+                      disabled={disabled || idx === value.length - 1}
+                      title="Move down"
+                      aria-label="Move down"
+                    >
+                      <span className="text-sm font-semibold">↓</span>
+                    </Button>
+
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(idx)} disabled={disabled}>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
