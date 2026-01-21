@@ -36,6 +36,7 @@ export default function SelectPackage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [packages, setPackages] = useState<Package[]>([]);
+  const [growingDbPackages, setGrowingDbPackages] = useState<GrowingPackage[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
   const [totalPrice, setTotalPrice] = useState<number>(0);
@@ -50,8 +51,34 @@ export default function SelectPackage() {
 
     const fetchPackages = async () => {
       if (stage === 'growing') {
-        // Use frontend-defined growing packages
-        setIsLoading(false);
+        // Prefer DB-driven growing packages so Super Admin can manage them
+        try {
+          const { data, error } = await (supabase as any)
+            .from('packages')
+            .select('*')
+            .in('type', ['optimize', 'scale', 'dominate'])
+            .eq('is_active', true)
+            .order('price');
+
+          if (error) throw error;
+
+          const mapped: GrowingPackage[] = (data || []).map((pkg: any) => ({
+            id: pkg.id,
+            name: pkg.name,
+            type: pkg.type,
+            description: pkg.description,
+            price: pkg.price,
+            features: Array.isArray(pkg.features) ? pkg.features : JSON.parse((pkg.features as string) || '[]'),
+          }));
+
+          setGrowingDbPackages(mapped);
+        } catch (error) {
+          console.error('Error fetching growing packages:', error);
+          // Fallback to frontend-defined growing packages
+          setGrowingDbPackages([]);
+        } finally {
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -105,55 +132,57 @@ export default function SelectPackage() {
 
         if (packageError) throw packageError;
       } else {
-        // For growing business packages, find or create the package first
-        const selectedGrowingPkg = growingPackages.find(p => p.id === selectedPackage);
-        if (selectedGrowingPkg) {
-          // Check if package with this type already exists
-          const { data: existingPkg } = await supabase
-            .from('packages')
-            .select('id')
-            .eq('type', selectedGrowingPkg.type)
-            .eq('is_active', true)
-            .maybeSingle();
+        // Growing business packages
+        const selectedDbPkg = growingDbPackages.find((p) => p.id === selectedPackage);
 
-          let packageId = existingPkg?.id;
-
-          if (!packageId) {
-            // Create the package in the database
-            const { data: newPkg, error: createError } = await supabase
-              .from('packages')
-              .insert({
-                name: selectedGrowingPkg.name,
-                type: selectedGrowingPkg.type,
-                description: selectedGrowingPkg.description,
-                price: selectedGrowingPkg.price,
-                features: selectedGrowingPkg.features,
-                is_active: true,
-              })
-              .select('id')
-              .single();
-
-            if (createError) {
-              console.error('Error creating package:', createError);
-              throw createError;
-            }
-            packageId = newPkg?.id;
-          }
-
-          if (!packageId) {
-            throw new Error('Failed to get or create package');
-          }
-
-          // Now create the user_package entry
+        if (selectedDbPkg) {
+          // DB-driven: selectedPackage is already the package_id
           const { error: userPkgError } = await supabase.from('user_packages').insert({
             user_id: user.id,
-            package_id: packageId,
+            package_id: selectedPackage,
             status: 'active',
           });
+          if (userPkgError) throw userPkgError;
+        } else {
+          // Fallback (legacy): frontend-defined growing packages; ensure DB row exists
+          const selectedGrowingPkg = growingPackages.find((p) => p.id === selectedPackage);
+          if (selectedGrowingPkg) {
+            const { data: existingPkg } = await supabase
+              .from('packages')
+              .select('id')
+              .eq('type', selectedGrowingPkg.type)
+              .eq('is_active', true)
+              .maybeSingle();
 
-          if (userPkgError) {
-            console.error('Error creating user package:', userPkgError);
-            throw userPkgError;
+            let packageId = existingPkg?.id;
+
+            if (!packageId) {
+              const { data: newPkg, error: createError } = await (supabase as any)
+                .from('packages')
+                .insert({
+                  name: selectedGrowingPkg.name,
+                  type: selectedGrowingPkg.type,
+                  description: selectedGrowingPkg.description,
+                  price: selectedGrowingPkg.price,
+                  features: selectedGrowingPkg.features,
+                  is_active: true,
+                })
+                .select('id')
+                .single();
+
+              if (createError) throw createError;
+              packageId = newPkg?.id;
+            }
+
+            if (!packageId) throw new Error('Failed to get or create package');
+
+            const { error: userPkgError } = await supabase.from('user_packages').insert({
+              user_id: user.id,
+              package_id: packageId,
+              status: 'active',
+            });
+
+            if (userPkgError) throw userPkgError;
           }
         }
       }
@@ -179,9 +208,9 @@ export default function SelectPackage() {
       sessionStorage.removeItem('onboarding_city');
       sessionStorage.removeItem('onboarding_phoneNumber');
 
-      const packageName = businessStage === 'new' 
+      const packageName = businessStage === 'new'
         ? packages.find(p => p.id === selectedPackage)?.name
-        : growingPackages.find(p => p.id === selectedPackage)?.name;
+        : (growingDbPackages.find(p => p.id === selectedPackage)?.name || growingPackages.find(p => p.id === selectedPackage)?.name);
 
       toast({
         title: 'Welcome aboard!',
@@ -209,7 +238,8 @@ export default function SelectPackage() {
     );
   }
 
-  const displayPackages = businessStage === 'new' ? packages : growingPackages;
+  const displayPackages =
+    businessStage === 'new' ? packages : (growingDbPackages.length > 0 ? growingDbPackages : growingPackages);
   const getAddOns = (type: string) => {
     if (businessStage === 'new') {
       return newBusinessAddOns[type as keyof typeof newBusinessAddOns] || [];
