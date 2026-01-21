@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,6 +32,8 @@ type AccountRow = {
 type SortKey = "name" | "email" | "role" | "account_status";
 type SortDir = "asc" | "desc";
 
+type RoleFilter = "all" | "user" | "assistant" | "super_admin";
+
 export default function SuperAdminUsersAssists() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -38,6 +41,15 @@ export default function SuperAdminUsersAssists() {
 
   const [sortKey, setSortKey] = useState<SortKey>("role");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+
+  const normalizeRole = (role: string) => {
+    const r = String(role ?? "").toLowerCase().trim();
+    if (r === "assist") return "assistant";
+    if (r === "super admin") return "super_admin";
+    return r;
+  };
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -76,15 +88,20 @@ export default function SuperAdminUsersAssists() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
+    const base = rows.filter((r) => {
+      if (roleFilter === "all") return true;
+      return normalizeRole(r.role) === roleFilter;
+    });
+
+    if (!q) return base;
+    return base.filter(
       (r) =>
         r.name.toLowerCase().includes(q) ||
         r.email.toLowerCase().includes(q) ||
         r.role.toLowerCase().includes(q) ||
         r.account_status.toLowerCase().includes(q)
     );
-  }, [query, rows]);
+  }, [query, roleFilter, rows]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
@@ -125,8 +142,24 @@ export default function SuperAdminUsersAssists() {
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Accounts</CardTitle>
-          <div className="w-full sm:w-80">
-            <Input placeholder="Search name, email, role..." value={query} onChange={(e) => setQuery(e.target.value)} />
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="w-full sm:w-56">
+              <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as RoleFilter)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter role" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
+                  <SelectItem value="all">All roles</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="assistant">Assist</SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-full sm:w-80">
+              <Input placeholder="Search name, email, role..." value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
