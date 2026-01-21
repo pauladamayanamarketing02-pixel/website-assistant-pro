@@ -33,6 +33,33 @@ export default function BusinessBasics() {
     if (storedBusinessId) {
       setBusinessId(storedBusinessId);
     }
+
+    // Prefill from previous step (when user clicks Back)
+    const businessName = sessionStorage.getItem('onboarding_businessName') ?? '';
+    const businessType = sessionStorage.getItem('onboarding_businessType') ?? '';
+    const country = sessionStorage.getItem('onboarding_country') ?? '';
+    const city = sessionStorage.getItem('onboarding_city') ?? '';
+    const phoneStored = sessionStorage.getItem('onboarding_phoneNumber') ?? '';
+
+    let phoneCode = '';
+    let phoneNumber = '';
+    const m = phoneStored.match(/^(\+\d+)\s*(.*)$/);
+    if (m) {
+      phoneCode = m[1] ?? '';
+      phoneNumber = (m[2] ?? '').trim();
+    } else {
+      phoneNumber = phoneStored;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      businessName,
+      businessType,
+      country,
+      city,
+      phoneCode: phoneCode || prev.phoneCode,
+      phoneNumber,
+    }));
   }, []);
 
   useEffect(() => {
