@@ -735,6 +735,53 @@ export type Database = {
         }
         Relationships: []
       }
+      package_add_ons: {
+        Row: {
+          add_on_key: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          package_id: string
+          price_per_unit: number
+          unit: string
+          unit_step: number
+          updated_at: string
+        }
+        Insert: {
+          add_on_key: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          package_id: string
+          price_per_unit?: number
+          unit?: string
+          unit_step?: number
+          updated_at?: string
+        }
+        Update: {
+          add_on_key?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          package_id?: string
+          price_per_unit?: number
+          unit?: string
+          unit_step?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_add_ons_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_menu_rules: {
         Row: {
           created_at: string

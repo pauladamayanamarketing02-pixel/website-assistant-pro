@@ -50,8 +50,7 @@ export default function SuperAdminPackages() {
 
       if (error) throw error;
 
-      setPackages(
-        ((data as any[]) || []).map((p) => ({
+      const mapped = ((data as any[]) || []).map((p) => ({
           id: String(p.id),
           name: String(p.name ?? ""),
           type: String(p.type ?? ""),
@@ -60,8 +59,26 @@ export default function SuperAdminPackages() {
           features: normalizeFeatures(p.features),
           is_active: Boolean(p.is_active),
           created_at: p.created_at,
-        }))
-      );
+        }));
+
+      const ORDER = ["starter", "growth", "pro", "optimize", "scale", "dominate"];
+      const rank = (pkgType: string) => {
+        const i = ORDER.indexOf(String(pkgType ?? "").toLowerCase().trim());
+        return i === -1 ? 999 : i;
+      };
+
+      mapped.sort((a, b) => {
+        const ra = rank(a.type);
+        const rb = rank(b.type);
+        if (ra !== rb) return ra - rb;
+        const an = a.name.toLowerCase();
+        const bn = b.name.toLowerCase();
+        if (an < bn) return -1;
+        if (an > bn) return 1;
+        return 0;
+      });
+
+      setPackages(mapped);
     } catch (err) {
       console.error("Error fetching packages:", err);
       toast.error("Gagal memuat packages");

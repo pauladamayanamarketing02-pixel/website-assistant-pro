@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import PackageCard from '@/components/onboarding/PackageCard';
 import { growingPackages, growingPackageAddOns, type GrowingPackage } from '@/data/growingPackages';
 
+type DbAddOn = { id: string; label: string; pricePerUnit: number; unitStep: number; unit: string };
+
 interface Package {
   id: string;
   name: string;
@@ -43,6 +45,7 @@ export default function SelectPackage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [businessStage, setBusinessStage] = useState<'new' | 'growing'>('new');
+  const [dbAddOnsByPackageId, setDbAddOnsByPackageId] = useState<Record<string, DbAddOn[]>>({});
 
   useEffect(() => {
     // Get the business stage from session storage
@@ -71,7 +74,31 @@ export default function SelectPackage() {
             features: Array.isArray(pkg.features) ? pkg.features : JSON.parse((pkg.features as string) || '[]'),
           }));
 
-          setGrowingDbPackages(mapped);
+           setGrowingDbPackages(mapped);
+
+           // Load DB add-ons for growing packages
+           const pkgIds = mapped.map((p) => String(p.id)).filter(Boolean);
+           if (pkgIds.length > 0) {
+             const { data: addOnRows } = await (supabase as any)
+               .from('package_add_ons')
+               .select('package_id,add_on_key,label,price_per_unit,unit_step,unit')
+               .in('package_id', pkgIds)
+               .eq('is_active', true);
+
+             const grouped: Record<string, DbAddOn[]> = {};
+             ((addOnRows as any[]) || []).forEach((r) => {
+               const pid = String(r.package_id);
+               if (!grouped[pid]) grouped[pid] = [];
+               grouped[pid].push({
+                 id: String(r.add_on_key),
+                 label: String(r.label),
+                 pricePerUnit: Number(r.price_per_unit ?? 0),
+                 unitStep: Number(r.unit_step ?? 1),
+                 unit: String(r.unit ?? 'unit'),
+               });
+             });
+             setDbAddOnsByPackageId(grouped);
+           }
         } catch (error) {
           console.error('Error fetching growing packages:', error);
           // Fallback to frontend-defined growing packages
@@ -92,15 +119,39 @@ export default function SelectPackage() {
 
         if (error) throw error;
 
-        if (data) {
-          setPackages(
-            data.map((pkg) => ({
-              ...pkg,
-              type: pkg.type as 'starter' | 'growth' | 'pro',
-              features: Array.isArray(pkg.features) ? pkg.features as string[] : JSON.parse(pkg.features as string || '[]'),
-            }))
-          );
-        }
+         if (data) {
+           const mapped = data.map((pkg) => ({
+             ...pkg,
+             type: pkg.type as 'starter' | 'growth' | 'pro',
+             features: Array.isArray(pkg.features) ? (pkg.features as string[]) : JSON.parse((pkg.features as string) || '[]'),
+           }));
+
+           setPackages(mapped);
+
+           // Load DB add-ons for new business packages
+           const pkgIds = mapped.map((p) => String((p as any).id)).filter(Boolean);
+           if (pkgIds.length > 0) {
+             const { data: addOnRows } = await (supabase as any)
+               .from('package_add_ons')
+               .select('package_id,add_on_key,label,price_per_unit,unit_step,unit')
+               .in('package_id', pkgIds)
+               .eq('is_active', true);
+
+             const grouped: Record<string, DbAddOn[]> = {};
+             ((addOnRows as any[]) || []).forEach((r) => {
+               const pid = String(r.package_id);
+               if (!grouped[pid]) grouped[pid] = [];
+               grouped[pid].push({
+                 id: String(r.add_on_key),
+                 label: String(r.label),
+                 pricePerUnit: Number(r.price_per_unit ?? 0),
+                 unitStep: Number(r.unit_step ?? 1),
+                 unit: String(r.unit ?? 'unit'),
+               });
+             });
+             setDbAddOnsByPackageId(grouped);
+           }
+         }
       } catch (error) {
         console.error('Error fetching packages:', error);
       } finally {
@@ -240,11 +291,16 @@ export default function SelectPackage() {
 
   const displayPackages =
     businessStage === 'new' ? packages : (growingDbPackages.length > 0 ? growingDbPackages : growingPackages);
-  const getAddOns = (type: string) => {
+  const getAddOns = (pkg: any) => {
+    const pkgId = String(pkg?.id ?? '');
+    const fromDb = pkgId && dbAddOnsByPackageId[pkgId];
+    if (fromDb && fromDb.length > 0) return fromDb;
+
+    // Fallback to existing hardcoded config
     if (businessStage === 'new') {
-      return newBusinessAddOns[type as keyof typeof newBusinessAddOns] || [];
+      return newBusinessAddOns[String(pkg?.type) as keyof typeof newBusinessAddOns] || [];
     }
-    return growingPackageAddOns[type as keyof typeof growingPackageAddOns] || [];
+    return growingPackageAddOns[String(pkg?.type) as keyof typeof growingPackageAddOns] || [];
   };
 
   return (
@@ -286,7 +342,7 @@ export default function SelectPackage() {
               description={pkg.description}
               basePrice={pkg.price}
               features={pkg.features}
-              addOns={getAddOns(pkg.type)}
+              addOns={getAddOns(pkg)}
               isPopular={businessStage === 'new' ? pkg.type === 'growth' : pkg.type === 'scale'}
               isSelected={selectedPackage === pkg.id}
               onSelect={(price, addOns) => handlePackageSelect(pkg.id, price, addOns)}
