@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +35,6 @@ type RoleFilter = "all" | "user" | "assistant" | "super_admin";
 
 export default function SuperAdminUsersAssists() {
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [rows, setRows] = useState<AccountRow[]>([]);
 
   const [sortKey, setSortKey] = useState<SortKey>("role");
@@ -87,21 +85,11 @@ export default function SuperAdminUsersAssists() {
   }, []);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base = rows.filter((r) => {
+    return rows.filter((r) => {
       if (roleFilter === "all") return true;
       return normalizeRole(r.role) === roleFilter;
     });
-
-    if (!q) return base;
-    return base.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        r.role.toLowerCase().includes(q) ||
-        r.account_status.toLowerCase().includes(q)
-    );
-  }, [query, roleFilter, rows]);
+  }, [roleFilter, rows]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
@@ -155,10 +143,6 @@ export default function SuperAdminUsersAssists() {
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="w-full sm:w-80">
-              <Input placeholder="Search name, email, role..." value={query} onChange={(e) => setQuery(e.target.value)} />
             </div>
           </div>
         </CardHeader>
