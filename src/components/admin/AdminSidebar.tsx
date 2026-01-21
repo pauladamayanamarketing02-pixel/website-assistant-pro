@@ -60,7 +60,7 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
           </div>
           {open && (
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-sidebar-foreground truncate">Admin Operasional</div>
+              <div className="text-sm font-semibold text-sidebar-foreground truncate">Admin Operations</div>
               <div className="text-xs text-sidebar-foreground/70 truncate">Control Center</div>
             </div>
           )}

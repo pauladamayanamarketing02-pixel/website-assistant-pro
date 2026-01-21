@@ -45,17 +45,17 @@ export default function AdminPlaceholder({ title }: { title: string }) {
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Halaman ini masih placeholder. Kita akan isi sesuai SOP Admin Operasional.
+          This page is still a placeholder. Will be filled according to admin operations SOP.
         </p>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Yang akan ada di menu ini</CardTitle>
+          <CardTitle className="text-base">Features planned for this menu</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {items.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Roadmap belum ditentukan untuk halaman ini.</div>
+            <div className="text-sm text-muted-foreground">Roadmap not yet defined for this page.</div>
           ) : (
             <ul className="space-y-2">
               {items.map((x) => (

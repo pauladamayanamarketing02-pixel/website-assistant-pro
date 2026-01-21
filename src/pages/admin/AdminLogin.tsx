@@ -11,8 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const schema = z.object({
-  email: z.string().trim().email("Email tidak valid"),
-  password: z.string().min(6, "Password minimal 6 karakter"),
+  email: z.string().trim().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export default function AdminLogin() {
@@ -74,7 +74,7 @@ export default function AdminLogin() {
       });
       if (error) throw error;
 
-      if (!data.user) throw new Error("Gagal login. Silakan coba lagi.");
+      if (!data.user) throw new Error("Login failed. Please try again.");
 
       const { data: roleData, error: roleErr } = await supabase
         .from("user_roles")
@@ -86,16 +86,16 @@ export default function AdminLogin() {
 
       if (roleData?.role !== ("admin" as any)) {
         await supabase.auth.signOut();
-        throw new Error("Akun ini tidak memiliki akses Admin Operasional.");
+        throw new Error("This account does not have Admin Operations access.");
       }
 
-      toast({ title: "Berhasil login", description: "Mengalihkan ke Admin Dashboard..." });
+      toast({ title: "Login successful", description: "Redirecting to Admin Dashboard..." });
       navigate("/dashboard/admin", { replace: true });
     } catch (err) {
       toast({
         variant: "destructive",
-        title: "Login gagal",
-        description: err instanceof Error ? err.message : "Terjadi kesalahan.",
+        title: "Login failed",
+        description: err instanceof Error ? err.message : "An error occurred.",
       });
     } finally {
       setIsSubmitting(false);
@@ -105,7 +105,7 @@ export default function AdminLogin() {
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">Checking...</div>
       </div>
     );
   }
@@ -117,7 +117,7 @@ export default function AdminLogin() {
         className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Kembali
+        Back
       </Link>
 
       <div className="w-full max-w-md space-y-8 animate-fade-in">
@@ -126,17 +126,17 @@ export default function AdminLogin() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Users className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-foreground">Admin Operasional</span>
+            <span className="text-2xl font-bold text-foreground">Admin Operations</span>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Login untuk mengelola operasional harian.
+            Login to manage daily operations.
           </p>
         </div>
 
         <Card className="shadow-soft">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Login Admin</CardTitle>
-            <CardDescription>Masukkan email & password admin.</CardDescription>
+            <CardTitle className="text-2xl">Admin Login</CardTitle>
+            <CardDescription>Enter your admin email and password.</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -179,7 +179,7 @@ export default function AdminLogin() {
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Memproses..." : "Login Admin"}
+                {isSubmitting ? "Processing..." : "Admin Login"}
               </Button>
             </form>
           </CardContent>
