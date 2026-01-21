@@ -27,8 +27,34 @@ export function BusinessUserActions({ userId, email, onView }: Props) {
   const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [sendingEmailChange, setSendingEmailChange] = useState(false);
+  const [currentAuthEmail, setCurrentAuthEmail] = useState<string | null>(null);
+  const [pendingAuthEmail, setPendingAuthEmail] = useState<string | null>(null);
+  const [loadingAuthEmail, setLoadingAuthEmail] = useState(false);
 
   const canTrigger = useMemo(() => Boolean(userId) && Boolean(email && email !== "—"), [email, userId]);
+
+  const openEmailDialog = async () => {
+    setEmailOpen(true);
+
+    if (!userId) return;
+    setLoadingAuthEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-account-actions", {
+        body: { action: "get_user_email", user_id: userId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error(String((data as any).error));
+
+      setCurrentAuthEmail((data as any)?.email ?? null);
+      setPendingAuthEmail((data as any)?.pending_email ?? null);
+    } catch {
+      // Fallback to the email we already have from app tables.
+      setCurrentAuthEmail(null);
+      setPendingAuthEmail(null);
+    } finally {
+      setLoadingAuthEmail(false);
+    }
+  };
 
   const onResetPassword = async () => {
     if (!email || email === "—") return;
@@ -107,7 +133,7 @@ export function BusinessUserActions({ userId, email, onView }: Props) {
           size="icon"
           className="h-8 w-8"
           title="Reset Email"
-          onClick={() => setEmailOpen(true)}
+          onClick={openEmailDialog}
           disabled={!canTrigger || sendingReset || sendingEmailChange}
         >
           <Mail className="h-4 w-4" />
@@ -145,7 +171,12 @@ export function BusinessUserActions({ userId, email, onView }: Props) {
               onChange={(e) => setNewEmail(e.target.value)}
               disabled={sendingEmailChange}
             />
-            <p className="text-xs text-muted-foreground">Email sekarang: {email}</p>
+            <p className="text-xs text-muted-foreground">
+              Email sekarang: {loadingAuthEmail ? "Memuat..." : currentAuthEmail ?? email}
+              {pendingAuthEmail ? (
+                <span className="block">Pending email baru: {pendingAuthEmail}</span>
+              ) : null}
+            </p>
           </div>
 
           <DialogFooter>

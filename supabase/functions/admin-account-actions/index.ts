@@ -17,6 +17,10 @@ type Payload =
       email: string;
     }
   | {
+      action: "get_user_email";
+      user_id: string;
+    }
+  | {
       action: "change_email";
       user_id: string;
       new_email: string;
@@ -88,6 +92,23 @@ Deno.serve(async (req) => {
       if (error) throw error;
 
       return json(200, { ok: true, user_id: data.user?.id, email: data.user?.email });
+    }
+
+    if (body.action === "get_user_email") {
+      const userId = String(body.user_id ?? "").trim();
+      if (!userId) return json(400, { error: "user_id is required" });
+
+      const { data, error } = await admin.auth.admin.getUserById(userId);
+      if (error) throw error;
+
+      // Supabase keeps the old email in `email` until the new email is confirmed.
+      // When a change is pending, `email_change` can contain the new email.
+      return json(200, {
+        ok: true,
+        user_id: data.user?.id,
+        email: data.user?.email ?? null,
+        pending_email: (data.user as any)?.email_change ?? null,
+      });
     }
 
     return json(400, { error: "Invalid action" });
