@@ -1,0 +1,188 @@
+import { useEffect, useMemo, useState } from "react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+type PackageRow = {
+  id: string;
+  name: string;
+  type: string;
+  is_active: boolean;
+};
+
+type MenuKey = "ai_agents" | "messages" | "content_planner" | "reporting";
+
+const MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
+  { key: "content_planner", label: "Content Planner", description: "Show/hide Content Planner in User Dashboard." },
+  { key: "ai_agents", label: "AI Agents", description: "Show/hide AI Agents in User Dashboard." },
+  { key: "messages", label: "Messages", description: "Show/hide Messages in User Dashboard." },
+  { key: "reporting", label: "Reporting & Visibility", description: "Show/hide Reporting & Visibility in User Dashboard." },
+];
+
+type RuleRow = {
+  menu_key: string;
+  is_enabled: boolean;
+};
+
+export default function SuperAdminAccessControl() {
+  const [loading, setLoading] = useState(true);
+  const [packages, setPackages] = useState<PackageRow[]>([]);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>("");
+  const [ruleByKey, setRuleByKey] = useState<Record<MenuKey, boolean>>({
+    ai_agents: true,
+    messages: true,
+    content_planner: true,
+    reporting: true,
+  });
+
+  const selectedPackage = useMemo(
+    () => packages.find((p) => String(p.id) === String(selectedPackageId)),
+    [packages, selectedPackageId]
+  );
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("packages")
+          .select("id,name,type,is_active")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        const list = (data ?? []).map((p: any) => ({
+          id: String(p.id),
+          name: String(p.name ?? ""),
+          type: String(p.type ?? ""),
+          is_active: Boolean(p.is_active ?? true),
+        })) as PackageRow[];
+        setPackages(list);
+        if (!selectedPackageId && list[0]?.id) setSelectedPackageId(list[0].id);
+      } catch (e) {
+        console.error(e);
+        toast.error("Failed to load packages");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPackageId) return;
+
+    const loadRules = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("package_menu_rules")
+          .select("menu_key,is_enabled")
+          .eq("package_id", selectedPackageId);
+        if (error) throw error;
+
+        const next: Record<MenuKey, boolean> = {
+          ai_agents: true,
+          messages: true,
+          content_planner: true,
+          reporting: true,
+        };
+
+        (data as RuleRow[] | null)?.forEach((r) => {
+          const k = String(r.menu_key) as MenuKey;
+          if (k in next) next[k] = Boolean(r.is_enabled);
+        });
+        setRuleByKey(next);
+      } catch (e) {
+        console.error(e);
+        toast.error("Failed to load access rules");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRules();
+  }, [selectedPackageId]);
+
+  const setRule = async (menuKey: MenuKey, enabled: boolean) => {
+    if (!selectedPackageId) return;
+    setRuleByKey((prev) => ({ ...prev, [menuKey]: enabled }));
+
+    const { error } = await supabase
+      .from("package_menu_rules")
+      .upsert(
+        {
+          package_id: selectedPackageId,
+          menu_key: menuKey,
+          is_enabled: enabled,
+        } as any,
+        { onConflict: "package_id,menu_key" }
+      );
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to save rule");
+      setRuleByKey((prev) => ({ ...prev, [menuKey]: !enabled }));
+      return;
+    }
+
+    toast.success("Rule saved");
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Access Control</h1>
+        <p className="text-muted-foreground">Control User Dashboard menus based on the user's package.</p>
+      </div>
+
+      <Card>
+        <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Package</CardTitle>
+          <div className="w-full sm:w-80">
+            <Select value={selectedPackageId} onValueChange={setSelectedPackageId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a package" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                {packages.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name} {p.type ? `(${p.type})` : ""} {p.is_active ? "" : "• inactive"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loading ? (
+            <p className="text-muted-foreground text-sm">Loading...</p>
+          ) : !selectedPackage ? (
+            <p className="text-muted-foreground text-sm">Select a package to configure.</p>
+          ) : (
+            <div className="space-y-3">
+              {MENU_ITEMS.map((item) => (
+                <div
+                  key={item.key}
+                  className="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground">{item.label}</div>
+                    <div className="text-xs text-muted-foreground">{item.description}</div>
+                  </div>
+
+                  <Switch
+                    checked={Boolean(ruleByKey[item.key])}
+                    onCheckedChange={(v) => setRule(item.key, Boolean(v))}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

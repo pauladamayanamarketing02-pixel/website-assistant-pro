@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { UserSidebar, type UserNavItem } from '@/components/user/UserSidebar';
+import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
 
 import DashboardOverview from './user/Overview';
 import MyBusiness from './user/MyBusiness';
@@ -48,6 +49,23 @@ export default function UserDashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
+
+  const visibleMenuItems = useMemo(() => {
+    const urlToKey: Record<string, any> = {
+      '/dashboard/user/content-planner': 'content_planner',
+      '/dashboard/user/ai-agents': 'ai_agents',
+      '/dashboard/user/messages': 'messages',
+      '/dashboard/user/reporting': 'reporting',
+    };
+
+    return menuItems.filter((item) => {
+      const key = urlToKey[item.url];
+      if (!key) return true;
+      return isEnabled(key);
+    });
+  }, [isEnabled]);
 
   const welcomeName = useMemo(() => {
     if (!user) return '';
@@ -100,7 +118,7 @@ export default function UserDashboard() {
   return (
     <SidebarProvider>
       <div className="h-screen flex w-full overflow-hidden">
-        <UserSidebar items={menuItems} onLogout={signOut} />
+        <UserSidebar items={loadingMenuRules ? menuItems : visibleMenuItems} onLogout={signOut} />
 
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
