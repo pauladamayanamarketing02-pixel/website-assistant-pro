@@ -70,9 +70,9 @@ export default function AdminOverview() {
       <header className="space-y-2">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard Operasional</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Admin Operations Dashboard</h1>
             <p className="text-sm text-muted-foreground">
-              Fokus aksi cepat untuk kondisi harian (data real-time menyusul).
+              Quick actions overview (real-time data coming soon).
             </p>
           </div>
 
@@ -80,31 +80,31 @@ export default function AdminOverview() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">Operasional</Badge>
+          <Badge variant="secondary">Operations</Badge>
           <Badge variant="outline">Admin</Badge>
-          <Badge variant="outline">Aksi cepat</Badge>
+          <Badge variant="outline">Quick actions</Badge>
         </div>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="User aktif hari ini" value="—" hint="Login terakhir 24 jam" icon={Users} />
-        <StatCard title="Assist aktif" value="—" hint="Aktif hari ini" icon={ShieldCheck} />
-        <StatCard title="Task berjalan" value="—" hint="Assigned / In Progress" icon={CheckSquare} />
-        <StatCard title="Task terlambat" value="—" hint="Melewati deadline" icon={Timer} tone="warn" />
+        <StatCard title="Active users today" value="—" hint="Logged in last 24h" icon={Users} />
+        <StatCard title="Active assists" value="—" hint="Active today" icon={ShieldCheck} />
+        <StatCard title="Tasks in progress" value="—" hint="Assigned / In Progress" icon={CheckSquare} />
+        <StatCard title="Overdue tasks" value="—" hint="Past deadline" icon={Timer} tone="warn" />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-12">
         {/* Left column */}
         <Card className="lg:col-span-5">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Prioritas Hari Ini</CardTitle>
+            <CardTitle className="text-base">Today's Priorities</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <div className="text-sm font-medium text-foreground">Review laporan pending</div>
-                  <div className="text-xs text-muted-foreground">Approve / reject agar bisa dikirim ke user.</div>
+                  <div className="text-sm font-medium text-foreground">Review pending reports</div>
+                  <div className="text-xs text-muted-foreground">Approve/reject so they can be sent to users.</div>
                 </div>
                 <Badge variant="outline">High</Badge>
               </div>
@@ -112,8 +112,8 @@ export default function AdminOverview() {
 
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <div className="text-sm font-medium text-foreground">Pantau task melewati deadline</div>
-                  <div className="text-xs text-muted-foreground">Reassign / set ulang SLA jika perlu.</div>
+                  <div className="text-sm font-medium text-foreground">Monitor overdue tasks</div>
+                  <div className="text-xs text-muted-foreground">Reassign or reset SLA if needed.</div>
                 </div>
                 <Badge variant="outline">High</Badge>
               </div>
@@ -121,8 +121,8 @@ export default function AdminOverview() {
 
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <div className="text-sm font-medium text-foreground">Tindak lanjut komplain</div>
-                  <div className="text-xs text-muted-foreground">Cek percakapan user ↔ assist & buat tiket.</div>
+                  <div className="text-sm font-medium text-foreground">Follow up on complaints</div>
+                  <div className="text-xs text-muted-foreground">Review user ↔ assist conversation & create tickets.</div>
                 </div>
                 <Badge variant="secondary">Normal</Badge>
               </div>
@@ -132,13 +132,13 @@ export default function AdminOverview() {
               <Button asChild variant="default" className="justify-start" disabled>
                 <Link to="/dashboard/admin/tasks">
                   <CheckSquare className="mr-2 h-4 w-4" />
-                  Buka Tasks
+                  Open Tasks
                 </Link>
               </Button>
               <Button asChild variant="outline" className="justify-start" disabled>
                 <Link to="/dashboard/admin/assists">
                   <ShieldCheck className="mr-2 h-4 w-4" />
-                  Buka Assists
+                  Open Assists
                 </Link>
               </Button>
               <Button asChild variant="outline" className="justify-start" disabled>
@@ -156,7 +156,7 @@ export default function AdminOverview() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Tombol di atas akan aktif setelah modul-modul Admin diimplementasikan.
+              Buttons above will be active once the admin modules are implemented.
             </p>
           </CardContent>
         </Card>
@@ -166,28 +166,28 @@ export default function AdminOverview() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Laporan Pending Approval</CardTitle>
+                <CardTitle className="text-base">Reports Pending Approval</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-                  Belum ada data.
+                  No data yet.
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Nantinya tampil 5 laporan terbaru: nama user, assist, status, dan aksi.
+                  Will show the 5 latest reports: user name, assist, status, and actions.
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Komplain / Tiket Support</CardTitle>
+                <CardTitle className="text-base">Complaints / Support Tickets</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-                  Belum ada data.
+                  No data yet.
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Nantinya tampil tiket aktif + prioritas + SLA breach alert.
+                  Will show active tickets + priority + SLA breach alerts.
                 </div>
               </CardContent>
             </Card>
@@ -195,7 +195,7 @@ export default function AdminOverview() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Ringkasan Operasional</CardTitle>
+              <CardTitle className="text-base">Operations Summary</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-3">
               <div className="rounded-lg border bg-card p-3">
@@ -203,21 +203,21 @@ export default function AdminOverview() {
                   <CalendarClock className="h-4 w-4 text-muted-foreground" />
                   SLA Monitor
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Deadline & reminder otomatis (soon).</p>
+                <p className="mt-1 text-xs text-muted-foreground">Automatic deadline & reminder (soon).</p>
               </div>
               <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                   Activity Logs
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Audit aktivitas (read-only) (soon).</p>
+                <p className="mt-1 text-xs text-muted-foreground">Activity audit (read-only) (soon).</p>
               </div>
               <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   Announcement
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Broadcast info ke user/assist (soon).</p>
+                <p className="mt-1 text-xs text-muted-foreground">Broadcast info to users/assists (soon).</p>
               </div>
             </CardContent>
           </Card>

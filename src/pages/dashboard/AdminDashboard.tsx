@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Newspaper,
   Phone,
+  Package,
   ShieldCheck,
   TrendingUp,
   User,
@@ -38,6 +39,7 @@ import AdminWebsiteMedia from "./admin/WebsiteMedia";
 import AdminWebsiteContact from "./admin/WebsiteContact";
 import AdminWebsiteServices from "./admin/WebsiteServices";
 import AdminWebsiteFaqs from "./admin/WebsiteFaqs";
+import AdminWebsitePackages from "./admin/WebsitePackages";
 import AdminWebsiteLayout from "./admin/WebsiteLayout";
 import AdminWebsiteHomepage from "./admin/WebsiteHomepage";
 import AdminBusinessUsers from "./admin/BusinessUsers";
@@ -83,6 +85,7 @@ export default function AdminDashboard() {
             { title: "Contact", url: "/dashboard/admin/website/contact", icon: Phone },
             { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
             { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
+            { title: "Packages", url: "/dashboard/admin/website/packages", icon: Package },
             { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
             { title: "Support", url: "/dashboard/admin/website/support", icon: MessageSquare },
           ],
@@ -187,6 +190,7 @@ export default function AdminDashboard() {
               <Route path="website/contact" element={<AdminWebsiteContact />} />
               <Route path="website/services" element={<AdminWebsiteServices />} />
               <Route path="website/services/faqs" element={<AdminWebsiteFaqs />} />
+              <Route path="website/packages" element={<AdminWebsitePackages />} />
               <Route path="website/layout" element={<AdminWebsiteLayout />} />
               <Route path="website/support" element={<AdminSupport />} />
 
