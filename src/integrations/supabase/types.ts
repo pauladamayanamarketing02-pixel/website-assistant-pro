@@ -586,6 +586,36 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_secrets: {
+        Row: {
+          ciphertext: string
+          created_at: string
+          id: string
+          iv: string
+          name: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          ciphertext: string
+          created_at?: string
+          id?: string
+          iv: string
+          name: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          ciphertext?: string
+          created_at?: string
+          id?: string
+          iv?: string
+          name?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
