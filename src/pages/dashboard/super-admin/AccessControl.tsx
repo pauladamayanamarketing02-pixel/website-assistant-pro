@@ -50,7 +50,7 @@ export default function SuperAdminAccessControl() {
         const { data, error } = await supabase
           .from("packages")
           .select("id,name,type,is_active")
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: true });
         if (error) throw error;
         const list = (data ?? []).map((p: any) => ({
           id: String(p.id),
@@ -58,6 +58,24 @@ export default function SuperAdminAccessControl() {
           type: String(p.type ?? ""),
           is_active: Boolean(p.is_active ?? true),
         })) as PackageRow[];
+
+        const ORDER = ["starter", "growth", "pro", "optimize", "scale", "dominate"];
+        const rank = (pkgType: string) => {
+          const i = ORDER.indexOf(String(pkgType ?? "").toLowerCase().trim());
+          return i === -1 ? 999 : i;
+        };
+
+        list.sort((a, b) => {
+          const ra = rank(a.type);
+          const rb = rank(b.type);
+          if (ra !== rb) return ra - rb;
+          const an = a.name.toLowerCase();
+          const bn = b.name.toLowerCase();
+          if (an < bn) return -1;
+          if (an > bn) return 1;
+          return 0;
+        });
+
         setPackages(list);
         if (!selectedPackageId && list[0]?.id) setSelectedPackageId(list[0].id);
       } catch (e) {
