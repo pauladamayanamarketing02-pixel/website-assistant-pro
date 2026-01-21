@@ -16,6 +16,7 @@ type Payload = {
 const roleToRedirectPath = (role: string) => {
   const r = String(role ?? "").toLowerCase().trim();
   if (r === "assist" || r === "assistant") return "/dashboard/assist";
+  if (r === "admin") return "/dashboard/admin";
   if (r === "super_admin" || r === "super admin") return "/dashboard/super-admin";
   return "/dashboard/user";
 };
