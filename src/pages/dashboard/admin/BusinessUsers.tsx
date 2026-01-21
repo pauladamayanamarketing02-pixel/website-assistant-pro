@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Ban, CheckCircle2, Eye, Plus, Trash2, UserX } from "lucide-react";
+import { Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -178,13 +178,8 @@ export default function AdminBusinessUsers() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Business List</h1>
-          <p className="text-sm text-muted-foreground">Manage business accounts, contacts, and account status.</p>
+          <p className="text-sm text-muted-foreground">Read-only view of business accounts.</p>
         </div>
-
-        <Button type="button" onClick={() => navigate("/dashboard/admin/business-users/new")}>
-          <Plus className="h-4 w-4" />
-          Add New Business
-        </Button>
       </header>
 
       <Card>
@@ -246,7 +241,7 @@ export default function AdminBusinessUsers() {
                     <TableHead className="min-w-[120px] lg:min-w-0">Contact</TableHead>
                     <TableHead className="min-w-[180px] lg:min-w-0">Email</TableHead>
                     <TableHead className="min-w-[100px] lg:min-w-0">Status</TableHead>
-                    <TableHead className="text-center min-w-[220px] lg:min-w-0">Action</TableHead>
+                    <TableHead className="text-center min-w-[120px] lg:min-w-0">View</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -268,53 +263,15 @@ export default function AdminBusinessUsers() {
                           <Badge variant="secondary">{statusLabel[row.status]}</Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title="Set Active"
-                              onClick={() => {}}
-                            >
-                              <CheckCircle2 className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title="Set Inactive"
-                              onClick={() => {}}
-                            >
-                              <UserX className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title="Blacklist"
-                              onClick={() => {}}
-                            >
-                              <Ban className="h-4 w-4 text-destructive" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title="Delete"
-                              onClick={() => {}}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              title="View"
-                              onClick={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="View"
+                            onClick={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
