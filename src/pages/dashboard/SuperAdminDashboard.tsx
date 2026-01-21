@@ -26,6 +26,7 @@ import SuperAdminOverview from "./super-admin/Overview";
 import SuperAdminPlaceholder from "./super-admin/Placeholder";
 import SuperAdminPackages from "./super-admin/Packages";
 import SuperAdminPackageEdit from "./super-admin/PackageEdit";
+import SuperAdminUsersAssists from "./super-admin/UsersAssists";
 
 function LoadingScreen() {
   return (
@@ -130,7 +131,7 @@ export default function SuperAdminDashboard() {
               />
               <Route
                 path="users-assists"
-                element={<SuperAdminPlaceholder title="Users & Assists" />}
+                element={<SuperAdminUsersAssists />}
               />
               <Route path="packages" element={<SuperAdminPackages />} />
               <Route path="packages/:id" element={<SuperAdminPackageEdit />} />

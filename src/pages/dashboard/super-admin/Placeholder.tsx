@@ -9,7 +9,7 @@ export default function SuperAdminPlaceholder({ title }: { title: string }) {
           <CardTitle>Coming soon</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Halaman ini masih placeholder. Nanti kita isi sesuai spesifikasi menu Super Admin.
+          This page is still a placeholder. We'll build it based on the Super Admin specs.
         </CardContent>
       </Card>
     </div>

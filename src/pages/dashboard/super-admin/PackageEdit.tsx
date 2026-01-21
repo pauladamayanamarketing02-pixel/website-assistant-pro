@@ -125,14 +125,14 @@ export default function SuperAdminPackageEdit() {
               variant="ghost"
               size="icon"
               onClick={() => navigate("/dashboard/super-admin/packages")}
-              aria-label="Kembali"
-              title="Kembali"
+              aria-label="Back"
+              title="Back"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-3xl font-bold text-foreground">Edit Package</h1>
           </div>
-          <p className="text-muted-foreground">Perubahan di sini akan tampil di halaman onboarding.</p>
+          <p className="text-muted-foreground">Changes here will appear on the onboarding pages.</p>
         </div>
       </div>
 
@@ -142,7 +142,7 @@ export default function SuperAdminPackageEdit() {
         </CardHeader>
         <CardContent>
           {loading || !pkg ? (
-            <p className="text-muted-foreground">Memuat data...</p>
+            <p className="text-muted-foreground">Loading...</p>
           ) : (
             <div className="space-y-4">
               <div className="grid gap-2">
@@ -153,7 +153,7 @@ export default function SuperAdminPackageEdit() {
               <div className="grid gap-2">
                 <Label>Type</Label>
                 <Input value={pkg.type} disabled />
-                <p className="text-xs text-muted-foreground">Type dikunci karena dipakai sebagai identifier paket.</p>
+                <p className="text-xs text-muted-foreground">Type is locked because it is used as the package identifier.</p>
               </div>
 
               <div className="grid gap-2">
@@ -195,7 +195,7 @@ export default function SuperAdminPackageEdit() {
               <div className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
                   <div className="text-sm font-medium text-foreground">Active</div>
-                  <div className="text-xs text-muted-foreground">Paket non-aktif tidak tampil di onboarding.</div>
+                  <div className="text-xs text-muted-foreground">Inactive packages won't show up in onboarding.</div>
                 </div>
                 <Switch checked={pkg.is_active} onCheckedChange={(v) => setPkg({ ...pkg, is_active: v })} />
               </div>
@@ -211,7 +211,7 @@ export default function SuperAdminPackageEdit() {
                   onClick={() => navigate("/dashboard/super-admin/packages")}
                   disabled={saving}
                 >
-                  Batal
+                  Cancel
                 </Button>
               </div>
             </div>
