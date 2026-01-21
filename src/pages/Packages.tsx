@@ -85,7 +85,7 @@ export default function Packages() {
             <p className="text-center text-muted-foreground">No packages available.</p>
           ) : (
             <div className="mx-auto max-w-6xl">
-              <div className="grid gap-8 justify-items-center sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="flex flex-wrap justify-center gap-8">
                 {packages.map((pkg, i) => {
                   const features = Array.isArray(pkg.features) ? pkg.features : [];
                   return (
