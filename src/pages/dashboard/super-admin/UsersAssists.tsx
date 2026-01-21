@@ -28,10 +28,16 @@ type AccountRow = {
   account_status: string;
 };
 
+type SortKey = "name" | "email" | "role" | "account_status";
+type SortDir = "asc" | "desc";
+
 export default function SuperAdminUsersAssists() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<AccountRow[]>([]);
+
+  const [sortKey, setSortKey] = useState<SortKey>("role");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -80,6 +86,28 @@ export default function SuperAdminUsersAssists() {
     );
   }, [query, rows]);
 
+  const sorted = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const av = String(a[sortKey] ?? "").toLowerCase();
+      const bv = String(b[sortKey] ?? "").toLowerCase();
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [filtered, sortDir, sortKey]);
+
+  const toggleSort = (key: SortKey) => {
+    setSortKey((prevKey) => {
+      if (prevKey === key) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prevKey;
+      }
+      setSortDir("asc");
+      return key;
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -110,19 +138,28 @@ export default function SuperAdminUsersAssists() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("role")}
+                      className="inline-flex items-center gap-2 hover:underline"
+                    >
+                      Role
+                      {sortKey === "role" ? <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span> : null}
+                    </button>
+                  </TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 ? (
+                {sorted.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-muted-foreground">
                       No accounts found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((r) => (
+                  sorted.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>{r.email}</TableCell>
