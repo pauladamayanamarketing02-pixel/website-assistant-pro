@@ -131,32 +131,56 @@ export default function SuperAdminPackageEdit() {
       const { error } = await (supabase as any).from("packages").update(payload).eq("id", pkg.id);
       if (error) throw error;
 
-      // Save add-ons (upsert active/inactive rows) + delete removed ones
-      const toUpsert = addOns
-        .filter((a) => a.add_on_key.trim() && a.label.trim())
-        .map((a) => {
-          // IMPORTANT:
-          // Do not send `id: null/undefined` for new rows.
-          // The table has a default `gen_random_uuid()` but an explicit null violates NOT NULL.
-          const base = {
-            package_id: pkg.id,
-            add_on_key: a.add_on_key.trim(),
-            label: a.label.trim(),
-            price_per_unit: Number(a.price_per_unit ?? 0),
-            unit_step: Number(a.unit_step ?? 1),
-            unit: String(a.unit ?? "unit").trim() || "unit",
-            is_active: Boolean(a.is_active ?? true),
-          };
+      // Save add-ons + delete removed ones
+      // IMPORTANT:
+      // We cannot rely on upsert(payload-with-id, onConflict=package_id,add_on_key) when the user edits `add_on_key`.
+      // If `add_on_key` changes, PostgREST may try to INSERT with an existing `id` and trigger:
+      //   duplicate key value violates unique constraint "package_add_ons_pkey"
+      // So we:
+      // - UPDATE rows that already have an id (by id)
+      // - UPSERT/INSERT rows that are new (no id) (by unique key package_id+add_on_key)
+      const validAddOns = addOns.filter((a) => a.add_on_key.trim() && a.label.trim());
 
-          return a.id ? { id: a.id, ...base } : base;
-        });
+      const existingAddOns = validAddOns.filter((a) => Boolean(a.id));
+      const newAddOns = validAddOns.filter((a) => !a.id);
 
-      if (toUpsert.length > 0) {
+      if (existingAddOns.length > 0) {
+        const updateResults = await Promise.all(
+          existingAddOns.map((a) => {
+            const updatePayload = {
+              package_id: pkg.id,
+              add_on_key: a.add_on_key.trim(),
+              label: a.label.trim(),
+              price_per_unit: Number(a.price_per_unit ?? 0),
+              unit_step: Number(a.unit_step ?? 1),
+              unit: String(a.unit ?? "unit").trim() || "unit",
+              is_active: Boolean(a.is_active ?? true),
+            };
+
+            return (supabase as any).from("package_add_ons").update(updatePayload).eq("id", a.id);
+          })
+        );
+
+        const firstErr = updateResults.find((r) => r?.error)?.error;
+        if (firstErr) throw firstErr;
+      }
+
+      if (newAddOns.length > 0) {
+        const insertPayload = newAddOns.map((a) => ({
+          package_id: pkg.id,
+          add_on_key: a.add_on_key.trim(),
+          label: a.label.trim(),
+          price_per_unit: Number(a.price_per_unit ?? 0),
+          unit_step: Number(a.unit_step ?? 1),
+          unit: String(a.unit ?? "unit").trim() || "unit",
+          is_active: Boolean(a.is_active ?? true),
+        }));
+
         const { error: upsertErr } = await (supabase as any)
           .from("package_add_ons")
-           // Important: ensure missing columns use DB defaults (e.g. id = gen_random_uuid())
-           // Otherwise PostgREST may send missing fields as NULL and violate NOT NULL.
-           .upsert(toUpsert, { onConflict: "package_id,add_on_key", defaultToNull: false });
+          // Ensure missing columns use DB defaults (e.g. id = gen_random_uuid())
+          .upsert(insertPayload, { onConflict: "package_id,add_on_key", defaultToNull: false });
+
         if (upsertErr) throw upsertErr;
       }
 
