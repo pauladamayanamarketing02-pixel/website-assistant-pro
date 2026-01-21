@@ -119,6 +119,22 @@ export default function AssistDashboard() {
     if (!loading && user && role === 'assist') {
       (async () => {
         try {
+          // If opened via Super Admin magic-link, allow bypass orientation check (verified server-side).
+          const imp = new URLSearchParams(window.location.search).get('imp');
+          if (imp) {
+            try {
+              const { data, error } = await supabase.functions.invoke('super-admin-impersonation-verify', {
+                body: { token: imp },
+              });
+              if (!error && (data as any)?.allow === true) {
+                setOnboardingChecked(true);
+                return;
+              }
+            } catch {
+              // ignore and fall back
+            }
+          }
+
           const { data, error } = await (supabase as any)
             .from('profiles')
             .select('onboarding_completed')

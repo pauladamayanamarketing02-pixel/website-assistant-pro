@@ -20,6 +20,33 @@ const roleToRedirectPath = (role: string) => {
   return "/dashboard/user";
 };
 
+const textEncoder = new TextEncoder();
+
+function base64UrlEncode(bytes: Uint8Array) {
+  // base64url without padding
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function signImpersonationToken(secret: string, payload: Record<string, unknown>) {
+  const header = { alg: "HS256", typ: "JWT" };
+  const encHeader = base64UrlEncode(textEncoder.encode(JSON.stringify(header)));
+  const encPayload = base64UrlEncode(textEncoder.encode(JSON.stringify(payload)));
+  const signingInput = `${encHeader}.${encPayload}`;
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    textEncoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, textEncoder.encode(signingInput));
+  const encSig = base64UrlEncode(new Uint8Array(sig));
+  return `${signingInput}.${encSig}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -99,17 +126,30 @@ Deno.serve(async (req) => {
 
     const redirectTo = `${origin}${roleToRedirectPath(String((targetRole as any)?.role))}`;
 
+    // Add signed token so dashboards can bypass onboarding/orientation checks ONLY for this magic-link session.
+    // Token is verified server-side by edge function `super-admin-impersonation-verify`.
+    const signed = await signImpersonationToken(serviceRoleKey, {
+      sub: targetUserId,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 60 * 10, // 10 minutes
+      typ: "sa_impersonation",
+    });
+
+    const url = new URL(redirectTo);
+    url.searchParams.set("imp", signed);
+    const redirectToWithToken = url.toString();
+
     const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
       type: "magiclink",
       email,
-      options: { redirectTo },
+      options: { redirectTo: redirectToWithToken },
     });
 
     if (linkErr) throw linkErr;
     const action_link = (link as any)?.properties?.action_link as string | undefined;
     if (!action_link) throw new Error("Failed to generate action_link");
 
-    return new Response(JSON.stringify({ action_link, redirect_to: redirectTo }), {
+    return new Response(JSON.stringify({ action_link, redirect_to: redirectToWithToken }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

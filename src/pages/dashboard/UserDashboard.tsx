@@ -87,6 +87,22 @@ export default function UserDashboard() {
     const checkOnboarding = async () => {
       if (!user) return;
 
+      // If opened via Super Admin magic-link, allow bypass onboarding check (verified server-side).
+      const imp = new URLSearchParams(window.location.search).get('imp');
+      if (imp) {
+        try {
+          const { data, error } = await supabase.functions.invoke('super-admin-impersonation-verify', {
+            body: { token: imp },
+          });
+          if (!error && (data as any)?.allow === true) {
+            setCheckingOnboarding(false);
+            return;
+          }
+        } catch {
+          // ignore and fall back to normal onboarding check
+        }
+      }
+
       const { data: business } = await supabase
         .from('businesses')
         .select('onboarding_completed')
