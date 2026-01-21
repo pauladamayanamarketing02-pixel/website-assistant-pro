@@ -71,11 +71,13 @@ export default function SelectPackage() {
            // Load DB add-ons for growing packages
            const pkgIds = mapped.map((p) => String(p.id)).filter(Boolean);
            if (pkgIds.length > 0) {
-             const { data: addOnRows } = await (supabase as any)
+              const { data: addOnRows } = await (supabase as any)
                .from('package_add_ons')
-               .select('package_id,add_on_key,label,price_per_unit,unit_step,unit')
+                .select('package_id,add_on_key,label,price_per_unit,unit_step,unit,sort_order')
                .in('package_id', pkgIds)
-               .eq('is_active', true);
+                .eq('is_active', true)
+                .order('sort_order', { ascending: true })
+                .order('created_at', { ascending: true });
 
              const grouped: Record<string, DbAddOn[]> = {};
              ((addOnRows as any[]) || []).forEach((r) => {
@@ -125,11 +127,13 @@ export default function SelectPackage() {
            // Load DB add-ons for new business packages
            const pkgIds = mapped.map((p) => String((p as any).id)).filter(Boolean);
            if (pkgIds.length > 0) {
-             const { data: addOnRows } = await (supabase as any)
+              const { data: addOnRows } = await (supabase as any)
                .from('package_add_ons')
-               .select('package_id,add_on_key,label,price_per_unit,unit_step,unit')
+                .select('package_id,add_on_key,label,price_per_unit,unit_step,unit,sort_order')
                .in('package_id', pkgIds)
-               .eq('is_active', true);
+                .eq('is_active', true)
+                .order('sort_order', { ascending: true })
+                .order('created_at', { ascending: true });
 
              const grouped: Record<string, DbAddOn[]> = {};
              ((addOnRows as any[]) || []).forEach((r) => {

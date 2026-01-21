@@ -81,8 +81,9 @@ export default function SuperAdminPackageEdit() {
         // Load add-ons for this package
         const { data: addOnRows, error: addOnErr } = await (supabase as any)
           .from("package_add_ons")
-          .select("id,add_on_key,label,price_per_unit,unit_step,unit,is_active")
+          .select("id,add_on_key,label,price_per_unit,unit_step,unit,is_active,sort_order")
           .eq("package_id", String(data.id))
+          .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true });
 
         if (addOnErr) throw addOnErr;
@@ -96,6 +97,7 @@ export default function SuperAdminPackageEdit() {
             unit_step: Number(r.unit_step ?? 1),
             unit: String(r.unit ?? "unit"),
             is_active: Boolean(r.is_active ?? true),
+            sort_order: Number(r.sort_order ?? 0),
           }))
         );
         setRemovedAddOnIds([]);
@@ -155,6 +157,7 @@ export default function SuperAdminPackageEdit() {
               unit_step: Number(a.unit_step ?? 1),
               unit: String(a.unit ?? "unit").trim() || "unit",
               is_active: Boolean(a.is_active ?? true),
+              sort_order: Number(a.sort_order ?? 0),
             };
 
             return (supabase as any).from("package_add_ons").update(updatePayload).eq("id", a.id);
@@ -174,6 +177,7 @@ export default function SuperAdminPackageEdit() {
           unit_step: Number(a.unit_step ?? 1),
           unit: String(a.unit ?? "unit").trim() || "unit",
           is_active: Boolean(a.is_active ?? true),
+          sort_order: Number(a.sort_order ?? 0),
         }));
 
         const { error: upsertErr } = await (supabase as any)
