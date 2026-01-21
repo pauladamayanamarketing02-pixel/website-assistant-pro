@@ -266,6 +266,7 @@ export default function AdminBusinessUsers() {
                           <BusinessUserActions
                             userId={row.userId}
                             email={row.email}
+                            onDeleted={fetchBusinessUsers}
                             onView={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
                           />
                         </TableCell>

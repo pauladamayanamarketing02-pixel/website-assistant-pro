@@ -21,6 +21,10 @@ type Payload =
       user_id: string;
     }
   | {
+      action: "delete_user";
+      user_id: string;
+    }
+  | {
       action: "change_email";
       user_id: string;
       new_email: string;
@@ -109,6 +113,54 @@ Deno.serve(async (req) => {
         email: data.user?.email ?? null,
         pending_email: (data.user as any)?.email_change ?? null,
       });
+    }
+
+    if (body.action === "delete_user") {
+      const userId = String(body.user_id ?? "").trim();
+      if (!userId) return json(400, { error: "user_id is required" });
+
+      // 1) Fetch business ids (for content_items cleanup)
+      const { data: businesses, error: businessesErr } = await admin
+        .from("businesses")
+        .select("id")
+        .eq("user_id", userId);
+      if (businessesErr) throw businessesErr;
+      const businessIds = (businesses ?? []).map((b) => b.id).filter(Boolean);
+
+      // 2) Delete app data (order matters where possible)
+      if (businessIds.length > 0) {
+        const { error: contentItemsErr } = await admin.from("content_items").delete().in("business_id", businessIds);
+        if (contentItemsErr) throw contentItemsErr;
+      }
+
+      // Delete items directly tied to the user id
+      const deletions = [
+        admin.from("task_work_logs").delete().eq("user_id", userId),
+        admin.from("tasks").delete().eq("user_id", userId),
+        admin.from("task_recurring_rules").delete().eq("user_id", userId),
+        admin.from("user_content").delete().eq("user_id", userId),
+        admin.from("user_gallery").delete().eq("user_id", userId),
+        admin.from("chat_clears").delete().eq("user_id", userId),
+        admin.from("chat_clears").delete().eq("peer_id", userId),
+        admin.from("messages").delete().eq("sender_id", userId),
+        admin.from("messages").delete().eq("receiver_id", userId),
+        admin.from("orders").delete().eq("user_id", userId),
+        admin.from("invoices").delete().eq("user_id", userId),
+        admin.from("user_packages").delete().eq("user_id", userId),
+        admin.from("user_roles").delete().eq("user_id", userId),
+        admin.from("businesses").delete().eq("user_id", userId),
+        admin.from("profiles").delete().eq("id", userId),
+      ];
+
+      const results = await Promise.all(deletions);
+      const firstErr = results.find((r) => (r as any)?.error)?.error as any;
+      if (firstErr) throw firstErr;
+
+      // 3) Finally delete Auth user
+      const { error: authDeleteErr } = await admin.auth.admin.deleteUser(userId);
+      if (authDeleteErr) throw authDeleteErr;
+
+      return json(200, { ok: true, user_id: userId });
     }
 
     return json(400, { error: "Invalid action" });
