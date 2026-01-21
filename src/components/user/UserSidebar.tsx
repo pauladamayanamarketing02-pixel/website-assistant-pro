@@ -56,7 +56,16 @@ export function UserSidebar({
       setUnreadCount(count || 0);
     };
 
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshUnread();
+    };
+
     refreshUnread();
+
+    // Fallback refresh: ensures badge clears even if realtime UPDATE isn't delivered
+    window.addEventListener("focus", refreshUnread);
+    document.addEventListener("visibilitychange", onVisibility);
+    const intervalId = window.setInterval(refreshUnread, 15000);
 
     const channel = supabase
       .channel(`sidebar-unread-messages-${user.id}`)
@@ -83,6 +92,9 @@ export function UserSidebar({
 
     return () => {
       isMounted = false;
+      window.removeEventListener("focus", refreshUnread);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(intervalId);
       supabase.removeChannel(channel);
     };
   }, [user?.id]);
