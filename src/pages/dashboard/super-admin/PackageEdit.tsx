@@ -154,7 +154,9 @@ export default function SuperAdminPackageEdit() {
       if (toUpsert.length > 0) {
         const { error: upsertErr } = await (supabase as any)
           .from("package_add_ons")
-          .upsert(toUpsert, { onConflict: "package_id,add_on_key" });
+           // Important: ensure missing columns use DB defaults (e.g. id = gen_random_uuid())
+           // Otherwise PostgREST may send missing fields as NULL and violate NOT NULL.
+           .upsert(toUpsert, { onConflict: "package_id,add_on_key", defaultToNull: false });
         if (upsertErr) throw upsertErr;
       }
 
