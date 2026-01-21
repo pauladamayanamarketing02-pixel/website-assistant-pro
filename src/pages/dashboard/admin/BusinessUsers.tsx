@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Eye, KeyRound, Mail, Trash2, UserX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -21,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+import { BusinessUserActions } from "./business-users/BusinessUserActions";
 
 type BusinessStatus = "active" | "pending" | "inactive" | "trial" | "expired" | "cancelled";
 
@@ -262,69 +262,13 @@ export default function AdminBusinessUsers() {
                         <TableCell>
                           <Badge variant="secondary">{statusLabel[row.status]}</Badge>
                         </TableCell>
-                         <TableCell className="text-center">
-                           <div className="flex items-center justify-center gap-1">
-                             <Button
-                               variant="ghost"
-                               size="icon"
-                               className="h-8 w-8"
-                               title="Set Active"
-                               disabled
-                             >
-                               <CheckCircle2 className="h-4 w-4 text-primary" />
-                             </Button>
-
-                             <Button
-                               variant="ghost"
-                               size="icon"
-                               className="h-8 w-8"
-                               title="Reset Password"
-                               disabled
-                             >
-                               <KeyRound className="h-4 w-4 text-muted-foreground" />
-                             </Button>
-
-                             <Button
-                               variant="ghost"
-                               size="icon"
-                               className="h-8 w-8"
-                               title="Reset Email"
-                               disabled
-                             >
-                               <Mail className="h-4 w-4 text-muted-foreground" />
-                             </Button>
-
-                             <Button
-                               variant="ghost"
-                               size="icon"
-                               className="h-8 w-8"
-                               title="Set Nonactive"
-                               disabled
-                             >
-                               <UserX className="h-4 w-4 text-muted-foreground" />
-                             </Button>
-
-                             <Button
-                               variant="ghost"
-                               size="icon"
-                               className="h-8 w-8"
-                               title="Delete"
-                               disabled
-                             >
-                               <Trash2 className="h-4 w-4 text-destructive" />
-                             </Button>
-
-                             <Button
-                               variant="outline"
-                               size="icon"
-                               className="h-8 w-8"
-                               title="View"
-                               onClick={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
-                             >
-                               <Eye className="h-4 w-4" />
-                             </Button>
-                           </div>
-                         </TableCell>
+                        <TableCell className="text-center">
+                          <BusinessUserActions
+                            userId={row.userId}
+                            email={row.email}
+                            onView={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
