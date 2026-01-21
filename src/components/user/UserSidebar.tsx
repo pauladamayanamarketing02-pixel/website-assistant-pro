@@ -60,11 +60,14 @@ export function UserSidebar({
       if (document.visibilityState === "visible") refreshUnread();
     };
 
+    const onMessagesUnreadRefresh = () => refreshUnread();
+
     refreshUnread();
 
     // Fallback refresh: ensures badge clears even if realtime UPDATE isn't delivered
     window.addEventListener("focus", refreshUnread);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("messages:refresh-unread", onMessagesUnreadRefresh as EventListener);
     const intervalId = window.setInterval(refreshUnread, 15000);
 
     const channel = supabase
@@ -94,6 +97,7 @@ export function UserSidebar({
       isMounted = false;
       window.removeEventListener("focus", refreshUnread);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("messages:refresh-unread", onMessagesUnreadRefresh as EventListener);
       window.clearInterval(intervalId);
       supabase.removeChannel(channel);
     };
