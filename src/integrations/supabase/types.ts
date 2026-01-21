@@ -774,6 +774,7 @@ export type Database = {
           label: string
           package_id: string
           price_per_unit: number
+          sort_order: number
           unit: string
           unit_step: number
           updated_at: string
@@ -786,6 +787,7 @@ export type Database = {
           label: string
           package_id: string
           price_per_unit?: number
+          sort_order?: number
           unit?: string
           unit_step?: number
           updated_at?: string
@@ -798,6 +800,7 @@ export type Database = {
           label?: string
           package_id?: string
           price_per_unit?: number
+          sort_order?: number
           unit?: string
           unit_step?: number
           updated_at?: string
