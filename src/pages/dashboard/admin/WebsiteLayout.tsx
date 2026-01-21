@@ -169,7 +169,7 @@ export default function WebsiteLayout() {
             ) : lastSavedAt ? (
               <>Saved at {lastSavedAt.toLocaleTimeString()}</>
             ) : (
-              "Klik Selesai untuk menyimpan perubahan."
+              "Click Done to save changes."
             )}
           </div>
         </div>
@@ -181,7 +181,7 @@ export default function WebsiteLayout() {
                 <X className="h-4 w-4 mr-2" /> Cancel
               </Button>
               <Button onClick={finishEdit} disabled={saving}>
-                <Save className="h-4 w-4 mr-2" /> Selesai
+                <Save className="h-4 w-4 mr-2" /> Done
               </Button>
             </>
           ) : (
@@ -195,7 +195,7 @@ export default function WebsiteLayout() {
       <Card>
         <CardHeader>
           <CardTitle>Header</CardTitle>
-          <CardDescription>Brand + menu navigasi + CTA.</CardDescription>
+          <CardDescription>Brand + navigation menu + CTA.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
@@ -338,7 +338,7 @@ export default function WebsiteLayout() {
       <Card>
         <CardHeader>
           <CardTitle>Footer</CardTitle>
-          <CardDescription>Tagline, link, daftar layanan, dan kontak.</CardDescription>
+          <CardDescription>Tagline, links, services list, and contact details.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
@@ -398,7 +398,7 @@ export default function WebsiteLayout() {
             <Input value={settings.footer.servicesTitle} onChange={(e) => updateFooter({ servicesTitle: e.target.value })} disabled={!canSave} />
           </div>
           <div className="grid gap-2">
-            <Label>Services (1 per baris)</Label>
+            <Label>Services (one per line)</Label>
             <Textarea
               value={servicesTextarea}
               onChange={(e) => updateFooter({ services: e.target.value.split("\n").map((x) => x.trim()).filter(Boolean) })}

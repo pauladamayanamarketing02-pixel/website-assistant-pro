@@ -85,7 +85,7 @@ export default function WebsiteHomepage() {
       .upsert({ key: SETTINGS_KEY, value: nextSettings }, { onConflict: "key" });
 
     if (error) {
-      toast({ variant: "destructive", title: "Gagal menyimpan", description: error.message });
+      toast({ variant: "destructive", title: "Failed to save", description: error.message });
       setSaving(false);
       return false;
     }
@@ -111,9 +111,9 @@ export default function WebsiteHomepage() {
   const addPromo = () => {
     const promo: HomepagePromo = {
       id: crypto.randomUUID(),
-      title: "Promo baru",
+      title: "New promo",
       subtitle: "",
-      ctaLabel: "Lihat",
+      ctaLabel: "View",
       ctaHref: "/packages",
       startsAt: new Date().toISOString(),
       endsAt: null,
@@ -139,7 +139,7 @@ export default function WebsiteHomepage() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Homepage</h1>
-          <p className="text-sm text-muted-foreground">Kelola promo/banner di bagian atas halaman utama.</p>
+          <p className="text-sm text-muted-foreground">Manage the promo/banner shown at the top of the homepage.</p>
           <div className="mt-2 text-xs text-muted-foreground">
             {loading ? (
               "Loading..."
@@ -150,7 +150,7 @@ export default function WebsiteHomepage() {
             ) : lastSavedAt ? (
               <>Saved at {lastSavedAt.toLocaleTimeString()}</>
             ) : (
-              "Klik Selesai untuk menyimpan perubahan."
+              "Click Done to save changes."
             )}
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function WebsiteHomepage() {
                 <X className="h-4 w-4 mr-2" /> Cancel
               </Button>
               <Button onClick={finishEdit} disabled={saving}>
-                <Save className="h-4 w-4 mr-2" /> Selesai
+                <Save className="h-4 w-4 mr-2" /> Done
               </Button>
             </>
           ) : (
@@ -177,11 +177,11 @@ export default function WebsiteHomepage() {
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>Promo / Banner</CardTitle>
-            <CardDescription>Item akan tampil jika berada di dalam jadwal (Start/End) dan Published.</CardDescription>
+            <CardDescription>Items show only when they are scheduled (Start/End) and Published.</CardDescription>
           </div>
 
           <Button type="button" onClick={addPromo} disabled={!canSave}>
-            <Plus className="h-4 w-4" /> Tambah Promo
+            <Plus className="h-4 w-4" /> Add Promo
           </Button>
         </CardHeader>
 
@@ -189,7 +189,7 @@ export default function WebsiteHomepage() {
           {loading ? (
             <div className="py-8 text-sm text-muted-foreground">Loading...</div>
           ) : (settings.promos ?? []).length === 0 ? (
-            <div className="py-8 text-sm text-muted-foreground">Belum ada promo.</div>
+            <div className="py-8 text-sm text-muted-foreground">No promos yet.</div>
           ) : (
             (settings.promos ?? []).map((promo) => (
               <div key={promo.id} className="rounded-lg border border-border bg-card">
@@ -242,7 +242,7 @@ export default function WebsiteHomepage() {
                       value={promo.ctaLabel ?? ""}
                       onChange={(e) => updatePromo(promo.id, { ctaLabel: e.target.value })}
                       disabled={!canSave}
-                      placeholder="Lihat promo"
+                      placeholder="View offer"
                     />
                   </div>
 
@@ -257,7 +257,7 @@ export default function WebsiteHomepage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Start (jadwal)</Label>
+                    <Label>Start (schedule)</Label>
                     <Input
                       type="datetime-local"
                       value={toLocalInputValue(promo.startsAt ?? null)}
@@ -267,14 +267,14 @@ export default function WebsiteHomepage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>End (jadwal)</Label>
+                    <Label>End (schedule)</Label>
                     <Input
                       type="datetime-local"
                       value={toLocalInputValue(promo.endsAt ?? null)}
                       onChange={(e) => updatePromo(promo.id, { endsAt: toIsoFromLocalInput(e.target.value) })}
                       disabled={!canSave}
                     />
-                    <p className="text-xs text-muted-foreground">Kosongkan End jika promo tidak ada batas akhir.</p>
+                    <p className="text-xs text-muted-foreground">Leave End empty if the promo has no end date.</p>
                   </div>
                 </div>
               </div>
