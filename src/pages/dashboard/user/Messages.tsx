@@ -770,6 +770,17 @@ export default function Messages() {
                         placeholder="Type your message..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter' || e.shiftKey) return;
+
+                          // Enter to send, Shift+Enter for new line
+                          e.preventDefault();
+
+                          if (sending || uploading) return;
+                          if (!newMessage.trim() && !uploadedFile) return;
+
+                          handleSend();
+                        }}
                         rows={2}
                         className="resize-none"
                       />
