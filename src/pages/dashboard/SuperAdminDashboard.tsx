@@ -25,6 +25,7 @@ import { SuperAdminSidebar, type SuperAdminNavItem } from "@/components/super-ad
 import SuperAdminOverview from "./super-admin/Overview";
 import SuperAdminPlaceholder from "./super-admin/Placeholder";
 import SuperAdminPackages from "./super-admin/Packages";
+import SuperAdminPackageEdit from "./super-admin/PackageEdit";
 
 function LoadingScreen() {
   return (
@@ -132,6 +133,7 @@ export default function SuperAdminDashboard() {
                 element={<SuperAdminPlaceholder title="Users & Assists" />}
               />
               <Route path="packages" element={<SuperAdminPackages />} />
+              <Route path="packages/:id" element={<SuperAdminPackageEdit />} />
               <Route path="payments" element={<SuperAdminPlaceholder title="Payments" />} />
               <Route path="subscriptions" element={<SuperAdminPlaceholder title="Subscriptions" />} />
               <Route path="promotions" element={<SuperAdminPlaceholder title="Promotions" />} />

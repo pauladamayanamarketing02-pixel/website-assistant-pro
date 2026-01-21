@@ -1,13 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Edit, RefreshCcw } from "lucide-react";
@@ -37,11 +34,9 @@ function normalizeFeatures(raw: unknown): string[] {
 }
 
 export default function SuperAdminPackages() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [packages, setPackages] = useState<PackageRow[]>([]);
-  const [editPackage, setEditPackage] = useState<PackageRow | null>(null);
-  const [open, setOpen] = useState(false);
 
   const title = "Services / Packages";
 
@@ -78,45 +73,6 @@ export default function SuperAdminPackages() {
   useEffect(() => {
     fetchPackages();
   }, []);
-
-  const canSave = useMemo(() => {
-    if (!editPackage) return false;
-    if (!editPackage.name.trim()) return false;
-    return true;
-  }, [editPackage]);
-
-  const handleSave = async () => {
-    if (!editPackage) return;
-    if (!canSave) return;
-
-    setSaving(true);
-    try {
-      const payload = {
-        name: editPackage.name.trim(),
-        description: editPackage.description?.trim() || null,
-        price: editPackage.price,
-        features: editPackage.features,
-        is_active: editPackage.is_active,
-      };
-
-      const { error } = await (supabase as any)
-        .from("packages")
-        .update(payload)
-        .eq("id", editPackage.id);
-
-      if (error) throw error;
-
-      toast.success("Package berhasil disimpan");
-      setOpen(false);
-      setEditPackage(null);
-      await fetchPackages();
-    } catch (err: any) {
-      console.error("Error saving package:", err);
-      toast.error(err?.message || "Gagal menyimpan package");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -157,25 +113,18 @@ export default function SuperAdminPackages() {
                     <TableCell className="capitalize">{pkg.type}</TableCell>
                     <TableCell>${pkg.price?.toFixed(2) || "0.00"}</TableCell>
                     <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          pkg.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
+                      <Badge variant={pkg.is_active ? "default" : "secondary"}>
                         {pkg.is_active ? "Active" : "Inactive"}
-                      </span>
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setEditPackage(pkg);
-                          setOpen(true);
-                        }}
+                        onClick={() => navigate(`/dashboard/super-admin/packages/${pkg.id}`)}
                       >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -185,86 +134,6 @@ export default function SuperAdminPackages() {
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Package</DialogTitle>
-          </DialogHeader>
-
-          {editPackage && (
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label>Name</Label>
-                <Input
-                  value={editPackage.name}
-                  onChange={(e) => setEditPackage({ ...editPackage, name: e.target.value })}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Type</Label>
-                <Input value={editPackage.type} disabled />
-                <p className="text-xs text-muted-foreground">Type dikunci karena dipakai sebagai identifier paket.</p>
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Price</Label>
-                <Input
-                  type="number"
-                  value={editPackage.price ?? 0}
-                  onChange={(e) =>
-                    setEditPackage({
-                      ...editPackage,
-                      price: e.target.value === "" ? null : Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={editPackage.description ?? ""}
-                  onChange={(e) => setEditPackage({ ...editPackage, description: e.target.value })}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Features (one per line)</Label>
-                <Textarea
-                  value={editPackage.features.join("\n")}
-                  onChange={(e) =>
-                    setEditPackage({
-                      ...editPackage,
-                      features: e.target.value
-                        .split("\n")
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                  rows={6}
-                />
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div>
-                  <div className="text-sm font-medium text-foreground">Active</div>
-                  <div className="text-xs text-muted-foreground">Paket non-aktif tidak tampil di onboarding.</div>
-                </div>
-                <Switch
-                  checked={editPackage.is_active}
-                  onCheckedChange={(v) => setEditPackage({ ...editPackage, is_active: v })}
-                />
-              </div>
-
-              <Button className="w-full" onClick={handleSave} disabled={!canSave || saving}>
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
