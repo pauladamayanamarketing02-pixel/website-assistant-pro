@@ -13,10 +13,25 @@ import type { Database } from "@/integrations/supabase/types";
 
 type FaqRow = Database["public"]["Tables"]["website_faqs"]["Row"];
 type PackageRow = Database["public"]["Tables"]["packages"]["Row"];
+type PublicPackageRow = PackageRow & { is_recommended?: boolean };
+
+const PUBLIC_PACKAGE_NAME_ORDER = ["starter", "growth", "pro", "optimize", "scale", "dominate"] as const;
+
+function sortPackagesForPublic(p1: PublicPackageRow, p2: PublicPackageRow) {
+  const a = (p1.name ?? "").trim().toLowerCase();
+  const b = (p2.name ?? "").trim().toLowerCase();
+  const ai = PUBLIC_PACKAGE_NAME_ORDER.indexOf(a as any);
+  const bi = PUBLIC_PACKAGE_NAME_ORDER.indexOf(b as any);
+
+  const aRank = ai === -1 ? Number.POSITIVE_INFINITY : ai;
+  const bRank = bi === -1 ? Number.POSITIVE_INFINITY : bi;
+  if (aRank !== bRank) return aRank - bRank;
+  return a.localeCompare(b);
+}
 
 export default function Packages() {
   const [faqs, setFaqs] = useState<FaqRow[]>([]);
-  const [packages, setPackages] = useState<PackageRow[]>([]);
+  const [packages, setPackages] = useState<PublicPackageRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,7 +55,7 @@ export default function Packages() {
         .eq("show_on_public", true)
         .order("created_at", { ascending: true });
 
-      if (pkgData) setPackages(pkgData as PackageRow[]);
+      if (pkgData) setPackages((pkgData as PublicPackageRow[]).slice().sort(sortPackagesForPublic));
       setLoading(false);
     })();
   }, []);
@@ -74,6 +89,14 @@ export default function Packages() {
                 const features = Array.isArray(pkg.features) ? pkg.features : [];
                 return (
                   <Card key={pkg.id} className="relative flex flex-col shadow-soft animate-fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
+                    {!!pkg.is_recommended && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge variant="default" className="gap-1">
+                          <Star className="h-3.5 w-3.5" />
+                          Recommended
+                        </Badge>
+                      </div>
+                    )}
                     <CardHeader className="text-center pb-4">
                       <CardDescription className="text-primary font-medium uppercase text-xs">{pkg.type}</CardDescription>
                       <CardTitle className="text-xl">{pkg.name}</CardTitle>

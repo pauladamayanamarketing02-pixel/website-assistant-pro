@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Eye, EyeOff, RefreshCcw, Save, X } from "lucide-react";
+import { Check, Eye, EyeOff, RefreshCcw, Save, Star, StarOff, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,8 +16,23 @@ type PackageRow = {
   type: string;
   is_active: boolean;
   show_on_public: boolean;
+  is_recommended?: boolean;
   created_at: string;
 };
+
+const PUBLIC_PACKAGE_NAME_ORDER = ["starter", "growth", "pro", "optimize", "scale", "dominate"] as const;
+
+function sortPackagesForPublic(p1: PackageRow, p2: PackageRow) {
+  const a = (p1.name ?? "").trim().toLowerCase();
+  const b = (p2.name ?? "").trim().toLowerCase();
+  const ai = PUBLIC_PACKAGE_NAME_ORDER.indexOf(a as any);
+  const bi = PUBLIC_PACKAGE_NAME_ORDER.indexOf(b as any);
+
+  const aRank = ai === -1 ? Number.POSITIVE_INFINITY : ai;
+  const bRank = bi === -1 ? Number.POSITIVE_INFINITY : bi;
+  if (aRank !== bRank) return aRank - bRank;
+  return a.localeCompare(b);
+}
 
 export default function WebsitePackages() {
   const [loading, setLoading] = useState(true);
@@ -31,11 +46,11 @@ export default function WebsitePackages() {
     try {
       const { data, error } = await supabase
         .from("packages")
-        .select("id,name,description,price,type,is_active,show_on_public,created_at")
+        .select("id,name,description,price,type,is_active,show_on_public,is_recommended,created_at")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setPackages((data ?? []) as PackageRow[]);
+      setPackages(((data ?? []) as PackageRow[]).slice().sort(sortPackagesForPublic));
     } catch (err) {
       console.error("Error fetching packages:", err);
       toast.error("Failed to load packages");
@@ -54,18 +69,25 @@ export default function WebsitePackages() {
     );
   };
 
+  const toggleRecommended = (id: string) => {
+    setPackages((prev) =>
+      prev.map((pkg) => (pkg.id === id ? { ...pkg, is_recommended: !pkg.is_recommended } : pkg))
+    );
+  };
+
   const finishEdit = async () => {
     setSaving(true);
     try {
       const updates = packages.map((pkg) => ({
         id: pkg.id,
         show_on_public: pkg.show_on_public,
+        is_recommended: !!pkg.is_recommended,
       }));
 
       for (const upd of updates) {
         const { error } = await supabase
           .from("packages")
-          .update({ show_on_public: upd.show_on_public })
+          .update({ show_on_public: upd.show_on_public, is_recommended: upd.is_recommended })
           .eq("id", upd.id);
 
         if (error) throw error;
@@ -158,13 +180,14 @@ export default function WebsitePackages() {
                   <TableHead>Type</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Active</TableHead>
+                  <TableHead className="text-right">Recommended</TableHead>
                   <TableHead className="text-right">Show on Public</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {packages.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       No packages found.
                     </TableCell>
                   </TableRow>
@@ -185,6 +208,27 @@ export default function WebsitePackages() {
                         ) : (
                           <Badge variant="secondary">Inactive</Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleRecommended(pkg.id)}
+                          disabled={!isEditing}
+                          className={pkg.is_recommended ? "text-primary" : "text-muted-foreground"}
+                        >
+                          {pkg.is_recommended ? (
+                            <>
+                              <Star className="h-4 w-4 mr-2" />
+                              Yes
+                            </>
+                          ) : (
+                            <>
+                              <StarOff className="h-4 w-4 mr-2" />
+                              No
+                            </>
+                          )}
+                        </Button>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
