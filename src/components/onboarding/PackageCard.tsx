@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, Plus, Minus, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,16 +56,19 @@ export default function PackageCard({
   onSelect,
 }: PackageCardProps) {
   const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
-  const [totalPrice, setTotalPrice] = useState(basePrice);
 
-  useEffect(() => {
-    let price = basePrice;
-    addOns.forEach((addOn) => {
+  const totalPrice = useMemo(() => {
+    return addOns.reduce((sum, addOn) => {
       const quantity = selectedAddOns[addOn.id] || 0;
-      price += quantity * addOn.pricePerUnit;
-    });
-    setTotalPrice(price);
-  }, [selectedAddOns, basePrice, addOns]);
+      return sum + quantity * addOn.pricePerUnit;
+    }, basePrice);
+  }, [addOns, basePrice, selectedAddOns]);
+
+  // Keep parent (SelectPackage) in sync when user changes add-ons on the selected card.
+  useEffect(() => {
+    if (!isSelected) return;
+    onSelect(totalPrice, selectedAddOns);
+  }, [isSelected, onSelect, selectedAddOns, totalPrice]);
 
   const handleAddOnChange = (addOnId: string, delta: number, unitStep: number) => {
     setSelectedAddOns((prev) => {
