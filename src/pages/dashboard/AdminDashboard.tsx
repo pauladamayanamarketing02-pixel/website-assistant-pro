@@ -156,7 +156,7 @@ export default function AdminDashboard() {
             <SidebarTrigger />
 
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-foreground truncate">Admin Operasional</div>
+              <div className="text-sm font-semibold text-foreground truncate">Operations Admin</div>
               <div className="text-xs text-muted-foreground truncate">Control Center</div>
             </div>
 

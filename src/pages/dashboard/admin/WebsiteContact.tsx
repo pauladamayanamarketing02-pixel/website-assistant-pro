@@ -106,7 +106,7 @@ export default function WebsiteContact() {
             ) : lastSavedAt ? (
               <>Saved at {lastSavedAt.toLocaleTimeString()}</>
             ) : (
-              "Klik Selesai untuk menyimpan perubahan."
+              "Click Done to save changes."
             )}
           </div>
         </div>

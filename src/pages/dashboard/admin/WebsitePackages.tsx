@@ -47,6 +47,7 @@ export default function WebsitePackages() {
       const { data, error } = await supabase
         .from("packages")
         .select("id,name,description,price,type,is_active,show_on_public,is_recommended,created_at")
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -84,19 +85,22 @@ export default function WebsitePackages() {
         is_recommended: !!pkg.is_recommended,
       }));
 
-      for (const upd of updates) {
-        const { error } = await supabase
-          .from("packages")
-          .update({ show_on_public: upd.show_on_public, is_recommended: upd.is_recommended })
-          .eq("id", upd.id);
+      const results = await Promise.all(
+        updates.map((upd) =>
+          supabase
+            .from("packages")
+            .update({ show_on_public: upd.show_on_public, is_recommended: upd.is_recommended })
+            .eq("id", upd.id)
+        )
+      );
 
-        if (error) throw error;
-      }
+      const firstError = results.find((r) => r.error)?.error;
+      if (firstError) throw firstError;
 
       toast.success("Public visibility updated successfully");
       setLastSavedAt(new Date());
-      setIsEditing(false);
       await fetchPackages();
+      setIsEditing(false);
     } catch (err) {
       console.error("Error saving packages:", err);
       toast.error("Failed to update packages");
