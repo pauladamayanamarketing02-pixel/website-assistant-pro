@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 export type OrderTemplate = {
   id: string;
   name: string;
-  category: "business" | "portfolio" | "service" | "agency";
+  // Kategori template bersifat fleksibel (mengikuti input admin)
+  category: string;
   is_active?: boolean;
   sort_order?: number;
   // URL gambar preview template (thumbnail) yang akan ditampilkan sebagai <img>
@@ -41,12 +42,12 @@ const fallbackSubscriptionPlans: OrderSubscriptionPlan[] = [
 ];
 
 const fallbackTemplates: OrderTemplate[] = [
-  { id: "t1", name: "Modern Business", category: "business" },
-  { id: "t2", name: "Creative Portfolio", category: "portfolio" },
-  { id: "t3", name: "Local Services", category: "service" },
-  { id: "t4", name: "Studio Agency", category: "agency" },
-  { id: "t5", name: "Clean Services", category: "service" },
-  { id: "t6", name: "Bold Business", category: "business" },
+  { id: "t1", name: "Modern Business", category: "Business" },
+  { id: "t2", name: "Creative Portfolio", category: "Portfolio" },
+  { id: "t3", name: "Local Services", category: "Services" },
+  { id: "t4", name: "Studio Agency", category: "Agency" },
+  { id: "t5", name: "Clean Services", category: "Services" },
+  { id: "t6", name: "Bold Business", category: "Business" },
 ];
 
 function safeString(v: unknown): string {
@@ -72,7 +73,7 @@ function parseTemplates(value: unknown): OrderTemplate[] {
       const obj = raw as any;
       const id = safeString(obj?.id).trim();
       const name = safeString(obj?.name).trim();
-      const category = safeString(obj?.category) as OrderTemplate["category"];
+      const category = safeString(obj?.category).trim();
       const is_active = typeof obj?.is_active === "boolean" ? obj.is_active : true;
       const sort_order = safeNumber(obj?.sort_order);
       // Backward-compat:
@@ -84,7 +85,7 @@ function parseTemplates(value: unknown): OrderTemplate[] {
       const preview_image_url = explicitImageUrl || (isLikelyImageUrl(legacyPreviewUrl) ? legacyPreviewUrl : "");
       const preview_url = !isLikelyImageUrl(legacyPreviewUrl) ? legacyPreviewUrl : "";
       if (!id || !name) return null;
-      if (!(["business", "portfolio", "service", "agency"] as const).includes(category)) return null;
+      if (!category) return null;
       return {
         id,
         name,

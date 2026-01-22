@@ -16,6 +16,15 @@ export default function ChooseDesign() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<OrderTemplate["category"] | "all">("all");
 
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of templates) {
+      const c = String(t.category ?? "").trim();
+      if (c) set.add(c);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [templates]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return templates.filter((t) => {
@@ -37,20 +46,23 @@ export default function ChooseDesign() {
           <CardContent className="flex flex-col gap-3 md:flex-row md:items-center">
             <Input className="md:flex-1" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search templates" />
             <div className="flex flex-wrap gap-2">
-              {([
-                ["all", "All"],
-                ["business", "Business"],
-                ["service", "Services"],
-                ["portfolio", "Portfolio"],
-              ] as const).map(([key, label]) => (
+              <Button
+                type="button"
+                size="sm"
+                variant={category === "all" ? "default" : "outline"}
+                onClick={() => setCategory("all")}
+              >
+                All
+              </Button>
+              {categories.map((c) => (
                 <Button
-                  key={key}
+                  key={c}
                   type="button"
                   size="sm"
-                  variant={category === key ? "default" : "outline"}
-                  onClick={() => setCategory(key)}
+                  variant={category === c ? "default" : "outline"}
+                  onClick={() => setCategory(c)}
                 >
-                  {label}
+                  {c}
                 </Button>
               ))}
             </div>
