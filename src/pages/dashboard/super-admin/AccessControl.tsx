@@ -46,6 +46,24 @@ type RuleRow = {
   is_enabled: boolean;
 };
 
+async function ensureMenuRuleRowsExist(packageId: string, existingKeys: Set<string>) {
+  const missing = MENU_ITEMS.filter((i) => !existingKeys.has(i.key));
+  if (missing.length === 0) return;
+
+  // Seed missing keys as enabled=true so they exist as rows in DB.
+  // This makes future ON/OFF changes explicit and persistent.
+  await supabase
+    .from("package_menu_rules")
+    .upsert(
+      missing.map((m) => ({
+        package_id: packageId,
+        menu_key: m.key,
+        is_enabled: true,
+      })) as any,
+      { onConflict: "package_id,menu_key" }
+    );
+}
+
 export default function SuperAdminAccessControl() {
   const [loading, setLoading] = useState(true);
   const [packages, setPackages] = useState<PackageRow[]>([]);
@@ -122,6 +140,9 @@ export default function SuperAdminAccessControl() {
           .select("menu_key,is_enabled")
           .eq("package_id", selectedPackageId);
         if (error) throw error;
+
+        const existingKeys = new Set<string>((data as RuleRow[] | null)?.map((r) => String(r.menu_key)) ?? []);
+        await ensureMenuRuleRowsExist(selectedPackageId, existingKeys);
 
         const next: Record<MenuKey, boolean> = {
           ai_agents: true,
