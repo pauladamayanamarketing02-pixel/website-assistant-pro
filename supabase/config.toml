@@ -2,3 +2,6 @@ project_id = "supiwygxypfqjzoqmlaq"
 
 [functions.domainr-check]
 verify_jwt = false
+
+[functions.super-admin-integration-secrets]
+verify_jwt = false
