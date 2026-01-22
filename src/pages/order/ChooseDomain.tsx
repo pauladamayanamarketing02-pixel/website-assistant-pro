@@ -8,11 +8,20 @@ import { OrderLayout } from "@/components/order/OrderLayout";
 import { OrderSummaryCard } from "@/components/order/OrderSummaryCard";
 import { useOrder } from "@/contexts/OrderContext";
 import { useDomainDuckCheck, type DomainDuckAvailability } from "@/hooks/useDomainDuckCheck";
+import { useOrderPublicSettings } from "@/hooks/useOrderPublicSettings";
 
 type DomainStatus = "available" | "unavailable" | "premium" | "blocked" | "unknown";
 
 function badgeVariant(_status: DomainStatus) {
   return "secondary" as const;
+}
+
+function formatUsd(value: number) {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+  } catch {
+    return `$${value.toFixed(2)}`;
+  }
 }
 
 export default function ChooseDomain() {
@@ -23,6 +32,7 @@ export default function ChooseDomain() {
   const [lastChecked, setLastChecked] = useState<string>(state.domain || initial);
 
   const { loading, error, availability } = useDomainDuckCheck(lastChecked, { enabled: Boolean(lastChecked) });
+  const { pricing } = useOrderPublicSettings(lastChecked);
 
   const status: DomainStatus | null = useMemo(() => {
     if (!lastChecked) return null;
@@ -77,6 +87,7 @@ export default function ChooseDomain() {
                       <tr>
                         <th className="px-3 py-2 text-left font-medium text-foreground">Domain</th>
                         <th className="px-3 py-2 text-left font-medium text-foreground">Status</th>
+                        <th className="px-3 py-2 text-left font-medium text-foreground">Price</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -98,6 +109,11 @@ export default function ChooseDomain() {
                                         : "Unknown"
                             }</Badge>
                           </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="text-foreground font-medium">
+                            {pricing.domainPriceUsd == null ? "—" : formatUsd(pricing.domainPriceUsd)}
+                          </span>
                         </td>
                       </tr>
                     </tbody>

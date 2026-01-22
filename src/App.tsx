@@ -41,6 +41,7 @@ import OrientationPortfolio from "./pages/orientation/Portfolio";
 import ChooseDomain from "./pages/order/ChooseDomain";
 import ChooseDesign from "./pages/order/ChooseDesign";
 import Details from "./pages/order/Details";
+import SubscriptionPlan from "./pages/order/SubscriptionPlan";
 import Payment from "./pages/order/Payment";
 import Confirmation from "./pages/order/Confirmation";
 
@@ -184,6 +185,7 @@ const App = () => (
             <Route path="/order/choose-domain" element={<ChooseDomain />} />
             <Route path="/order/choose-design" element={<ChooseDesign />} />
             <Route path="/order/details" element={<Details />} />
+            <Route path="/order/subscription" element={<SubscriptionPlan />} />
             <Route path="/order/payment" element={<Payment />} />
             <Route path="/order/confirmation" element={<Confirmation />} />
             

@@ -15,6 +15,7 @@ export type OrderState = {
   domainStatus: DomainStatus | null;
   selectedTemplateId: string | null;
   selectedTemplateName: string | null;
+  subscriptionYears: 1 | 2 | 3 | null;
   details: OrderDetails;
   promoCode: string;
 };
@@ -24,6 +25,7 @@ type OrderContextValue = {
   setDomain: (domain: string) => void;
   setDomainStatus: (status: DomainStatus | null) => void;
   setTemplate: (template: { id: string; name: string } | null) => void;
+  setSubscriptionYears: (years: 1 | 2 | 3 | null) => void;
   setDetails: (patch: Partial<OrderDetails>) => void;
   setPromoCode: (code: string) => void;
   reset: () => void;
@@ -36,6 +38,7 @@ const defaultState: OrderState = {
   domainStatus: null,
   selectedTemplateId: null,
   selectedTemplateName: null,
+  subscriptionYears: null,
   details: {
     name: "",
     email: "",
@@ -80,6 +83,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           selectedTemplateId: template?.id ?? null,
           selectedTemplateName: template?.name ?? null,
         })),
+      setSubscriptionYears: (subscriptionYears) => setState((s) => ({ ...s, subscriptionYears })),
       setDetails: (patch) => setState((s) => ({ ...s, details: { ...s.details, ...patch } })),
       setPromoCode: (promoCode) => setState((s) => ({ ...s, promoCode })),
       reset: () => setState(defaultState),

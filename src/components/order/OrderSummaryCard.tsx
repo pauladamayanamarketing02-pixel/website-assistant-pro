@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { useOrder } from "@/contexts/OrderContext";
 import { useOrderPublicSettings } from "@/hooks/useOrderPublicSettings";
 
-export function OrderSummaryCard() {
+export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boolean }) {
   const { state } = useOrder();
   const { pricing, contact } = useOrderPublicSettings(state.domain);
 
@@ -36,10 +36,12 @@ export function OrderSummaryCard() {
               {state.domain || "—"}
             </span>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">Est. Price</span>
-            <span className="text-sm font-medium text-foreground">{domainPriceLabel}</span>
-          </div>
+          {showEstPrice ? (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">Est. Price</span>
+              <span className="text-sm font-medium text-foreground">{domainPriceLabel}</span>
+            </div>
+          ) : null}
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">Status</span>
             <span className="text-sm">
