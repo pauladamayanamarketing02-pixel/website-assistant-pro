@@ -108,7 +108,7 @@ export default function SuperAdminPromotions() {
       setPromos(parsed);
     } catch (e: any) {
       console.error(e);
-      const msg = e?.message || "Gagal memuat Promo";
+      const msg = e?.message || "Failed to load promotions";
       if (String(msg).toLowerCase().includes("unauthorized")) {
         navigate("/super-admin/login", { replace: true });
         return;
@@ -135,14 +135,14 @@ export default function SuperAdminPromotions() {
       const description = String(promoDraft.description ?? "").trim();
 
       if (!code || !promo_name || !event_name) {
-        toast({ variant: "destructive", title: "Gagal simpan", description: "Code, Promo Name, dan Event/Campaign wajib diisi." });
+        toast({ variant: "destructive", title: "Save failed", description: "Promo Code, Promo Name, and Event/Campaign are required." });
         return;
       }
 
       const starts_at = promoDraft.status === "scheduled" ? promoDraft.starts_at : null;
       const ends_at = promoDraft.status === "scheduled" ? promoDraft.ends_at : null;
       if (promoDraft.status === "scheduled" && (!starts_at || !ends_at)) {
-        toast({ variant: "destructive", title: "Tanggal wajib", description: "Untuk status Scheduled, Start & End date wajib." });
+        toast({ variant: "destructive", title: "Dates required", description: "For Scheduled status, Start and End date are required." });
         return;
       }
 
@@ -194,7 +194,7 @@ export default function SuperAdminPromotions() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle>Promo</CardTitle>
-              <CardDescription>Kelola promo/campaign untuk kebutuhan order (draft/scheduled/active/expired).</CardDescription>
+              <CardDescription>Manage promotions/campaigns for orders (draft/scheduled/active/expired).</CardDescription>
             </div>
             <Badge variant="outline">Total: {promosCountLabel}</Badge>
           </div>
@@ -202,7 +202,7 @@ export default function SuperAdminPromotions() {
         <CardContent className="space-y-3">
           {promosLoading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
 
-          {/* Form (copied from Admin Domain Tools > Promo tab) */}
+          {/* Form */}
           <div className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-12">
             <div className="md:col-span-3">
               <Label className="text-xs">Promo Code</Label>
@@ -315,7 +315,7 @@ export default function SuperAdminPromotions() {
                 </Button>
               ) : null}
               <Button type="button" onClick={savePromos} disabled={promosSaving}>
-                <Save className="h-4 w-4 mr-2" /> Simpan Promo
+                <Save className="h-4 w-4 mr-2" /> Save Promo
               </Button>
             </div>
           </div>
@@ -397,15 +397,15 @@ export default function SuperAdminPromotions() {
               </div>
             </div>
           ) : !promosLoading ? (
-            <div className="text-sm text-muted-foreground">Belum ada promo.</div>
+            <div className="text-sm text-muted-foreground">No promotions yet.</div>
           ) : null}
 
           <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog((s) => ({ ...s, open }))}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Hapus promo?</AlertDialogTitle>
+                <AlertDialogTitle>Delete promotion?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Anda yakin ingin menghapus promo <span className="font-medium">{deleteDialog.promo?.code ?? ""}</span>? Tindakan ini tidak bisa dibatalkan.
+                  Are you sure you want to delete promotion <span className="font-medium">{deleteDialog.promo?.code ?? ""}</span>? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -419,7 +419,7 @@ export default function SuperAdminPromotions() {
                     try {
                       const { error } = await (supabase as any).from("order_promos").delete().eq("id", promo.id);
                       if (error) throw error;
-                      toast({ title: "Deleted", description: "Promo dihapus." });
+                      toast({ title: "Deleted", description: "Promotion deleted." });
                       setDeleteDialog({ open: false, promo: null });
                       await fetchPromos();
                     } catch (e: any) {

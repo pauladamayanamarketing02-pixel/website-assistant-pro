@@ -206,7 +206,7 @@ export default function AdminSupport() {
   }, [rows, statusFilter]);
 
   const websiteInquiryRows = useMemo(() => {
-    // Halaman ini khusus untuk Website Inquiries (dari /contact).
+    // This page is for Website Inquiries (from /contact).
     const blocked = new Set(["business_support", "assistant_support"]);
     return filtered.filter((r) => !blocked.has(String(r.source).toLowerCase()));
   }, [filtered]);
@@ -235,7 +235,7 @@ export default function AdminSupport() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Website Inquiries</h1>
-          <p className="text-sm text-muted-foreground">Pesan yang masuk dari form /contact.</p>
+          <p className="text-sm text-muted-foreground">Messages submitted from the /contact form.</p>
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -263,7 +263,7 @@ export default function AdminSupport() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-base">Website Inquiries</CardTitle>
           <CardDescription>
-            Semua inquiry yang dibuat dari form publik (kecuali Business/Assistant Support).
+            All inquiries created from public forms (excluding Business/Assistant Support).
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -181,7 +181,7 @@ export default function WebsiteServices() {
             ) : lastSavedAt ? (
               <>Saved at {lastSavedAt.toLocaleTimeString()}</>
             ) : (
-              "Klik Selesai untuk menyimpan perubahan."
+              "Click Done to save changes."
             )}
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function WebsiteServices() {
                 <X className="h-4 w-4 mr-2" /> Cancel
               </Button>
               <Button onClick={finishEdit} disabled={saving}>
-                <Save className="h-4 w-4 mr-2" /> Selesai
+                <Save className="h-4 w-4 mr-2" /> Done
               </Button>
             </>
           ) : (
@@ -362,7 +362,7 @@ export default function WebsiteServices() {
                       </div>
 
                       <div className="grid gap-2 md:col-span-2">
-                        <Label>Features (1 per baris)</Label>
+                        <Label>Features (one per line)</Label>
                         <Textarea
                           value={featuresToTextarea(svc.features)}
                           onChange={(e) => updateService(index, { features: textareaToFeatures(e.target.value) })}
