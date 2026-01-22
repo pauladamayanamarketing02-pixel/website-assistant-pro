@@ -83,7 +83,11 @@ async function getIntegrationSecretPlain(admin: any, provider: string, name: str
     .maybeSingle();
   if (mkErr) throw mkErr;
   const masterKey = String((mkRow as any)?.ciphertext ?? "");
-  if (!masterKey) throw new Error("Integrations master key belum diset");
+  if (!masterKey) {
+    const err = new Error("Integrations master key belum diset");
+    (err as any).status = 400;
+    throw err;
+  }
 
   const { data: row, error } = await admin
     .from("integration_secrets")
@@ -189,8 +193,9 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    const status = (e as any)?.status && Number.isFinite((e as any).status) ? Number((e as any).status) : 500;
     return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
