@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 
 type InquiryStatus = "new" | "resolved" | "all" | (string & {});
@@ -163,6 +164,7 @@ export default function AdminSupport() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<InquiryStatus>("all");
   const [selected, setSelected] = useState<InquiryRow | null>(null);
+  const [tab, setTab] = useState<"public" | "business" | "assistant">("public");
 
   const fetchInquiries = async () => {
     try {
@@ -205,10 +207,17 @@ export default function AdminSupport() {
     return rows.filter((r) => String(r.status).toLowerCase() === needle);
   }, [rows, statusFilter]);
 
-  const websiteInquiryRows = useMemo(() => {
-    // This page is for Website Inquiries (from /contact).
+  const ticketsPublic = useMemo(() => {
     const blocked = new Set(["business_support", "assistant_support"]);
     return filtered.filter((r) => !blocked.has(String(r.source).toLowerCase()));
+  }, [filtered]);
+
+  const ticketsBusiness = useMemo(() => {
+    return filtered.filter((r) => String(r.source).toLowerCase() === "business_support");
+  }, [filtered]);
+
+  const ticketsAssistant = useMemo(() => {
+    return filtered.filter((r) => String(r.source).toLowerCase() === "assistant_support");
   }, [filtered]);
 
   const markResolved = async (id: string) => {
@@ -234,8 +243,10 @@ export default function AdminSupport() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground">Website Inquiries</h1>
-          <p className="text-sm text-muted-foreground">Messages submitted from the /contact form.</p>
+          <h1 className="text-3xl font-bold text-foreground">Support Tickets</h1>
+          <p className="text-sm text-muted-foreground">
+            Inbox for public + business + assistant support requests.
+          </p>
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -261,22 +272,50 @@ export default function AdminSupport() {
 
       <Card>
         <CardHeader className="space-y-1">
-          <CardTitle className="text-base">Website Inquiries</CardTitle>
-          <CardDescription>
-            All inquiries created from public forms (excluding Business/Assistant Support).
-          </CardDescription>
+          <CardTitle className="text-base">Tickets</CardTitle>
+          <CardDescription>Filter by ticket type and status.</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="py-8 text-sm text-muted-foreground">Loading inquiries...</div>
           ) : (
-            <InquiryTable
-              rows={websiteInquiryRows}
-              emptyLabel="No website inquiries."
-              onOpen={setSelected}
-              selected={selected}
-              onMarkResolved={markResolved}
-            />
+            <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
+              <TabsList>
+                <TabsTrigger value="public">Tickets Public</TabsTrigger>
+                <TabsTrigger value="business">Tickets Business</TabsTrigger>
+                <TabsTrigger value="assistant">Tickets Assistant</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="public" className="mt-4">
+                <InquiryTable
+                  rows={ticketsPublic}
+                  emptyLabel="No public tickets."
+                  onOpen={setSelected}
+                  selected={selected}
+                  onMarkResolved={markResolved}
+                />
+              </TabsContent>
+
+              <TabsContent value="business" className="mt-4">
+                <InquiryTable
+                  rows={ticketsBusiness}
+                  emptyLabel="No business tickets."
+                  onOpen={setSelected}
+                  selected={selected}
+                  onMarkResolved={markResolved}
+                />
+              </TabsContent>
+
+              <TabsContent value="assistant" className="mt-4">
+                <InquiryTable
+                  rows={ticketsAssistant}
+                  emptyLabel="No assistant tickets."
+                  onOpen={setSelected}
+                  selected={selected}
+                  onMarkResolved={markResolved}
+                />
+              </TabsContent>
+            </Tabs>
           )}
         </CardContent>
       </Card>
