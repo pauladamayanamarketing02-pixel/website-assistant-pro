@@ -17,6 +17,20 @@ type IntegrationSecretMeta = {
   is_master_key?: boolean;
 };
 
+async function invokeWithAuth<T>(fnName: string, body: unknown) {
+  const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+  if (sessionErr) throw sessionErr;
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Unauthorized: session not found");
+
+  return supabase.functions.invoke<T>(fnName, {
+    body,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export default function SuperAdminCms() {
   const [loading, setLoading] = useState(false);
   const [secrets, setSecrets] = useState<IntegrationSecretMeta[]>([]);
@@ -38,9 +52,7 @@ export default function SuperAdminCms() {
   const fetchSecrets = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("super-admin-integration-secrets", {
-        body: { action: "list" },
-      });
+      const { data, error } = await invokeWithAuth<any>("super-admin-integration-secrets", { action: "list" });
       if (error) throw error;
       setSecrets(((data as any)?.items ?? []) as IntegrationSecretMeta[]);
     } catch (e: any) {
@@ -62,8 +74,9 @@ export default function SuperAdminCms() {
       const key = masterKey.trim();
       if (!key) throw new Error("Master key wajib diisi");
 
-      const { error } = await supabase.functions.invoke("super-admin-integration-secrets", {
-        body: { action: "set_master_key", master_key: key },
+      const { error } = await invokeWithAuth<any>("super-admin-integration-secrets", {
+        action: "set_master_key",
+        master_key: key,
       });
       if (error) throw error;
 
@@ -86,8 +99,10 @@ export default function SuperAdminCms() {
       const newKey = newMasterKey.trim();
       if (!oldKey || !newKey) throw new Error("Old & New master key wajib diisi");
 
-      const { error } = await supabase.functions.invoke("super-admin-integration-secrets", {
-        body: { action: "rotate_master_key", old_master_key: oldKey, new_master_key: newKey },
+      const { error } = await invokeWithAuth<any>("super-admin-integration-secrets", {
+        action: "rotate_master_key",
+        old_master_key: oldKey,
+        new_master_key: newKey,
       });
       if (error) throw error;
 
@@ -112,8 +127,11 @@ export default function SuperAdminCms() {
       const v = value;
       if (!p || !n || !v) throw new Error("Provider, Name, dan Value wajib diisi");
 
-      const { error } = await supabase.functions.invoke("super-admin-integration-secrets", {
-        body: { action: "upsert_secret", provider: p, name: n, value: v },
+      const { error } = await invokeWithAuth<any>("super-admin-integration-secrets", {
+        action: "upsert_secret",
+        provider: p,
+        name: n,
+        value: v,
       });
       if (error) throw error;
 
@@ -135,8 +153,11 @@ export default function SuperAdminCms() {
       const v = domainrKey.trim();
       if (!v) throw new Error("Domainr API key wajib diisi");
 
-      const { error } = await supabase.functions.invoke("super-admin-integration-secrets", {
-        body: { action: "upsert_secret", provider: "domainr", name: "api_key", value: v },
+      const { error } = await invokeWithAuth<any>("super-admin-integration-secrets", {
+        action: "upsert_secret",
+        provider: "domainr",
+        name: "api_key",
+        value: v,
       });
       if (error) throw error;
 
