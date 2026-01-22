@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarChart3, CreditCard, Mail, KeyRound, Webhook } from "lucide-react";
 import { DomainDuckIntegrationCard, type DomainDuckTestResult } from "@/components/super-admin/DomainDuckIntegrationCard";
+import { Ga4IntegrationCard } from "@/components/super-admin/Ga4IntegrationCard";
 
 async function getAccessToken() {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
@@ -49,6 +50,32 @@ export default function SuperAdminCms() {
   const [domainduckTestDomain, setDomainduckTestDomain] = useState("example.com");
   const [domainduckTestResult, setDomainduckTestResult] = useState<DomainDuckTestResult | null>(null);
 
+  const [ga4MeasurementId, setGa4MeasurementId] = useState("");
+  const [ga4Configured, setGa4Configured] = useState(false);
+  const [ga4UpdatedAt, setGa4UpdatedAt] = useState<string | null>(null);
+  const [ga4Masked, setGa4Masked] = useState<string | null>(null);
+
+  const fetchGa4Status = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await invokeWithAuth<any>("super-admin-ga4-settings", { action: "get" });
+      if (error) throw error;
+      setGa4Configured(Boolean((data as any)?.configured));
+      setGa4UpdatedAt(((data as any)?.updated_at ?? null) as string | null);
+      setGa4Masked(((data as any)?.measurement_id_masked ?? null) as any);
+    } catch (e: any) {
+      console.error(e);
+      if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
+        toast.error("Session expired. Silakan login ulang.");
+        navigate("/super-admin/login", { replace: true });
+        return;
+      }
+      toast.error(e?.message || "Gagal memuat status GA4");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchDomainDuckStatus = async () => {
     setLoading(true);
     try {
@@ -74,7 +101,45 @@ export default function SuperAdminCms() {
 
   useEffect(() => {
     fetchDomainDuckStatus();
+    fetchGa4Status();
   }, []);
+
+  const onSaveGa4 = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const v = ga4MeasurementId.trim();
+      if (!v) throw new Error("Measurement ID wajib diisi");
+      if (!/^G-[A-Z0-9]{6,}$/i.test(v)) throw new Error("Format Measurement ID tidak valid (contoh: G-CTS53JM1RF)");
+
+      const { error } = await invokeWithAuth<any>("super-admin-ga4-settings", { action: "set", measurement_id: v });
+      if (error) throw error;
+
+      setGa4MeasurementId("");
+      toast.success("GA4 aktif");
+      await fetchGa4Status();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal menyimpan GA4");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onClearGa4 = async () => {
+    setLoading(true);
+    try {
+      const { error } = await invokeWithAuth<any>("super-admin-ga4-settings", { action: "clear" });
+      if (error) throw error;
+      toast.success("GA4 dinonaktifkan");
+      await fetchGa4Status();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal menonaktifkan GA4");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onSaveDomainDuckKey = async (e: FormEvent) => {
     e.preventDefault();
@@ -207,24 +272,15 @@ export default function SuperAdminCms() {
           testResult={domainduckTestResult}
         />
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" /> GA4 (Google Analytics)
-              </CardTitle>
-              <Badge variant="secondary">Planned</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Store Measurement ID, enable basic event tracking, and verify connection.
-            <div className="mt-4">
-              <Button variant="outline" disabled>
-                <KeyRound className="h-4 w-4 mr-2" /> Configure
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <Ga4IntegrationCard
+          loading={loading}
+          status={{ configured: ga4Configured, updatedAt: ga4UpdatedAt, measurementIdMasked: ga4Masked }}
+          value={ga4MeasurementId}
+          onChange={setGa4MeasurementId}
+          onSave={onSaveGa4}
+          onRefresh={fetchGa4Status}
+          onClear={onClearGa4}
+        />
 
         {/* Domain Lookup configured above (DomainDuck) */}
 
