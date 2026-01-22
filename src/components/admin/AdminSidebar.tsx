@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { ChevronDown, Users, type LucideIcon } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
+import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,7 @@ export type AdminNavItem = {
   icon: LucideIcon;
   disabled?: boolean;
   children?: AdminNavItem[];
+  badgeCount?: number;
 };
 
 export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
@@ -87,8 +89,20 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                         aria-disabled
                         title="Coming soon"
                       >
-                        <item.icon className="h-4 w-4" />
-                        {open && <span className="truncate">{item.title}</span>}
+                        <span className="relative inline-flex">
+                          <item.icon className="h-4 w-4" />
+                          {!open && (item.badgeCount ?? 0) > 0 && (
+                            <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                          )}
+                        </span>
+                        {open && (
+                          <span className="truncate flex-1">{item.title}</span>
+                        )}
+                        {open && (item.badgeCount ?? 0) > 0 && (
+                          <Badge variant="destructive" className="ml-auto">
+                            {item.badgeCount}
+                          </Badge>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -104,10 +118,20 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                           (branchActive ? " bg-sidebar-accent text-sidebar-primary" : "")
                         }
                       >
-                        <item.icon className="h-4 w-4" />
+                        <span className="relative inline-flex">
+                          <item.icon className="h-4 w-4" />
+                          {!open && (item.badgeCount ?? 0) > 0 && (
+                            <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                          )}
+                        </span>
                         {open && (
                           <>
                             <span className="truncate flex-1">{item.title}</span>
+                            {(item.badgeCount ?? 0) > 0 && (
+                              <Badge variant="destructive" className="mr-1">
+                                {item.badgeCount}
+                              </Badge>
+                            )}
                             <ChevronDown className={"h-4 w-4 transition-transform " + (isExpanded ? "rotate-180" : "rotate-0")} />
                           </>
                         )}
@@ -125,7 +149,10 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                                   activeClassName="bg-sidebar-accent text-sidebar-primary"
                                 >
                                   <child.icon className="h-4 w-4" />
-                                  <span className="truncate">{child.title}</span>
+                                  <span className="truncate flex-1">{child.title}</span>
+                                  {(child.badgeCount ?? 0) > 0 && (
+                                    <Badge variant="destructive">{child.badgeCount}</Badge>
+                                  )}
                                 </NavLink>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
@@ -145,8 +172,18 @@ export function AdminSidebar({ items }: { items: AdminNavItem[] }) {
                         className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
                         activeClassName="bg-sidebar-accent text-sidebar-primary"
                       >
-                        <item.icon className="h-4 w-4" />
-                        {open && <span className="truncate">{item.title}</span>}
+                        <span className="relative inline-flex">
+                          <item.icon className="h-4 w-4" />
+                          {!open && (item.badgeCount ?? 0) > 0 && (
+                            <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                          )}
+                        </span>
+                        {open && <span className="truncate flex-1">{item.title}</span>}
+                        {open && (item.badgeCount ?? 0) > 0 && (
+                          <Badge variant="destructive" className="ml-auto">
+                            {item.badgeCount}
+                          </Badge>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -22,7 +22,7 @@ export default function AdminAssistantCreate() {
     e.preventDefault();
 
     if (!fullName.trim()) {
-      toast({ variant: "destructive", title: "Full Name is required" });
+      toast({ variant: "destructive", title: "Full name is required" });
       return;
     }
 
@@ -49,8 +49,8 @@ export default function AdminAssistantCreate() {
       if (error) throw error;
 
       toast({
-        title: "Assistant Created",
-        description: `Account for ${email} has been created and can login immediately.`,
+        title: "Assistant created",
+        description: `Account for ${email} has been created and can log in immediately.`,
       });
 
       navigate("/dashboard/admin/assistants");
@@ -58,7 +58,7 @@ export default function AdminAssistantCreate() {
       console.error("Error creating assistant:", err);
       toast({
         variant: "destructive",
-        title: "Failed to Create Assistant",
+        title: "Failed to create assistant",
         description: err.message ?? "An error occurred",
       });
     } finally {
@@ -70,14 +70,19 @@ export default function AdminAssistantCreate() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/admin/assistants")}>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/dashboard/admin/assistants")}
+              aria-label="Back"
+              title="Back"
+            >
               <ArrowLeft className="h-4 w-4" />
-              Back
             </Button>
+            <h1 className="text-3xl font-bold text-foreground">Add New Assistant</h1>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Add New Assistant</h1>
-          <p className="text-sm text-muted-foreground">Create assistant account (bisa langsung login).</p>
+          <p className="text-sm text-muted-foreground">Create an assistant account (can log in immediately).</p>
         </div>
       </header>
 
@@ -105,7 +110,7 @@ export default function AdminAssistantCreate() {
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Contoh: John Doe"
+                placeholder="e.g. John Doe"
                 required
               />
             </div>
@@ -133,11 +138,13 @@ export default function AdminAssistantCreate() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimal 8 karakter"
+                placeholder="At least 8 characters"
                 required
                 minLength={8}
               />
-              <p className="text-xs text-muted-foreground">Assistant akan login pakai email & password ini tanpa konfirmasi email.</p>
+              <p className="text-xs text-muted-foreground">
+                The assistant can log in with this email and password without email confirmation.
+              </p>
             </div>
 
             <div className="flex justify-end gap-2">

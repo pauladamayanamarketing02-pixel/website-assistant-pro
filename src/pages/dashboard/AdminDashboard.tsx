@@ -65,6 +65,24 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingAccess, setCheckingAccess] = useState(true);
+  const [supportNewCount, setSupportNewCount] = useState(0);
+
+  const fetchSupportNewCount = async () => {
+    try {
+      const { count, error } = await (supabase as any)
+        .from("website_inquiries")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new")
+        // Keep badge aligned with Support page scope (exclude internal sources)
+        .not("source", "in", '("business_support","assistant_support")');
+
+      if (error) throw error;
+      setSupportNewCount(Number(count ?? 0));
+    } catch {
+      // If anything fails, don't block the dashboard.
+      setSupportNewCount(0);
+    }
+  };
 
   const navItems: AdminNavItem[] = useMemo(
     () => [
@@ -88,7 +106,12 @@ export default function AdminDashboard() {
           { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
           { title: "Packages", url: "/dashboard/admin/website/packages", icon: Package },
           { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
-          { title: "Support", url: "/dashboard/admin/website/support", icon: MessageSquare },
+          {
+            title: "Support",
+            url: "/dashboard/admin/website/support",
+            icon: MessageSquare,
+            badgeCount: supportNewCount > 0 ? supportNewCount : undefined,
+          },
 
            // Templates (Order)
            { title: "Templates", url: "/dashboard/admin/website/templates", icon: SlidersHorizontal },
@@ -110,8 +133,26 @@ export default function AdminDashboard() {
       { title: "Activity Logs (soon)", url: "/dashboard/admin/logs", icon: AlertCircle },
       { title: "My Account", url: "/dashboard/admin/account", icon: User },
     ],
-    []
+    [supportNewCount]
   );
+
+  useEffect(() => {
+    void fetchSupportNewCount();
+
+    const channel = supabase
+      .channel("admin-support-badge")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "website_inquiries" },
+        () => void fetchSupportNewCount()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     (async () => {
