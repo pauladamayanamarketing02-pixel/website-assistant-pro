@@ -6,7 +6,6 @@ import {
   Bell,
   Briefcase,
   CheckSquare,
-  ClipboardCheck,
   FileQuestion,
   FileText,
   Globe,
@@ -108,7 +107,6 @@ export default function AdminDashboard() {
         ],
       },
       { title: "Announcements", url: "/dashboard/admin/announcements", icon: Bell },
-      { title: "Quality Control", url: "/dashboard/admin/qc", icon: ClipboardCheck },
       { title: "Activity Logs", url: "/dashboard/admin/logs", icon: AlertCircle },
       { title: "My Account", url: "/dashboard/admin/account", icon: User },
     ],
@@ -210,7 +208,6 @@ export default function AdminDashboard() {
               <Route path="analytics/conversion" element={<AdminPlaceholder title="Conversion (read-only)" />} />
 
               <Route path="announcements" element={<AdminPlaceholder title="Announcements" />} />
-              <Route path="qc" element={<AdminPlaceholder title="Quality Control" />} />
               <Route path="logs" element={<AdminPlaceholder title="Activity Logs" />} />
               <Route path="account" element={<AdminAccount />} />
             </Routes>

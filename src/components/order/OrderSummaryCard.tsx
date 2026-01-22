@@ -30,8 +30,6 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
   })();
 
   const yearsLabel = state.subscriptionYears ? `${state.subscriptionYears} tahun` : "—";
-  const domainPriceLabel = pricing.domainPriceUsd == null ? "—" : formatUsd(pricing.domainPriceUsd);
-  const packagePriceLabel = pricing.packagePriceUsd == null ? "—" : formatUsd(pricing.packagePriceUsd);
   const estTotalLabel = (() => {
     if (!showEstPrice) return null;
     if (!state.subscriptionYears) return "—";
@@ -52,16 +50,6 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
             <span className="text-sm font-medium text-foreground truncate max-w-[220px]">
               {state.domain || "—"}
             </span>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">Domain price</span>
-            <span className="text-sm font-medium text-foreground">{domainPriceLabel}</span>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">Hosting + template</span>
-            <span className="text-sm font-medium text-foreground">{packagePriceLabel}</span>
           </div>
 
           <div className="flex items-center justify-between gap-3">

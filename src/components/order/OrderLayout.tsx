@@ -14,7 +14,6 @@ const steps: Step[] = [
   { key: "details", label: "Your Details" },
   { key: "plan", label: "Subscription Plan" },
   { key: "payment", label: "Payment" },
-  { key: "done", label: "Done" },
 ];
 
 function stepIndex(activeKey: Step["key"]) {
@@ -43,7 +42,7 @@ export function OrderLayout({
           <div className="mt-4">
             <Card className="border-0 bg-muted/40">
               <CardContent className="py-4">
-                <ol className="grid grid-cols-2 gap-y-3 gap-x-4 md:grid-cols-6">
+                <ol className="grid grid-cols-2 gap-y-3 gap-x-4 md:grid-cols-5">
                   {steps.map((s, idx) => (
                     <li key={s.key} className="flex items-center gap-2">
                       <div
