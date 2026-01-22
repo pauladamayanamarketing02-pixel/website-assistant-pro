@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Trash2, Pencil, Sparkles, ArrowLeft, Copy } from 'lucide-react';
 import { usePackageAiToolRules } from '@/hooks/usePackageAiToolRules';
+import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
 
 type ToolLanguage = 'html' | 'react' | 'nextjs';
 
@@ -40,6 +41,7 @@ export default function AIGenerator() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isToolEnabled } = usePackageAiToolRules(user?.id);
+  const { isEnabled } = usePackageMenuRules(user?.id);
 
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState('');
@@ -65,9 +67,7 @@ export default function AIGenerator() {
 
   const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
 
-  const visibleTools = useMemo(() => {
-    return tools.filter((t) => isToolEnabled(t.id));
-  }, [isToolEnabled, tools]);
+  const canUseTools = useMemo(() => isEnabled('ai_agents'), [isEnabled]);
 
   const loadTools = async () => {
     if (!user?.id) return;
@@ -547,20 +547,35 @@ export default function AIGenerator() {
             <CardDescription>Click on a tool to use it, or edit/delete from actions</CardDescription>
           </CardHeader>
           <CardContent>
-            {visibleTools.length === 0 ? (
-              <div className="py-10 text-muted-foreground">Tools tidak tersedia untuk package ini.</div>
+            {tools.length === 0 ? (
+              <div className="py-10 text-muted-foreground">Belum ada tools.</div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {visibleTools.map((tool) => (
+                {tools.map((tool) => {
+                  const toolClickable = canUseTools && isToolEnabled(tool.id);
+                  return (
                   <Card 
                     key={tool.id}
-                    className="min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
+                    className={
+                      toolClickable
+                        ? 'min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50'
+                        : 'min-w-0 overflow-hidden cursor-not-allowed opacity-60 border-2'
+                    }
+                    aria-disabled={!toolClickable}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between gap-2 min-w-0">
                         <div
                           className="flex items-center gap-3 flex-1 min-w-0"
                           onClick={() => {
+                            if (!toolClickable) {
+                              toast({
+                                variant: 'destructive',
+                                title: 'Tool tidak tersedia',
+                                description: 'Tool ini dinonaktifkan untuk package kamu.',
+                              });
+                              return;
+                            }
                             setSelectedTool(tool);
                             setViewMode('tool-detail');
                           }}
@@ -623,7 +638,8 @@ export default function AIGenerator() {
                       </div>
                     </CardHeader>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
