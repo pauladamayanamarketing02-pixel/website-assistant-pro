@@ -27,11 +27,11 @@ export default function AdminCreateBusinessUser() {
     const password = form.password;
 
     if (!email) {
-      toast({ variant: "destructive", title: "Email wajib diisi" });
+      toast({ variant: "destructive", title: "Email is required" });
       return;
     }
     if (!password || password.length < 8) {
-      toast({ variant: "destructive", title: "Password minimal 8 karakter" });
+      toast({ variant: "destructive", title: "Password must be at least 8 characters" });
       return;
     }
 
@@ -50,8 +50,8 @@ export default function AdminCreateBusinessUser() {
       if (error) throw error;
 
       toast({
-        title: "Berhasil dibuat",
-        description: `Akun user sudah dibuat dan bisa langsung login: ${email}`,
+        title: "Created successfully",
+        description: `The user account has been created and can log in immediately: ${email}`,
       });
 
       // kembali ke list
@@ -59,8 +59,8 @@ export default function AdminCreateBusinessUser() {
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal membuat akun",
-        description: e?.message || "Terjadi kesalahan.",
+        title: "Failed to create account",
+        description: e?.message || "Something went wrong.",
       });
     } finally {
       setSaving(false);
@@ -71,18 +71,26 @@ export default function AdminCreateBusinessUser() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground">Add New Business</h1>
-          <p className="text-sm text-muted-foreground">Buat akun login role user (tanpa email konfirmasi).</p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/dashboard/admin/business-users")}
+              aria-label="Back"
+              title="Back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-3xl font-bold text-foreground">Add New Business</h1>
+          </div>
+          <p className="text-sm text-muted-foreground">Create a user account (can log in immediately).</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Kembali
-          </Button>
           <Button type="button" onClick={onSubmit} disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            {saving ? "Menyimpan..." : "Simpan"}
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </header>
@@ -91,7 +99,7 @@ export default function AdminCreateBusinessUser() {
         <CardHeader>
           <CardTitle className="text-base">Account & Business Info</CardTitle>
           <CardDescription>
-            Minimal: email + password. Opsional: nama, business name, phone.
+            Required: email + password. Optional: full name, business name, phone.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 md:grid-cols-2">
@@ -114,7 +122,7 @@ export default function AdminCreateBusinessUser() {
               type="password"
               value={form.password}
               onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-              placeholder="Minimal 8 karakter"
+              placeholder="At least 8 characters"
               autoComplete="new-password"
             />
           </div>
@@ -125,7 +133,7 @@ export default function AdminCreateBusinessUser() {
               id="fullName"
               value={form.fullName}
               onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))}
-              placeholder="Nama lengkap"
+              placeholder="Full name"
             />
           </div>
 
@@ -135,7 +143,7 @@ export default function AdminCreateBusinessUser() {
               id="businessName"
               value={form.businessName}
               onChange={(e) => setForm((p) => ({ ...p, businessName: e.target.value }))}
-              placeholder="Nama bisnis"
+              placeholder="Business name"
             />
           </div>
 
@@ -145,7 +153,7 @@ export default function AdminCreateBusinessUser() {
               id="phone"
               value={form.phone}
               onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-              placeholder="+62..."
+              placeholder="e.g. +62..."
             />
           </div>
         </CardContent>
