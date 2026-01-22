@@ -30,7 +30,7 @@ export function OrderLayout({
   title: string;
   step: Step["key"];
   children: ReactNode;
-  sidebar: ReactNode;
+  sidebar: ReactNode | null;
 }) {
   const active = stepIndex(step);
 
@@ -66,9 +66,10 @@ export function OrderLayout({
           </div>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section className={cn("grid gap-6", sidebar ? "lg:grid-cols-[1fr_360px]" : "")}
+        >
           <div>{children}</div>
-          <aside className="lg:sticky lg:top-6 h-fit">{sidebar}</aside>
+          {sidebar ? <aside className="lg:sticky lg:top-6 h-fit">{sidebar}</aside> : null}
         </section>
       </main>
     </PublicLayout>
