@@ -21,6 +21,7 @@ export type OrderContactSettings = {
 export type OrderSubscriptionPlan = {
   years: number;
   label?: string;
+  price_usd?: number;
   is_active?: boolean;
   sort_order?: number;
 };
@@ -90,12 +91,14 @@ function parseSubscriptionPlans(value: unknown): OrderSubscriptionPlan[] {
       const obj = raw as any;
       const years = safeNumber(obj?.years);
       const label = safeString(obj?.label).trim();
+      const price_usd = safeNumber(obj?.price_usd);
       const is_active = typeof obj?.is_active === "boolean" ? obj.is_active : true;
       const sort_order = safeNumber(obj?.sort_order);
       if (!years || years <= 0) return null;
       return {
         years,
         label: label || `${years} Tahun`,
+        price_usd,
         is_active,
         sort_order: sort_order ?? years,
       } satisfies OrderSubscriptionPlan;

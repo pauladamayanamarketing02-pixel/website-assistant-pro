@@ -34,8 +34,8 @@ export default function ChooseDesign() {
             <CardTitle className="text-base">Filter & search template</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 md:flex-row md:items-center">
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search templates" />
-            <div className="flex gap-2">
+            <Input className="md:flex-1" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search templates" />
+            <div className="flex flex-wrap gap-2">
               {([
                 ["all", "All"],
                 ["business", "Business"],
@@ -56,7 +56,7 @@ export default function ChooseDesign() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => {
             const isSelected = selected === t.id;
             return (
