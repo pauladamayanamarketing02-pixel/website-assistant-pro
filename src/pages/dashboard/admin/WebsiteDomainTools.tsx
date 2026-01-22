@@ -77,6 +77,7 @@ export default function WebsiteDomainTools() {
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
   const [expandedCategoryKeys, setExpandedCategoryKeys] = useState<string[]>([]);
+  const [draftTemplateId, setDraftTemplateId] = useState<string | null>(null);
 
   const editingTemplate = useMemo(() => {
     if (!editTemplateId) return null;
@@ -335,6 +336,38 @@ export default function WebsiteDomainTools() {
     }
   };
 
+  const persistTemplates = async (nextTemplates: TemplateRow[]) => {
+    setSaving(true);
+    try {
+      const payload = (nextTemplates ?? [])
+        .map((t) => ({
+          id: String(t.id ?? "").trim(),
+          name: String(t.name ?? "").trim(),
+          category: t.category,
+          is_active: t.is_active !== false,
+          sort_order: typeof t.sort_order === "number" ? t.sort_order : Number(t.sort_order ?? 0),
+          preview_image_url: String((t as any)?.preview_image_url ?? "").trim() || undefined,
+          preview_url: String((t as any)?.preview_url ?? "").trim() || undefined,
+        }))
+        .filter((t) => t.id && t.name);
+
+      const { error } = await (supabase as any)
+        .from("website_settings")
+        .upsert({ key: SETTINGS_TEMPLATES_KEY, value: payload }, { onConflict: "key" });
+      if (error) throw error;
+
+      toast({ title: "Saved", description: "Template list updated." });
+      await fetchTemplates();
+      return true;
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Failed to save", description: e?.message ?? "Unknown error" });
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const templateCountLabel = useMemo(() => String(templates.length), [templates.length]);
 
   return (
@@ -395,7 +428,28 @@ export default function WebsiteDomainTools() {
                 <div className="text-xs text-muted-foreground">
                   Showing {filteredTemplates.length} templates • Page {templatePage} / {totalTemplatePages}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const id = `t${Date.now()}`;
+                      setTemplates((prev) => [
+                        ...prev,
+                        {
+                          id,
+                          name: "New Template",
+                          category: (categories[0]?.name ?? "business") as any,
+                          is_active: true,
+                          sort_order: prev.length + 1,
+                        },
+                      ]);
+                      setDraftTemplateId(id);
+                      setEditTemplateId(id);
+                    }}
+                    disabled={saving}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Add Template
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"
@@ -536,26 +590,7 @@ export default function WebsiteDomainTools() {
                     <div className="text-sm text-muted-foreground">No templates yet. Click “Add Template”.</div>
                   ) : null}
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const id = `t${Date.now()}`;
-                        setTemplates((prev) => [
-                          ...prev,
-                          { id, name: "New Template", category: (categories[0]?.name ?? "business") as any, is_active: true, sort_order: prev.length + 1 },
-                        ]);
-                        setEditTemplateId(id);
-                      }}
-                      disabled={saving}
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Add Template
-                    </Button>
-                    <Button type="button" onClick={saveTemplates} disabled={saving}>
-                      <Save className="h-4 w-4 mr-2" /> Save Templates
-                    </Button>
-                  </div>
+                  {/* Saved via the Add/Edit dialog */}
                 </div>
             </CardContent>
           </Card>
@@ -697,10 +732,19 @@ export default function WebsiteDomainTools() {
       </Dialog>
 
       {/* Edit template dialog */}
-      <Dialog open={!!editTemplateId} onOpenChange={(open) => (!open ? setEditTemplateId(null) : null)}>
+      <Dialog
+        open={!!editTemplateId}
+        onOpenChange={(open) => {
+          if (open) return;
+          // If this was a newly-added draft and user closes without saving, remove it.
+          setTemplates((prev) => (draftTemplateId ? prev.filter((t) => t.id !== draftTemplateId) : prev));
+          setDraftTemplateId(null);
+          setEditTemplateId(null);
+        }}
+      >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Edit Template</DialogTitle>
+            <DialogTitle>{draftTemplateId ? "Add Template" : "Edit Template"}</DialogTitle>
           </DialogHeader>
 
           {editingTemplate ? (
@@ -831,8 +875,31 @@ export default function WebsiteDomainTools() {
               </div>
 
               <div className="md:col-span-2 flex items-center justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setEditTemplateId(null)} disabled={saving}>
-                  Close
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setTemplates((prev) => (draftTemplateId ? prev.filter((t) => t.id !== draftTemplateId) : prev));
+                    setDraftTemplateId(null);
+                    setEditTemplateId(null);
+                  }}
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    if (!editingTemplate) return;
+                    const ok = await persistTemplates(templates);
+                    if (!ok) return;
+                    setDraftTemplateId(null);
+                    setEditTemplateId(null);
+                  }}
+                  disabled={saving || !String(editingTemplate.name ?? "").trim()}
+                >
+                  <Save className="h-4 w-4 mr-2" /> Save
                 </Button>
               </div>
             </div>
@@ -848,17 +915,18 @@ export default function WebsiteDomainTools() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete template?</AlertDialogTitle>
             <AlertDialogDescription>
-              Template akan dihapus dari daftar. Aksi ini tidak bisa dibatalkan.
+              This template will be removed from the list. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeleteTemplateId(null)}>No</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
+              onClick={async () => {
                 const id = deleteTemplateId;
                 if (!id) return;
-                setTemplates((prev) => prev.filter((t) => t.id !== id));
-                setDeleteTemplateId(null);
+                const next = templates.filter((t) => t.id !== id);
+                const ok = await persistTemplates(next);
+                if (ok) setDeleteTemplateId(null);
               }}
             >
               Yes
