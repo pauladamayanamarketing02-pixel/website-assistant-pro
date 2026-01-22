@@ -60,15 +60,16 @@ export default function ChooseDesign() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => {
             const isSelected = selected === t.id;
-            const previewUrl = String(t.preview_url ?? "").trim();
+            const previewImg = String((t as any)?.preview_image_url ?? "").trim();
+            const demoUrl = String(t.preview_url ?? "").trim();
             return (
               <Card key={t.id} className={isSelected ? "ring-2 ring-ring" : ""}>
                 <CardContent className="p-5">
                   <div className="mb-4 overflow-hidden rounded-md border bg-muted">
                     <AspectRatio ratio={16 / 9}>
-                      {previewUrl ? (
+                      {previewImg ? (
                         <img
-                          src={previewUrl}
+                          src={previewImg}
                           alt={`Preview ${t.name}`}
                           className="h-full w-full object-cover"
                           loading="lazy"
@@ -101,7 +102,7 @@ export default function ChooseDesign() {
                         if (!url) return;
                         window.open(url, "_blank", "noopener,noreferrer");
                       }}
-                      disabled={!previewUrl}
+                      disabled={!demoUrl}
                     >
                       Preview
                     </Button>

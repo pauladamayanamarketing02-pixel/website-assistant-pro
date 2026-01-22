@@ -8,7 +8,9 @@ export type OrderTemplate = {
   category: "business" | "portfolio" | "service" | "agency";
   is_active?: boolean;
   sort_order?: number;
-  // URL gambar preview template (atau URL apa pun yang akan ditampilkan sebagai <img>)
+  // URL gambar preview template (thumbnail) yang akan ditampilkan sebagai <img>
+  preview_image_url?: string;
+  // URL demo/preview website (dibuka di tab baru)
   preview_url?: string;
 };
 
@@ -56,6 +58,13 @@ function safeNumber(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function isLikelyImageUrl(url: string): boolean {
+  const u = (url ?? "").trim().toLowerCase();
+  if (!u) return false;
+  if (u.includes("/template-previews/")) return true;
+  return /\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i.test(u);
+}
+
 function parseTemplates(value: unknown): OrderTemplate[] {
   if (!Array.isArray(value)) return fallbackTemplates;
   const normalized = value
@@ -66,10 +75,25 @@ function parseTemplates(value: unknown): OrderTemplate[] {
       const category = safeString(obj?.category) as OrderTemplate["category"];
       const is_active = typeof obj?.is_active === "boolean" ? obj.is_active : true;
       const sort_order = safeNumber(obj?.sort_order);
-      const preview_url = safeString(obj?.preview_url).trim();
+      // Backward-compat:
+      // - Dulu `preview_url` dipakai sebagai URL gambar.
+      // - Sekarang gambar pindah ke `preview_image_url`, dan `preview_url` jadi URL demo.
+      const legacyPreviewUrl = safeString(obj?.preview_url).trim();
+      const explicitImageUrl = safeString(obj?.preview_image_url).trim();
+
+      const preview_image_url = explicitImageUrl || (isLikelyImageUrl(legacyPreviewUrl) ? legacyPreviewUrl : "");
+      const preview_url = !isLikelyImageUrl(legacyPreviewUrl) ? legacyPreviewUrl : "";
       if (!id || !name) return null;
       if (!(["business", "portfolio", "service", "agency"] as const).includes(category)) return null;
-      return { id, name, category, is_active, sort_order, preview_url: preview_url || undefined } satisfies OrderTemplate;
+      return {
+        id,
+        name,
+        category,
+        is_active,
+        sort_order,
+        preview_image_url: preview_image_url || undefined,
+        preview_url: preview_url || undefined,
+      } satisfies OrderTemplate;
     })
     .filter(Boolean) as OrderTemplate[];
 

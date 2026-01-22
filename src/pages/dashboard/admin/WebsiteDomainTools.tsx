@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
+import { ExternalLink, Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
 
 type TemplateRow = {
   id: string;
@@ -22,6 +22,9 @@ type TemplateRow = {
   category: string;
   is_active?: boolean;
   sort_order?: number;
+  // URL gambar thumbnail
+  preview_image_url?: string;
+  // URL demo (dibuka di tab baru)
   preview_url?: string;
 };
 
@@ -59,6 +62,13 @@ function safeNumber(v: unknown): number {
 function asNumber(v: unknown, fallback = 0) {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function isLikelyImageUrl(url: string): boolean {
+  const u = (url ?? "").trim().toLowerCase();
+  if (!u) return false;
+  if (u.includes("/template-previews/")) return true;
+  return /\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i.test(u);
 }
 
 export default function WebsiteDomainTools() {
@@ -109,7 +119,20 @@ export default function WebsiteDomainTools() {
           .maybeSingle(),
       ]);
 
-      const nextTemplates = Array.isArray(tplRow?.value) ? (tplRow.value as any) : [];
+      const rawTemplates = Array.isArray(tplRow?.value) ? (tplRow.value as any[]) : [];
+      // Backward-compat: dulu `preview_url` dipakai untuk gambar.
+      // Sekarang gambar -> `preview_image_url`, demo URL -> `preview_url`.
+      const nextTemplates: TemplateRow[] = rawTemplates.map((t: any) => {
+        const legacyPreview = String(t?.preview_url ?? "").trim();
+        const explicitImg = String(t?.preview_image_url ?? "").trim();
+        const preview_image_url = explicitImg || (isLikelyImageUrl(legacyPreview) ? legacyPreview : "");
+        const preview_url = !isLikelyImageUrl(legacyPreview) ? legacyPreview : "";
+        return {
+          ...t,
+          preview_image_url: preview_image_url || undefined,
+          preview_url: preview_url || undefined,
+        };
+      });
       setTemplates(nextTemplates);
       const nextCategories = Array.isArray(catsRow?.value) ? (catsRow.value as any[]).map((v) => String(v ?? "").trim()).filter(Boolean) : [];
       setTemplateCategories(Array.from(new Set(nextCategories)).sort((a, b) => a.localeCompare(b)));
@@ -342,7 +365,7 @@ export default function WebsiteDomainTools() {
       const { data: urlData } = (supabase as any).storage.from("template-previews").getPublicUrl(data.path);
       const publicUrl = urlData?.publicUrl ?? "";
 
-      setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, preview_url: publicUrl } : t)));
+      setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, preview_image_url: publicUrl } : t)));
       toast({ title: "Uploaded", description: "Gambar berhasil diupload." });
     } catch (e: any) {
       console.error(e);
@@ -365,7 +388,7 @@ export default function WebsiteDomainTools() {
         if (error) console.warn("Failed to delete file from storage:", error);
       }
 
-      setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, preview_url: "" } : t)));
+      setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, preview_image_url: "" } : t)));
       toast({ title: "Removed", description: "Gambar dihapus." });
     } catch (e: any) {
       console.error(e);
@@ -385,6 +408,7 @@ export default function WebsiteDomainTools() {
           category: t.category,
           is_active: t.is_active !== false,
           sort_order: typeof t.sort_order === "number" ? t.sort_order : Number(t.sort_order ?? 0),
+          preview_image_url: String((t as any)?.preview_image_url ?? "").trim() || undefined,
           preview_url: String((t as any)?.preview_url ?? "").trim() || undefined,
         }))
         .filter((t) => t.id && t.name);
@@ -686,6 +710,7 @@ export default function WebsiteDomainTools() {
                             <TableRow>
                               <TableHead className="w-[84px]">Preview</TableHead>
                               <TableHead>Name</TableHead>
+                              <TableHead className="w-[260px]">Url Preview</TableHead>
                               <TableHead className="w-[220px]">Category</TableHead>
                               <TableHead className="w-[120px]">Sort</TableHead>
                               <TableHead className="w-[160px]">Status</TableHead>
@@ -695,7 +720,8 @@ export default function WebsiteDomainTools() {
                           <TableBody>
                             {pagedTemplates.map((t) => {
                               const idx = templates.findIndex((x) => x.id === t.id);
-                              const previewSrc = String((t as any)?.preview_url ?? "").trim();
+                              const previewSrc = String((t as any)?.preview_image_url ?? "").trim();
+                              const demoUrl = String((t as any)?.preview_url ?? "").trim();
 
                               return (
                                 <TableRow key={t.id}>
@@ -727,6 +753,33 @@ export default function WebsiteDomainTools() {
                                       }
                                       disabled={saving}
                                     />
+                                  </TableCell>
+
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        value={demoUrl}
+                                        onChange={(e) =>
+                                          setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, preview_url: e.target.value } : x)))
+                                        }
+                                        placeholder="https://demo..."
+                                        disabled={saving}
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                          const url = String((t as any)?.preview_url ?? "").trim();
+                                          if (!url) return;
+                                          window.open(url, "_blank", "noopener,noreferrer");
+                                        }}
+                                        disabled={!demoUrl}
+                                        aria-label="Open preview url"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Button>
+                                    </div>
                                   </TableCell>
 
                                   <TableCell>
