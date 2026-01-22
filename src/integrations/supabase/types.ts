@@ -1050,6 +1050,33 @@ export type Database = {
         }
         Relationships: []
       }
+      super_admin_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          provider: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          provider: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          provider?: string
+        }
+        Relationships: []
+      }
       task_recurring_rules: {
         Row: {
           assigned_to: string | null
