@@ -23,9 +23,6 @@ const roadmap: Record<string, string[]> = {
     "Atur aturan validasi domain (format, auto-normalize)",
     "Kaitkan harga domain ke paket (read-only dulu)",
   ],
-  "Order Flow": ["Atur step order", "Ubah CTA & copy per step", "Atur template default (opsional)"],
-  "Domain Pricing": ["Default package untuk harga domain", "Fallback price", "Aturan pricing per paket"],
-  "TLD Prices": ["Daftar harga per TLD", "Import/export", "Aktif/nonaktif TLD"],
 
   Analytics: ["Traffic", "Pages", "Blog Performance", "Campaign (UTM)", "Conversion (read-only)"],
   Traffic: ["Overview traffic", "Source/medium", "Device", "Tren harian"],

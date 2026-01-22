@@ -92,9 +92,6 @@ export default function AdminDashboard() {
 
           // Domain Tools (Order)
           { title: "Domain Tools", url: "/dashboard/admin/website/domain-tools", icon: SlidersHorizontal },
-          { title: "Order Flow", url: "/dashboard/admin/website/domain-tools/order-flow", icon: SlidersHorizontal },
-          { title: "Domain Pricing", url: "/dashboard/admin/website/domain-tools/domain-pricing", icon: SlidersHorizontal },
-          { title: "TLD Prices", url: "/dashboard/admin/website/domain-tools/tld-prices", icon: SlidersHorizontal },
         ],
       },
       {
@@ -203,9 +200,6 @@ export default function AdminDashboard() {
 
               {/* Domain Tools (Order) */}
               <Route path="website/domain-tools" element={<AdminPlaceholder title="Domain Tools" />} />
-              <Route path="website/domain-tools/order-flow" element={<AdminPlaceholder title="Order Flow" />} />
-              <Route path="website/domain-tools/domain-pricing" element={<AdminPlaceholder title="Domain Pricing" />} />
-              <Route path="website/domain-tools/tld-prices" element={<AdminPlaceholder title="TLD Prices" />} />
 
               {/* Analytics */}
               <Route path="analytics/traffic" element={<AdminPlaceholder title="Traffic" />} />
