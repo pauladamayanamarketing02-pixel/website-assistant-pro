@@ -6,14 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrderLayout } from "@/components/order/OrderLayout";
 import { OrderSummaryCard } from "@/components/order/OrderSummaryCard";
 import { useOrder } from "@/contexts/OrderContext";
+import { useOrderPublicSettings } from "@/hooks/useOrderPublicSettings";
+import { validatePromoCode } from "@/hooks/useOrderPromoCode";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Payment() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { state, setPromoCode } = useOrder();
+  const { state, setPromoCode, setAppliedPromo } = useOrder();
+  const { pricing, subscriptionPlans } = useOrderPublicSettings(state.domain);
   const [method, setMethod] = useState<"card" | "bank">("card");
   const [promo, setPromo] = useState(state.promoCode);
+
+  const baseTotalUsd = useMemo(() => {
+    if (!state.subscriptionYears) return null;
+    const selectedPlan = subscriptionPlans.find((p) => p.years === state.subscriptionYears);
+    const planOverrideUsd =
+      typeof selectedPlan?.price_usd === "number" && Number.isFinite(selectedPlan.price_usd) ? selectedPlan.price_usd : null;
+    if (planOverrideUsd != null) return planOverrideUsd;
+    const domainUsd = pricing.domainPriceUsd ?? null;
+    const pkgUsd = pricing.packagePriceUsd ?? null;
+    if (domainUsd == null || pkgUsd == null) return null;
+    return (domainUsd + pkgUsd) * state.subscriptionYears;
+  }, [pricing.domainPriceUsd, pricing.packagePriceUsd, state.subscriptionYears, subscriptionPlans]);
 
   const canComplete = useMemo(() => {
     return Boolean(
@@ -51,9 +66,34 @@ export default function Payment() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setPromoCode(promo.trim());
-                  toast({ title: "Promo code saved", description: promo.trim() ? `Code: ${promo.trim()}` : "Cleared" });
+                onClick={async () => {
+                  const code = promo.trim();
+                  setPromoCode(code);
+                  if (!code) {
+                    setAppliedPromo(null);
+                    toast({ title: "Promo cleared" });
+                    return;
+                  }
+                  if (baseTotalUsd == null) {
+                    setAppliedPromo(null);
+                    toast({ variant: "destructive", title: "Tidak bisa apply promo", description: "Total belum siap." });
+                    return;
+                  }
+
+                  const res = await validatePromoCode(code, baseTotalUsd);
+                  if (!res.ok) {
+                    setAppliedPromo(null);
+                    toast({ variant: "destructive", title: "Promo tidak valid", description: "Kode promo tidak ditemukan / tidak aktif." });
+                    return;
+                  }
+
+                  setAppliedPromo({
+                    id: res.promo.id,
+                    code: res.promo.code,
+                    promoName: res.promo.promo_name,
+                    discountUsd: res.discountUsd,
+                  });
+                  toast({ title: "Promo applied", description: `${res.promo.promo_name} (-$${res.discountUsd.toFixed(2)})` });
                 }}
               >
                 Apply

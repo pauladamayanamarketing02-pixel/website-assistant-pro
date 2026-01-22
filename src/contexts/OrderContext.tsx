@@ -18,6 +18,12 @@ export type OrderState = {
   subscriptionYears: number | null;
   details: OrderDetails;
   promoCode: string;
+  appliedPromo: {
+    id: string;
+    code: string;
+    promoName: string;
+    discountUsd: number;
+  } | null;
 };
 
 type OrderContextValue = {
@@ -28,6 +34,7 @@ type OrderContextValue = {
   setSubscriptionYears: (years: number | null) => void;
   setDetails: (patch: Partial<OrderDetails>) => void;
   setPromoCode: (code: string) => void;
+  setAppliedPromo: (promo: OrderState["appliedPromo"]) => void;
   reset: () => void;
 };
 
@@ -47,6 +54,7 @@ const defaultState: OrderState = {
     acceptedTerms: false,
   },
   promoCode: "",
+  appliedPromo: null,
 };
 
 const OrderContext = createContext<OrderContextValue | null>(null);
@@ -86,6 +94,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       setSubscriptionYears: (subscriptionYears) => setState((s) => ({ ...s, subscriptionYears })),
       setDetails: (patch) => setState((s) => ({ ...s, details: { ...s.details, ...patch } })),
       setPromoCode: (promoCode) => setState((s) => ({ ...s, promoCode })),
+      setAppliedPromo: (appliedPromo) => setState((s) => ({ ...s, appliedPromo })),
       reset: () => setState(defaultState),
     }),
     [state],

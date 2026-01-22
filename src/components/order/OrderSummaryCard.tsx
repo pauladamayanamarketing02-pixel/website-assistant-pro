@@ -30,23 +30,38 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
   })();
 
   const yearsLabel = state.subscriptionYears ? `${state.subscriptionYears} tahun` : "—";
-  const estTotalLabel = (() => {
+
+  const baseTotalUsd = (() => {
     if (!showEstPrice) return null;
-    if (!state.subscriptionYears) return "—";
+    if (!state.subscriptionYears) return null;
 
     const selectedPlan = subscriptionPlans.find((p) => p.years === state.subscriptionYears);
-    const planOverrideUsd = typeof selectedPlan?.price_usd === "number" && Number.isFinite(selectedPlan.price_usd)
-      ? selectedPlan.price_usd
-      : null;
-
-    if (planOverrideUsd != null) return formatUsd(planOverrideUsd);
+    const planOverrideUsd =
+      typeof selectedPlan?.price_usd === "number" && Number.isFinite(selectedPlan.price_usd) ? selectedPlan.price_usd : null;
+    if (planOverrideUsd != null) return planOverrideUsd;
 
     const domainUsd = pricing.domainPriceUsd ?? null;
     const pkgUsd = pricing.packagePriceUsd ?? null;
-    if (domainUsd == null || pkgUsd == null) return "—";
+    if (domainUsd == null || pkgUsd == null) return null;
 
-    const total = (domainUsd + pkgUsd) * state.subscriptionYears;
-    return formatUsd(total);
+    return (domainUsd + pkgUsd) * state.subscriptionYears;
+  })();
+
+  const promoDiscountUsd = (() => {
+    const d = state.appliedPromo?.discountUsd ?? 0;
+    if (!Number.isFinite(d) || d <= 0) return 0;
+    return d;
+  })();
+
+  const totalAfterPromoUsd = (() => {
+    if (baseTotalUsd == null) return null;
+    return Math.max(0, baseTotalUsd - promoDiscountUsd);
+  })();
+
+  const estTotalLabel = (() => {
+    if (!showEstPrice) return null;
+    if (totalAfterPromoUsd == null) return "—";
+    return formatUsd(totalAfterPromoUsd);
   })();
 
   return (
@@ -69,10 +84,20 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
           </div>
 
           {showEstPrice ? (
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-muted-foreground">Est. price</span>
-              <span className="text-sm font-medium text-foreground">{estTotalLabel}</span>
-            </div>
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Est. price</span>
+                <span className="text-sm font-medium text-foreground">{estTotalLabel}</span>
+              </div>
+              {state.appliedPromo ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-muted-foreground">Promo</span>
+                  <span className="text-sm font-medium text-foreground truncate max-w-[220px]">
+                    {state.appliedPromo.code} (-{formatUsd(promoDiscountUsd)})
+                  </span>
+                </div>
+              ) : null}
+            </>
           ) : null}
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">Status</span>
