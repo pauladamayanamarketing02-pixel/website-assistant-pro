@@ -13,8 +13,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ExternalLink, Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
+import { ExternalLink, Plus, RefreshCcw, Save, Trash2, Upload, X, Pencil } from "lucide-react";
 
 type TemplateRow = {
   id: string;
@@ -62,6 +73,15 @@ export default function WebsiteDomainTools() {
 
   const [categoryQuery, setCategoryQuery] = useState("");
   const [previewDialog, setPreviewDialog] = useState<{ open: boolean; src?: string; title?: string }>({ open: false });
+
+  const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+  const [expandedCategoryKeys, setExpandedCategoryKeys] = useState<string[]>([]);
+
+  const editingTemplate = useMemo(() => {
+    if (!editTemplateId) return null;
+    return templates.find((t) => t.id === editTemplateId) ?? null;
+  }, [editTemplateId, templates]);
 
   const fetchTemplates = async () => {
     setLoading(true);
@@ -132,6 +152,15 @@ export default function WebsiteDomainTools() {
     return categories.filter((c) => c.name.toLowerCase().includes(q));
   }, [categories, categoryQuery]);
 
+  useEffect(() => {
+    // Default: semua category terbuka (tapi tetap bisa di-minimize)
+    setExpandedCategoryKeys((prev) => {
+      if (prev.length) return prev;
+      return (categories ?? []).map((c) => c.name);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories.length]);
+
   const filteredTemplates = useMemo(() => {
     const q = templateQuery.trim().toLowerCase();
     return (templates ?? []).filter((t) => {
@@ -153,6 +182,10 @@ export default function WebsiteDomainTools() {
     const start = (templatePage - 1) * TEMPLATE_PAGE_SIZE;
     return filteredTemplates.slice(start, start + TEMPLATE_PAGE_SIZE);
   }, [filteredTemplates, templatePage]);
+
+  const updateTemplate = (id: string, patch: Partial<TemplateRow>) => {
+    setTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  };
 
   const saveCategoriesOnly = async (nextCategories: string[]) => {
     try {
@@ -398,16 +431,15 @@ export default function WebsiteDomainTools() {
                             <TableRow>
                               <TableHead className="w-[84px]">Preview</TableHead>
                               <TableHead>Name</TableHead>
-                              <TableHead className="w-[260px]">Url Preview</TableHead>
-                              <TableHead className="w-[220px]">Category</TableHead>
-                              <TableHead className="w-[120px]">Sort</TableHead>
-                              <TableHead className="w-[160px]">Status</TableHead>
+                              <TableHead className="w-[260px] hidden lg:table-cell">Demo URL</TableHead>
+                              <TableHead className="w-[220px] hidden md:table-cell">Category</TableHead>
+                              <TableHead className="w-[120px] hidden md:table-cell">Sort</TableHead>
+                              <TableHead className="w-[160px] hidden sm:table-cell">Status</TableHead>
                               <TableHead className="w-[210px] text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {pagedTemplates.map((t) => {
-                              const idx = templates.findIndex((x) => x.id === t.id);
                               const previewSrc = String((t as any)?.preview_image_url ?? "").trim();
                               const demoUrl = String((t as any)?.preview_url ?? "").trim();
 
@@ -434,139 +466,69 @@ export default function WebsiteDomainTools() {
                                   </TableCell>
 
                                   <TableCell>
-                                    <Input
-                                      value={t.name}
-                                      onChange={(e) =>
-                                        setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))
-                                      }
-                                      disabled={saving}
-                                    />
-                                  </TableCell>
-
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <Input
-                                        value={demoUrl}
-                                        onChange={(e) =>
-                                          setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, preview_url: e.target.value } : x)))
-                                        }
-                                        placeholder="https://demo..."
-                                        disabled={saving}
-                                      />
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => {
-                                          const url = String((t as any)?.preview_url ?? "").trim();
-                                          if (!url) return;
-                                          window.open(url, "_blank", "noopener,noreferrer");
-                                        }}
-                                        disabled={!demoUrl}
-                                        aria-label="Open preview url"
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                      </Button>
+                                    <div className="min-w-0">
+                                      <div className="font-medium text-foreground truncate">{t.name}</div>
+                                      <div className="text-xs text-muted-foreground truncate md:hidden">
+                                        {String(t.category ?? "").trim() || "-"}
+                                      </div>
                                     </div>
                                   </TableCell>
 
-                                  <TableCell>
-                                    <Select
-                                      value={String(t.category ?? "").trim() || "uncategorized"}
-                                      onValueChange={(v) =>
-                                        setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, category: v as any } : x)))
-                                      }
-                                    >
-                                      <SelectTrigger disabled={saving}>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {(categories.length ? categories : [{ name: "business", count: 0 }]).map((c) => (
-                                          <SelectItem key={c.name} value={c.name}>
-                                            {c.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                  <TableCell className="hidden lg:table-cell">
+                                    {demoUrl ? (
+                                      <div className="flex items-center justify-between gap-2">
+                                        <a
+                                          href={demoUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="truncate text-sm text-foreground underline underline-offset-2"
+                                          title={demoUrl}
+                                        >
+                                          {demoUrl}
+                                        </a>
+                                        <Button type="button" variant="outline" size="icon" onClick={() => window.open(demoUrl, "_blank", "noopener,noreferrer")}>
+                                          <ExternalLink className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-sm text-muted-foreground">-</span>
+                                    )}
                                   </TableCell>
 
-                                  <TableCell>
-                                    <Input
-                                      value={String(t.sort_order ?? 0)}
-                                      onChange={(e) =>
-                                        setTemplates((prev) =>
-                                          prev.map((x, i) => (i === idx ? { ...x, sort_order: Number(e.target.value) } : x)),
-                                        )
-                                      }
-                                      inputMode="numeric"
-                                      disabled={saving}
-                                    />
+                                  <TableCell className="hidden md:table-cell">
+                                    <span className="text-sm text-foreground">{String(t.category ?? "").trim() || "-"}</span>
                                   </TableCell>
 
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant={t.is_active === false ? "secondary" : "default"}>
-                                        {t.is_active === false ? "Off" : "On"}
-                                      </Badge>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() =>
-                                          setTemplates((prev) =>
-                                            prev.map((x, i) => (i === idx ? { ...x, is_active: x.is_active === false } : x)),
-                                          )
-                                        }
-                                        disabled={saving}
-                                      >
-                                        Toggle
-                                      </Button>
-                                    </div>
+                                  <TableCell className="hidden md:table-cell">
+                                    <span className="text-sm text-foreground">{String(t.sort_order ?? 0)}</span>
+                                  </TableCell>
+
+                                  <TableCell className="hidden sm:table-cell">
+                                    <Badge variant={t.is_active === false ? "secondary" : "default"}>
+                                      {t.is_active === false ? "Off" : "On"}
+                                    </Badge>
                                   </TableCell>
 
                                   <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                      <label className="cursor-pointer">
-                                        <input
-                                          type="file"
-                                          accept="image/*"
-                                          className="hidden"
-                                          onChange={(e) => handleUploadImage(t.id, e.target.files?.[0] ?? null)}
-                                          disabled={saving || uploadingTemplate[t.id]}
-                                        />
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          disabled={saving || uploadingTemplate[t.id]}
-                                          asChild
-                                        >
-                                          <span>
-                                            <Upload className="h-4 w-4 mr-2" />
-                                            {uploadingTemplate[t.id] ? "Uploading..." : "Upload"}
-                                          </span>
-                                        </Button>
-                                      </label>
-
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => handleRemoveImage(t.id, previewSrc)}
-                                        disabled={saving || uploadingTemplate[t.id] || !previewSrc}
+                                        onClick={() => setEditTemplateId(t.id)}
+                                        disabled={saving}
                                       >
-                                        <X className="h-4 w-4 mr-2" /> Remove
+                                        <Pencil className="h-4 w-4 mr-2" /> Edit
                                       </Button>
 
                                       <Button
                                         type="button"
                                         variant="outline"
-                                        size="icon"
-                                        onClick={() => setTemplates((prev) => prev.filter((_, i) => i !== idx))}
+                                        size="sm"
+                                        onClick={() => setDeleteTemplateId(t.id)}
                                         disabled={saving}
-                                        aria-label="Remove template"
                                       >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Trash2 className="h-4 w-4 mr-2" /> Delete
                                       </Button>
                                     </div>
                                   </TableCell>
@@ -585,12 +547,14 @@ export default function WebsiteDomainTools() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() =>
+                      onClick={() => {
+                        const id = `t${Date.now()}`;
                         setTemplates((prev) => [
                           ...prev,
-                          { id: `t${Date.now()}`, name: "New Template", category: "business", is_active: true, sort_order: prev.length + 1 },
-                        ])
-                      }
+                          { id, name: "New Template", category: (categories[0]?.name ?? "business") as any, is_active: true, sort_order: prev.length + 1 },
+                        ]);
+                        setEditTemplateId(id);
+                      }}
                       disabled={saving}
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Template
@@ -667,19 +631,30 @@ export default function WebsiteDomainTools() {
                   </div>
 
                   <ScrollArea className="h-[520px] pr-2">
-                    <div className="space-y-2">
+                    <Accordion
+                      type="multiple"
+                      value={expandedCategoryKeys}
+                      onValueChange={(v) => setExpandedCategoryKeys(v as string[])}
+                      className="space-y-2"
+                    >
                       {(filteredCategories.length ? filteredCategories : []).map((c) => (
-                        <div key={c.name} className="rounded-md border bg-background p-2">
+                        <AccordionItem key={c.name} value={c.name} className="rounded-md border bg-background px-2">
                           <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium text-foreground truncate">{c.name}</div>
-                              <div className="text-xs text-muted-foreground">Used: {c.count}</div>
-                            </div>
+                            <AccordionTrigger className="flex-1 py-2 hover:no-underline">
+                              <div className="min-w-0 text-left">
+                                <div className="text-sm font-medium text-foreground truncate">{c.name}</div>
+                                <div className="text-xs text-muted-foreground">Used: {c.count}</div>
+                              </div>
+                            </AccordionTrigger>
                             <Button
                               type="button"
                               variant="outline"
                               size="icon"
-                              onClick={() => deleteCategory(c.name)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                deleteCategory(c.name);
+                              }}
                               disabled={saving}
                               aria-label="Delete category"
                             >
@@ -687,21 +662,23 @@ export default function WebsiteDomainTools() {
                             </Button>
                           </div>
 
-                          <div className="mt-2">
-                            <Label className="text-xs">Rename</Label>
-                            <Input
-                              defaultValue={c.name}
-                              onBlur={(e) => {
-                                const next = e.target.value.trim();
-                                if (!next || next === c.name) return;
-                                renameCategory(c.name, next);
-                              }}
-                              disabled={saving}
-                            />
-                          </div>
-                        </div>
+                          <AccordionContent className="pb-2">
+                            <div className="mt-2">
+                              <Label className="text-xs">Rename</Label>
+                              <Input
+                                defaultValue={c.name}
+                                onBlur={(e) => {
+                                  const next = e.target.value.trim();
+                                  if (!next || next === c.name) return;
+                                  renameCategory(c.name, next);
+                                }}
+                                disabled={saving}
+                              />
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
                       ))}
-                    </div>
+                    </Accordion>
                   </ScrollArea>
                 </div>
               </div>
@@ -725,6 +702,177 @@ export default function WebsiteDomainTools() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Edit template dialog */}
+      <Dialog open={!!editTemplateId} onOpenChange={(open) => (!open ? setEditTemplateId(null) : null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Edit Template</DialogTitle>
+          </DialogHeader>
+
+          {editingTemplate ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Label className="text-xs">Name</Label>
+                <Input
+                  value={editingTemplate.name}
+                  onChange={(e) => updateTemplate(editingTemplate.id, { name: e.target.value })}
+                  disabled={saving}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label className="text-xs">Demo URL</Label>
+                <Input
+                  value={String((editingTemplate as any)?.preview_url ?? "")}
+                  onChange={(e) => updateTemplate(editingTemplate.id, { preview_url: e.target.value } as any)}
+                  placeholder="https://demo..."
+                  disabled={saving}
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs">Category</Label>
+                <Select
+                  value={String(editingTemplate.category ?? "").trim() || (categories[0]?.name ?? "business")}
+                  onValueChange={(v) => updateTemplate(editingTemplate.id, { category: v as any })}
+                >
+                  <SelectTrigger disabled={saving}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(categories.length ? categories : [{ name: "business", count: 0 }]).map((c) => (
+                      <SelectItem key={c.name} value={c.name}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs">Sort Order</Label>
+                <Input
+                  value={String(editingTemplate.sort_order ?? 0)}
+                  onChange={(e) => updateTemplate(editingTemplate.id, { sort_order: asNumber(e.target.value, 0) })}
+                  inputMode="numeric"
+                  disabled={saving}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label className="text-xs">Status</Label>
+                <div className="mt-1 flex items-center gap-2">
+                  <Badge variant={editingTemplate.is_active === false ? "secondary" : "default"}>
+                    {editingTemplate.is_active === false ? "Off" : "On"}
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => updateTemplate(editingTemplate.id, { is_active: editingTemplate.is_active === false })}
+                    disabled={saving}
+                  >
+                    Toggle
+                  </Button>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <Label className="text-xs">Preview Image</Label>
+                <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-3">
+                    {String((editingTemplate as any)?.preview_image_url ?? "").trim() ? (
+                      <button
+                        type="button"
+                        className="block"
+                        onClick={() =>
+                          setPreviewDialog({
+                            open: true,
+                            src: String((editingTemplate as any)?.preview_image_url ?? "").trim(),
+                            title: editingTemplate.name,
+                          })
+                        }
+                      >
+                        <img
+                          src={String((editingTemplate as any)?.preview_image_url ?? "").trim()}
+                          alt={`Preview ${editingTemplate.name}`}
+                          className="h-16 w-24 rounded border object-cover"
+                          loading="lazy"
+                        />
+                      </button>
+                    ) : (
+                      <div className="h-16 w-24 rounded border bg-background" />
+                    )}
+                    <div className="text-xs text-muted-foreground">Bucket: template-previews</div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleUploadImage(editingTemplate.id, e.target.files?.[0] ?? null)}
+                        disabled={saving || uploadingTemplate[editingTemplate.id]}
+                      />
+                      <Button type="button" variant="outline" size="sm" disabled={saving || uploadingTemplate[editingTemplate.id]} asChild>
+                        <span>
+                          <Upload className="h-4 w-4 mr-2" />
+                          {uploadingTemplate[editingTemplate.id] ? "Uploading..." : "Upload"}
+                        </span>
+                      </Button>
+                    </label>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveImage(editingTemplate.id, String((editingTemplate as any)?.preview_image_url ?? ""))}
+                      disabled={saving || uploadingTemplate[editingTemplate.id] || !String((editingTemplate as any)?.preview_image_url ?? "").trim()}
+                    >
+                      <X className="h-4 w-4 mr-2" /> Remove
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 flex items-center justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditTemplateId(null)} disabled={saving}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">Template not found.</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <AlertDialog open={!!deleteTemplateId} onOpenChange={(open) => (!open ? setDeleteTemplateId(null) : null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Template akan dihapus dari daftar. Aksi ini tidak bisa dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTemplateId(null)}>No</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const id = deleteTemplateId;
+                if (!id) return;
+                setTemplates((prev) => prev.filter((t) => t.id !== id));
+                setDeleteTemplateId(null);
+              }}
+            >
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

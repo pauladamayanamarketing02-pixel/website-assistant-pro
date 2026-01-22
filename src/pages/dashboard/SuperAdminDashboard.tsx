@@ -59,7 +59,7 @@ export default function SuperAdminDashboard() {
       { title: "Audit Logs", url: "/dashboard/super-admin/audit-logs", icon: FileSearch },
       { title: "System Settings", url: "/dashboard/super-admin/system-settings", icon: Settings },
       { title: "Reports", url: "/dashboard/super-admin/reports", icon: BookOpen },
-      { title: "CMS", url: "/dashboard/super-admin/cms", icon: BookOpen },
+      { title: "Integrations", url: "/dashboard/super-admin/integrations", icon: BookOpen },
       { title: "Emergency", url: "/dashboard/super-admin/emergency", icon: Siren },
       { title: "My Account", url: "/dashboard/super-admin/my-account", icon: Shield },
     ],
@@ -147,7 +147,7 @@ export default function SuperAdminDashboard() {
               <Route path="audit-logs" element={<SuperAdminPlaceholder title="Audit Logs" />} />
               <Route path="system-settings" element={<SuperAdminPlaceholder title="System Settings" />} />
               <Route path="reports" element={<SuperAdminPlaceholder title="Reports" />} />
-              <Route path="cms" element={<SuperAdminCms />} />
+              <Route path="integrations" element={<SuperAdminCms />} />
               <Route path="emergency" element={<SuperAdminPlaceholder title="Emergency Tools" />} />
               <Route path="my-account" element={<SuperAdminPlaceholder title="My Account" />} />
             </Routes>
