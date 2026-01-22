@@ -90,7 +90,7 @@ export default function AdminDashboard() {
       { title: "Assistant", url: "/dashboard/admin/assistants", icon: ShieldCheck },
       { title: "Tasks", url: "/dashboard/admin/tasks", icon: CheckSquare },
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
-      { title: "Messages (soon)", url: "/dashboard/admin/messages", icon: MessageSquare },
+      { title: "Message Monitor (soon)", url: "/dashboard/admin/message-monitor", icon: MessageSquare },
       {
         title: "Support Tickets",
         url: "/dashboard/admin/support-tickets",
@@ -223,7 +223,7 @@ export default function AdminDashboard() {
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="tasks/new" element={<AdminTaskCreate />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
-              <Route path="messages" element={<AdminPlaceholder title="Messages" />} />
+              <Route path="message-monitor" element={<AdminPlaceholder title="Message Monitor" />} />
               <Route path="support-tickets" element={<AdminSupport />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
               <Route path="website/homepage" element={<AdminWebsiteHomepage />} />
