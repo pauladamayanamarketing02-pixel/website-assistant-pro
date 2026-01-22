@@ -115,6 +115,11 @@ export function DomainDuckIntegrationCard({
                 {status.configured ? `${used}/${limit}` : "—"}
               </span>
             </div>
+            <div className="mt-1">
+              Angka ini dihitung <span className="font-medium text-foreground">global per API key</span> (setiap panggilan ke
+              <span className="font-medium text-foreground"> domainduck-check</span>), termasuk fitur Domain Search di halaman lain—bukan
+              hanya tombol Test di CMS.
+            </div>
             {status.configured && exhausted ? (
               <div className="mt-1 text-destructive">Total habis ({used}/{limit}). Masukkan API key baru untuk reset ke 0/{limit}.</div>
             ) : null}
