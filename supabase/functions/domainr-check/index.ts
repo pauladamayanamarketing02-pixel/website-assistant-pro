@@ -97,15 +97,40 @@ async function getDomainrApiKey(admin: any) {
 async function domainrStatus(domains: string[], apiKey: string) {
   const qs = encodeURIComponent(domains.join(","));
 
-  // Domainr docs use `client_id`. Many users store their Domainr API key as client_id.
-  // If you are using a different authentication scheme, adjust accordingly.
-  const url = `https://api.domainr.com/v2/status?domain=${qs}&client_id=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Domainr error (${res.status}): ${txt || res.statusText}`);
+  // Domainr has two common auth patterns depending on where you got your key:
+  // 1) Official (deprecated docs): `client_id` query param to api.domainr.com
+  // 2) RapidAPI marketplace: `X-RapidAPI-Key` + `X-RapidAPI-Host` headers to domainr.p.rapidapi.com
+  // We'll try (1) first, then fallback to (2) on 401.
+
+  const officialUrl = `https://api.domainr.com/v2/status?domain=${qs}&client_id=${encodeURIComponent(apiKey)}`;
+  const officialRes = await fetch(officialUrl, { headers: { Accept: "application/json" } });
+
+  if (officialRes.ok) {
+    const json = (await officialRes.json()) as { status?: DomainrStatusRow[] };
+    return json.status ?? [];
   }
-  const json = (await res.json()) as { status?: DomainrStatusRow[] };
+
+  const officialTxt = await officialRes.text().catch(() => "");
+  if (officialRes.status !== 401) {
+    throw new Error(`Domainr error (${officialRes.status}): ${officialTxt || officialRes.statusText}`);
+  }
+
+  // Fallback: RapidAPI
+  const rapidUrl = `https://domainr.p.rapidapi.com/v2/status?domain=${qs}`;
+  const rapidRes = await fetch(rapidUrl, {
+    headers: {
+      Accept: "application/json",
+      "X-RapidAPI-Key": apiKey,
+      "X-RapidAPI-Host": "domainr.p.rapidapi.com",
+    },
+  });
+
+  if (!rapidRes.ok) {
+    const txt = await rapidRes.text().catch(() => "");
+    throw new Error(`Domainr error (${rapidRes.status}): ${txt || rapidRes.statusText}`);
+  }
+
+  const json = (await rapidRes.json()) as { status?: DomainrStatusRow[] };
   return json.status ?? [];
 }
 
