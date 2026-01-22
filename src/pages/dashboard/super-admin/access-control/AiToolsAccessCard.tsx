@@ -20,6 +20,7 @@ export function AiToolsAccessCard({ packageId }: { packageId: string }) {
   const [loading, setLoading] = useState(true);
   const [tools, setTools] = useState<ToolRow[]>([]);
   const [ruleByToolId, setRuleByToolId] = useState<Record<string, boolean>>({});
+  const [aiAgentsEnabled, setAiAgentsEnabled] = useState<boolean>(true);
 
   const visibleTools = useMemo(() => tools.filter((t) => t.is_active), [tools]);
 
@@ -30,7 +31,11 @@ export function AiToolsAccessCard({ packageId }: { packageId: string }) {
     const load = async () => {
       setLoading(true);
       try {
-        const [{ data: toolRows, error: toolErr }, { data: rules, error: ruleErr }] = await Promise.all([
+        const [
+          { data: toolRows, error: toolErr },
+          { data: rules, error: ruleErr },
+          { data: aiAgentsRule, error: aiAgentsErr },
+        ] = await Promise.all([
           (supabase as any)
             .from("assist_ai_tools")
             .select("id,title,is_active")
@@ -39,10 +44,20 @@ export function AiToolsAccessCard({ packageId }: { packageId: string }) {
             .from("package_ai_tool_rules")
             .select("tool_id,is_enabled")
             .eq("package_id", packageId),
+          (supabase as any)
+            .from("package_menu_rules")
+            .select("is_enabled")
+            .eq("package_id", packageId)
+            .eq("menu_key", "ai_agents")
+            .maybeSingle(),
         ]);
 
         if (toolErr) throw toolErr;
         if (ruleErr) throw ruleErr;
+        if (aiAgentsErr) throw aiAgentsErr;
+
+        // Default for menu rules is enabled when missing.
+        const nextAiAgentsEnabled = aiAgentsRule?.is_enabled ?? true;
 
         const nextTools: ToolRow[] = (toolRows ?? []).map((t: any) => ({
           id: String(t.id),
@@ -55,14 +70,17 @@ export function AiToolsAccessCard({ packageId }: { packageId: string }) {
           nextRules[String(r.tool_id)] = Boolean(r.is_enabled);
         });
 
-        // Default: enabled unless explicitly disabled
+        // When AI Agents is OFF, we switch to "whitelist" mode:
+        // only tools explicitly enabled in package_ai_tool_rules are usable.
+        // When AI Agents is ON, default is enabled unless explicitly disabled.
         nextTools.forEach((t) => {
-          if (nextRules[t.id] === undefined) nextRules[t.id] = true;
+          if (nextRules[t.id] === undefined) nextRules[t.id] = nextAiAgentsEnabled ? true : false;
         });
 
         if (!cancelled) {
           setTools(nextTools);
           setRuleByToolId(nextRules);
+          setAiAgentsEnabled(Boolean(nextAiAgentsEnabled));
         }
       } catch (e) {
         console.error(e);
@@ -109,6 +127,11 @@ export function AiToolsAccessCard({ packageId }: { packageId: string }) {
         <CardTitle>AI Agents — All Tools</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-xs text-muted-foreground">
+          {aiAgentsEnabled
+            ? "AI Agents aktif: tool default-nya ON (kecuali kamu matikan)."
+            : "AI Agents nonaktif: mode whitelist — hanya tool yang kamu ON-kan di sini yang tetap bisa dipakai user."}
+        </p>
         {loading ? (
           <p className="text-muted-foreground text-sm">Loading...</p>
         ) : visibleTools.length === 0 ? (

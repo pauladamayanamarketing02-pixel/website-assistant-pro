@@ -46,7 +46,7 @@ const iconMap: Record<string, any> = {
 export default function AICreation() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isToolEnabled } = usePackageAiToolRules(user?.id);
+  const { enabledByToolId, isToolEnabled } = usePackageAiToolRules(user?.id);
   const { isEnabled } = usePackageMenuRules(user?.id);
 
   const [viewMode, setViewMode] = useState<ViewMode>('tools');
@@ -56,7 +56,17 @@ export default function AICreation() {
 
   const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
 
-  const canUseTools = useMemo(() => isEnabled('ai_agents'), [isEnabled]);
+  const aiAgentsEnabled = useMemo(() => isEnabled('ai_agents'), [isEnabled]);
+
+  const isToolAllowed = useMemo(() => {
+    return (toolId: string) => {
+      // Normal mode: ai_agents ON => use per-tool rule defaulting to enabled.
+      if (aiAgentsEnabled) return isToolEnabled(toolId);
+
+      // Whitelist mode: ai_agents OFF => only tools explicitly enabled in package_ai_tool_rules are usable.
+      return enabledByToolId?.[toolId] === true;
+    };
+  }, [aiAgentsEnabled, enabledByToolId, isToolEnabled]);
 
   const loadTools = async () => {
     setLoadingTools(true);
@@ -101,7 +111,32 @@ export default function AICreation() {
   // Tool detail view (match /dashboard/assist/ai-generator)
   if (viewMode === 'tool-detail' && selectedTool) {
     const ToolIcon = iconMap[selectedTool.icon] ?? Sparkles;
-    const toolReadonly = !isToolEnabled(selectedTool.id);
+    const toolAllowed = isToolAllowed(selectedTool.id);
+
+    // Safety: if someone navigates here with a non-allowed tool, block usage.
+    if (!toolAllowed) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Tool dinonaktifkan</CardTitle>
+            <CardDescription>Tool ini tidak tersedia untuk package kamu.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setViewMode('tools');
+                setSelectedTool(null);
+              }}
+            >
+              Kembali ke All Tools
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const toolReadonly = false;
 
     return (
       <div className="space-y-6">
@@ -163,9 +198,7 @@ export default function AICreation() {
             <CardHeader className="shrink-0">
               <CardTitle>Preview</CardTitle>
               <CardDescription>
-                {toolReadonly
-                  ? 'Tool ini dinonaktifkan untuk package kamu (preview readonly).'
-                  : 'Rendered from the saved Code Snippet'}
+                {'Rendered from the saved Code Snippet'}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0 flex-1 min-h-0">
@@ -226,25 +259,22 @@ export default function AICreation() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {tools.map((tool) => {
                   const ToolIcon = iconMap[tool.icon] ?? Sparkles;
-                  const toolClickable = canUseTools;
-                  const toolEnabled = isToolEnabled(tool.id);
+                  const toolAllowed = isToolAllowed(tool.id);
                   return (
                     <Card
                       key={tool.id}
                       className={
-                        toolClickable
-                          ? toolEnabled
-                            ? 'min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50'
-                            : 'min-w-0 overflow-hidden cursor-pointer opacity-80 border-2'
+                        toolAllowed
+                          ? 'min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50'
                           : 'min-w-0 overflow-hidden cursor-not-allowed opacity-60 border-2'
                       }
-                      aria-disabled={!toolClickable}
+                      aria-disabled={!toolAllowed}
                       onClick={() => {
-                        if (!toolClickable) {
+                        if (!toolAllowed) {
                           toast({
                             variant: 'destructive',
-                            title: 'AI Agents dinonaktifkan',
-                            description: 'Fitur AI Agents dinonaktifkan untuk package kamu.',
+                            title: 'Tool dinonaktifkan',
+                            description: 'Tool ini tidak tersedia untuk package kamu.',
                           });
                           return;
                         }
