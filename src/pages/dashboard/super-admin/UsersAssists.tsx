@@ -125,10 +125,22 @@ export default function SuperAdminUsersAssists() {
       });
       if (error) throw error;
 
-      const link = (data as any)?.action_link as string | undefined;
-      if (!link) throw new Error("Missing action_link");
+      const actionLink = (data as any)?.action_link as string | undefined;
+      const redirectTo = (data as any)?.redirect_to as string | undefined;
+      if (!actionLink) throw new Error("Missing action_link");
+      if (!redirectTo) throw new Error("Missing redirect_to");
 
-      window.open(link, "_blank", "noopener,noreferrer");
+      // NOTE: Supabase magic-link sometimes falls back to SITE_URL (e.g. localhost) on the verify URL.
+      // To ensure we land on the correct dashboard, we verify the magiclink token ourselves on a local route,
+      // then redirect to the provided redirect_to.
+      const token = new URL(actionLink).searchParams.get("token");
+      if (!token) throw new Error("Missing token in action_link");
+
+      const local = new URL(`${window.location.origin}/super-admin/impersonate`);
+      local.searchParams.set("token", token);
+      local.searchParams.set("redirect_to", redirectTo);
+
+      window.open(local.toString(), "_blank", "noopener,noreferrer");
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Failed to generate login link");
