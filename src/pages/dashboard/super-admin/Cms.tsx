@@ -1,4 +1,3 @@
-import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -9,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarChart3, CreditCard, Mail, KeyRound, Webhook } from "lucide-react";
 import { DomainrIntegrationCard } from "@/components/super-admin/DomainrIntegrationCard";
-import { WhoapiIntegrationCard, type WhoapiTestResult } from "@/components/super-admin/WhoapiIntegrationCard";
+import { RapidapiDomainrIntegrationCard, type RapidapiDomainrTestResult } from "@/components/super-admin/RapidapiDomainrIntegrationCard";
 
 async function getAccessToken() {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
@@ -44,11 +43,9 @@ export default function SuperAdminCms() {
   const [domainrConfigured, setDomainrConfigured] = useState(false);
   const [domainrUpdatedAt, setDomainrUpdatedAt] = useState<string | null>(null);
 
-  const [whoapiKey, setWhoapiKey] = useState("");
-  const [whoapiConfigured, setWhoapiConfigured] = useState(false);
-  const [whoapiUpdatedAt, setWhoapiUpdatedAt] = useState<string | null>(null);
-  const [whoapiTestDomain, setWhoapiTestDomain] = useState("example.com");
-  const [whoapiTestResult, setWhoapiTestResult] = useState<WhoapiTestResult | null>(null);
+  const [rapidapiConfigured, setRapidapiConfigured] = useState(false);
+  const [rapidapiTestDomain, setRapidapiTestDomain] = useState("example.com");
+  const [rapidapiTestResult, setRapidapiTestResult] = useState<RapidapiDomainrTestResult | null>(null);
 
   const fetchDomainrStatus = async () => {
     setLoading(true);
@@ -71,13 +68,12 @@ export default function SuperAdminCms() {
     }
   };
 
-  const fetchWhoapiStatus = async () => {
+  const fetchRapidapiStatus = async () => {
     setLoading(true);
     try {
-      const { data, error } = await invokeWithAuth<any>("super-admin-whoapi-secret", { action: "get" });
+      const { data, error } = await invokeWithAuth<any>("super-admin-rapidapi-domainr-status", { action: "get" });
       if (error) throw error;
-      setWhoapiConfigured(Boolean((data as any)?.configured));
-      setWhoapiUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
+      setRapidapiConfigured(Boolean((data as any)?.configured));
     } catch (e: any) {
       console.error(e);
       if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
@@ -85,7 +81,7 @@ export default function SuperAdminCms() {
         navigate("/super-admin/login", { replace: true });
         return;
       }
-      toast.error(e?.message || "Gagal memuat status WhoAPI");
+      toast.error(e?.message || "Gagal memuat status RapidAPI");
     } finally {
       setLoading(false);
     }
@@ -93,54 +89,17 @@ export default function SuperAdminCms() {
 
   useEffect(() => {
     fetchDomainrStatus();
-    fetchWhoapiStatus();
+    fetchRapidapiStatus();
   }, []);
 
-  const onSaveWhoapiKey = async (e: FormEvent) => {
-    e.preventDefault();
+  const onTestRapidapiDomainr = async () => {
     setLoading(true);
+    setRapidapiTestResult(null);
     try {
-      const v = whoapiKey.trim();
-      if (!v) throw new Error("WhoAPI API key wajib diisi");
-      if (/\s/.test(v) || v.length < 10) throw new Error("WhoAPI API key tidak valid");
-
-      const { error } = await invokeWithAuth<any>("super-admin-whoapi-secret", { action: "set", api_key: v });
-      if (error) throw error;
-
-      setWhoapiKey("");
-      toast.success("WhoAPI API key tersimpan");
-      await fetchWhoapiStatus();
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Gagal menyimpan WhoAPI API key");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onClearWhoapiKey = async () => {
-    setLoading(true);
-    try {
-      const { error } = await invokeWithAuth<any>("super-admin-whoapi-secret", { action: "clear" });
-      if (error) throw error;
-      toast.success("WhoAPI key di-reset");
-      await fetchWhoapiStatus();
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Gagal reset WhoAPI key");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onTestWhoapi = async () => {
-    setLoading(true);
-    setWhoapiTestResult(null);
-    try {
-      const d = whoapiTestDomain.trim();
+      const d = rapidapiTestDomain.trim();
       if (!d) throw new Error("Domain test wajib diisi");
 
-      const { data, error } = await supabase.functions.invoke<any>("whoapi-check", { body: { domain: d } });
+      const { data, error } = await supabase.functions.invoke<any>("rapidapi-domainr-check", { body: { query: d } });
       if (error) {
         const resp = (error as any)?.context?.response;
         if (resp) {
@@ -150,19 +109,22 @@ export default function SuperAdminCms() {
         throw error;
       }
 
-      const result: WhoapiTestResult = {
-        domain: String((data as any)?.domain ?? d),
-        status: (data as any)?.status ?? "unknown",
-        registered: (data as any)?.registered ?? null,
+      const items = ((data as any)?.items ?? []) as Array<{ domain: string; status: string }>;
+      const exact = items.find((it) => String(it.domain).toLowerCase() === d.toLowerCase()) ?? null;
+
+      const result: RapidapiDomainrTestResult = {
+        domain: exact?.domain ?? d,
+        status: (exact?.status as any) ?? "unknown",
       };
-      setWhoapiTestResult(result);
+      setRapidapiTestResult(result);
 
       if (result.status === "available") toast.success("Available");
       else if (result.status === "unavailable") toast.error("Unavailable");
+      else if (result.status === "premium") toast.message("Premium");
       else toast.message("Unknown");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal test WhoAPI");
+      toast.error(e?.message || "Gagal test RapidAPI");
     } finally {
       setLoading(false);
     }
@@ -183,18 +145,14 @@ export default function SuperAdminCms() {
           onRefresh={fetchDomainrStatus}
         />
 
-        <WhoapiIntegrationCard
+        <RapidapiDomainrIntegrationCard
           loading={loading}
-          status={{ configured: whoapiConfigured, updatedAt: whoapiUpdatedAt }}
-          apiKeyValue={whoapiKey}
-          onApiKeyChange={setWhoapiKey}
-          onSave={onSaveWhoapiKey}
-          onRefresh={fetchWhoapiStatus}
-          onClear={onClearWhoapiKey}
-          testDomainValue={whoapiTestDomain}
-          onTestDomainChange={setWhoapiTestDomain}
-          onTest={onTestWhoapi}
-          testResult={whoapiTestResult}
+          configured={rapidapiConfigured}
+          onRefresh={fetchRapidapiStatus}
+          testDomainValue={rapidapiTestDomain}
+          onTestDomainChange={setRapidapiTestDomain}
+          onTest={onTestRapidapiDomainr}
+          testResult={rapidapiTestResult}
         />
 
         <Card>

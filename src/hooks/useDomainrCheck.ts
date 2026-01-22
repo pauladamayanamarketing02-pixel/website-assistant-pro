@@ -32,7 +32,7 @@ export function useDomainrCheck(query: string, { enabled = true, debounceMs = 45
     timer.current = window.setTimeout(async () => {
       setState((s) => ({ ...s, loading: true, error: null }));
       try {
-        const { data, error } = await supabase.functions.invoke("domainr-check", {
+        const { data, error } = await supabase.functions.invoke("rapidapi-domainr-check", {
           body: { query: q },
         });
         if (error) throw error;
