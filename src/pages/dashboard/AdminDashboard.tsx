@@ -43,7 +43,6 @@ import AdminWebsitePackages from "./admin/WebsitePackages";
 import AdminWebsiteLayout from "./admin/WebsiteLayout";
 import AdminWebsiteHomepage from "./admin/WebsiteHomepage";
 import AdminWebsiteDomainTools from "./admin/WebsiteDomainTools";
-import AdminWebsiteSubscriptionPlans from "./admin/WebsiteSubscriptionPlans";
 import AdminBusinessUsers from "./admin/BusinessUsers";
 import AdminBusinessUserDetails from "./admin/BusinessUserDetails";
 import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
@@ -93,7 +92,6 @@ export default function AdminDashboard() {
 
           // Domain Tools (Order)
           { title: "Domain Tools", url: "/dashboard/admin/website/domain-tools", icon: SlidersHorizontal },
-          { title: "Subscription Plans", url: "/dashboard/admin/website/subscription-plans", icon: SlidersHorizontal },
         ],
       },
       {
@@ -201,7 +199,6 @@ export default function AdminDashboard() {
 
               {/* Domain Tools (Order) */}
               <Route path="website/domain-tools" element={<AdminWebsiteDomainTools />} />
-              <Route path="website/subscription-plans" element={<AdminWebsiteSubscriptionPlans />} />
 
               {/* Analytics */}
               <Route path="analytics/traffic" element={<AdminPlaceholder title="Traffic" />} />

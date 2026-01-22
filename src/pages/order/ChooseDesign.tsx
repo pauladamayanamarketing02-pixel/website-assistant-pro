@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OrderLayout } from "@/components/order/OrderLayout";
-import { OrderSummaryCard } from "@/components/order/OrderSummaryCard";
 import { useOrder } from "@/contexts/OrderContext";
 import { useOrderPublicSettings, type OrderTemplate } from "@/hooks/useOrderPublicSettings";
 
@@ -28,7 +27,7 @@ export default function ChooseDesign() {
   const selected = state.selectedTemplateId;
 
   return (
-    <OrderLayout title="Choose Design" step="design" sidebar={<OrderSummaryCard showEstPrice={false} />}>
+    <OrderLayout title="Choose Design" step="design" sidebar={null}>
       <div className="space-y-6">
         <Card>
           <CardHeader className="pb-3">
