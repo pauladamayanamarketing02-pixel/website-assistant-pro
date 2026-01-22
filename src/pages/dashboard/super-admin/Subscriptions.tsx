@@ -51,6 +51,9 @@ export default function SuperAdminSubscriptions() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const [isEditingPlans, setIsEditingPlans] = useState(false);
+  const [isEditingPricing, setIsEditingPricing] = useState(false);
+
   // Domain pricing (copied from Admin Domain Tools > Domain tab)
   const [pricingLoading, setPricingLoading] = useState(true);
   const [pricingSaving, setPricingSaving] = useState(false);
@@ -191,6 +194,7 @@ export default function SuperAdminSubscriptions() {
 
       toast({ title: "Saved", description: "Domain pricing updated." });
       await fetchDomainPricing();
+      setIsEditingPricing(false);
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Failed to save", description: e?.message ?? "Unknown error" });
@@ -218,6 +222,7 @@ export default function SuperAdminSubscriptions() {
       if (error) throw error;
 
       toast({ title: "Saved", description: "Subscription plans updated." });
+      setIsEditingPlans(false);
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Failed to save", description: e?.message ?? "Unknown error" });
@@ -251,6 +256,21 @@ export default function SuperAdminSubscriptions() {
             </CardHeader>
 
             <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">
+                  {isEditingPlans ? "Edit mode: ON" : "Edit mode: OFF"}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingPlans((v) => !v)}
+                  disabled={plansSaving}
+                >
+                  {isEditingPlans ? "Cancel" : "Edit"}
+                </Button>
+              </div>
+
               {plansLoading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
 
               {!plansLoading && plans.length ? (
@@ -264,7 +284,7 @@ export default function SuperAdminSubscriptions() {
                           setPlans((prev) => prev.map((x, i) => (i === idx ? { ...x, years: asNumber(e.target.value) } : x)))
                         }
                         inputMode="numeric"
-                        disabled={plansSaving}
+                        disabled={plansSaving || !isEditingPlans}
                       />
                     </div>
 
@@ -275,7 +295,7 @@ export default function SuperAdminSubscriptions() {
                         onChange={(e) =>
                           setPlans((prev) => prev.map((x, i) => (i === idx ? { ...x, label: e.target.value } : x)))
                         }
-                        disabled={plansSaving}
+                        disabled={plansSaving || !isEditingPlans}
                       />
                     </div>
 
@@ -289,7 +309,7 @@ export default function SuperAdminSubscriptions() {
                           )
                         }
                         inputMode="decimal"
-                        disabled={plansSaving}
+                        disabled={plansSaving || !isEditingPlans}
                       />
                     </div>
 
@@ -301,7 +321,7 @@ export default function SuperAdminSubscriptions() {
                           setPlans((prev) => prev.map((x, i) => (i === idx ? { ...x, sort_order: asNumber(e.target.value) } : x)))
                         }
                         inputMode="numeric"
-                        disabled={plansSaving}
+                        disabled={plansSaving || !isEditingPlans}
                       />
                     </div>
 
@@ -315,7 +335,7 @@ export default function SuperAdminSubscriptions() {
                           onClick={() =>
                             setPlans((prev) => prev.map((x, i) => (i === idx ? { ...x, is_active: !x.is_active } : x)))
                           }
-                          disabled={plansSaving}
+                          disabled={plansSaving || !isEditingPlans}
                         >
                           Toggle
                         </Button>
@@ -325,7 +345,7 @@ export default function SuperAdminSubscriptions() {
                         variant="outline"
                         size="icon"
                         onClick={() => setPlans((prev) => prev.filter((_, i) => i !== idx))}
-                        disabled={plansSaving}
+                        disabled={plansSaving || !isEditingPlans}
                         aria-label="Remove plan"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -353,12 +373,12 @@ export default function SuperAdminSubscriptions() {
                       },
                     ])
                   }
-                  disabled={plansSaving}
+                  disabled={plansSaving || !isEditingPlans}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Plan
                 </Button>
 
-                <Button type="button" onClick={savePlans} disabled={plansSaving}>
+                <Button type="button" onClick={savePlans} disabled={plansSaving || !isEditingPlans}>
                   <Save className="h-4 w-4 mr-2" /> Simpan
                 </Button>
               </div>
@@ -379,6 +399,21 @@ export default function SuperAdminSubscriptions() {
             </CardHeader>
 
             <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">
+                  {isEditingPricing ? "Edit mode: ON" : "Edit mode: OFF"}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingPricing((v) => !v)}
+                  disabled={pricingSaving}
+                >
+                  {isEditingPricing ? "Cancel" : "Edit"}
+                </Button>
+              </div>
+
               {pricingLoading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
 
               {!pricingLoading && tldPrices.length ? (
@@ -390,7 +425,7 @@ export default function SuperAdminSubscriptions() {
                         value={String(r.tld ?? "")}
                         onChange={(e) => setTldPrices((prev) => prev.map((x, i) => (i === idx ? { ...x, tld: e.target.value } : x)))}
                         placeholder="com"
-                        disabled={pricingSaving}
+                        disabled={pricingSaving || !isEditingPricing}
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -401,7 +436,7 @@ export default function SuperAdminSubscriptions() {
                           setTldPrices((prev) => prev.map((x, i) => (i === idx ? { ...x, price_usd: safeNumber(e.target.value) } : x)))
                         }
                         inputMode="decimal"
-                        disabled={pricingSaving}
+                        disabled={pricingSaving || !isEditingPricing}
                       />
                     </div>
                     <div className="flex items-end justify-end">
@@ -410,7 +445,7 @@ export default function SuperAdminSubscriptions() {
                         variant="outline"
                         size="icon"
                         onClick={() => setTldPrices((prev) => prev.filter((_, i) => i !== idx))}
-                        disabled={pricingSaving || tldPrices.length <= 1}
+                        disabled={pricingSaving || !isEditingPricing || tldPrices.length <= 1}
                         aria-label="Remove tld"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -427,11 +462,11 @@ export default function SuperAdminSubscriptions() {
                   type="button"
                   variant="outline"
                   onClick={() => setTldPrices((prev) => [...prev, { tld: "", price_usd: 0 }])}
-                  disabled={pricingSaving}
+                  disabled={pricingSaving || !isEditingPricing}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add TLD
                 </Button>
-                <Button type="button" onClick={saveDomainPricing} disabled={pricingSaving}>
+                <Button type="button" onClick={saveDomainPricing} disabled={pricingSaving || !isEditingPricing}>
                   <Save className="h-4 w-4 mr-2" /> Simpan Pricing
                 </Button>
               </div>

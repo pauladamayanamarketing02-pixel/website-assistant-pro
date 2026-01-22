@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ExternalLink, Plus, RefreshCcw, Save, Trash2, Upload, X, Pencil } from "lucide-react";
+import { Plus, RefreshCcw, Save, Trash2, Upload, X, Pencil } from "lucide-react";
 
 type TemplateRow = {
   id: string;
@@ -431,7 +431,7 @@ export default function WebsiteDomainTools() {
                             <TableRow>
                               <TableHead className="w-[84px]">Preview</TableHead>
                               <TableHead>Name</TableHead>
-                              <TableHead className="w-[260px] hidden lg:table-cell">Demo URL</TableHead>
+                              <TableHead className="w-[180px] hidden lg:table-cell">Demo</TableHead>
                               <TableHead className="w-[220px] hidden md:table-cell">Category</TableHead>
                               <TableHead className="w-[120px] hidden md:table-cell">Sort</TableHead>
                               <TableHead className="w-[160px] hidden sm:table-cell">Status</TableHead>
@@ -476,20 +476,11 @@ export default function WebsiteDomainTools() {
 
                                   <TableCell className="hidden lg:table-cell">
                                     {demoUrl ? (
-                                      <div className="flex items-center justify-between gap-2">
-                                        <a
-                                          href={demoUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="truncate text-sm text-foreground underline underline-offset-2"
-                                          title={demoUrl}
-                                        >
-                                          {demoUrl}
+                                      <Button type="button" variant="outline" size="sm" asChild>
+                                        <a href={demoUrl} target="_blank" rel="noopener noreferrer" title={demoUrl}>
+                                          Preview
                                         </a>
-                                        <Button type="button" variant="outline" size="icon" onClick={() => window.open(demoUrl, "_blank", "noopener,noreferrer")}>
-                                          <ExternalLink className="h-4 w-4" />
-                                        </Button>
-                                      </div>
+                                      </Button>
                                     ) : (
                                       <span className="text-sm text-muted-foreground">-</span>
                                     )}
@@ -514,21 +505,23 @@ export default function WebsiteDomainTools() {
                                       <Button
                                         type="button"
                                         variant="outline"
-                                        size="sm"
+                                        size="icon"
                                         onClick={() => setEditTemplateId(t.id)}
                                         disabled={saving}
+                                        aria-label="Edit template"
                                       >
-                                        <Pencil className="h-4 w-4 mr-2" /> Edit
+                                        <Pencil className="h-4 w-4" />
                                       </Button>
 
                                       <Button
                                         type="button"
                                         variant="outline"
-                                        size="sm"
+                                        size="icon"
                                         onClick={() => setDeleteTemplateId(t.id)}
                                         disabled={saving}
+                                        aria-label="Delete template"
                                       >
-                                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                        <Trash2 className="h-4 w-4" />
                                       </Button>
                                     </div>
                                   </TableCell>
