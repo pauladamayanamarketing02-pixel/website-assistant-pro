@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,34 @@ export default function Payment() {
     if (domainUsd == null || pkgUsd == null) return null;
     return (domainUsd + pkgUsd) * state.subscriptionYears;
   }, [pricing.domainPriceUsd, pricing.packagePriceUsd, state.subscriptionYears, subscriptionPlans]);
+
+  // Auto-apply promo as user types (debounced), so Est. price updates immediately.
+  useEffect(() => {
+    const code = promo.trim();
+    setPromoCode(code);
+
+    // Clear applied promo while typing / when empty
+    if (!code || baseTotalUsd == null) {
+      setAppliedPromo(null);
+      return;
+    }
+
+    const t = window.setTimeout(async () => {
+      const res = await validatePromoCode(code, baseTotalUsd);
+      if (!res.ok) {
+        setAppliedPromo(null);
+        return;
+      }
+      setAppliedPromo({
+        id: res.promo.id,
+        code: res.promo.code,
+        promoName: res.promo.promo_name,
+        discountUsd: res.discountUsd,
+      });
+    }, 450);
+
+    return () => window.clearTimeout(t);
+  }, [baseTotalUsd, promo, setAppliedPromo, setPromoCode]);
 
   const canComplete = useMemo(() => {
     return Boolean(
