@@ -231,18 +231,30 @@ export default function WebsiteDomainTools() {
   const saveDomainPricing = async () => {
     setPricingSaving(true);
     try {
-      const pkgId = String(pricingPackageId ?? "").trim();
-      // pkgId is internal; ensure we always send something if available
+      const pkgId = String(pricingPackageId ?? "").trim() || String(packages?.[0]?.id ?? "").trim();
+      if (!pkgId) {
+        toast({
+          variant: "destructive",
+          title: "Gagal menyimpan",
+          description: "Tidak ada Package tersedia untuk konteks pricing. Buat/aktifkan package dulu.",
+        });
+        return;
+      }
 
+      // normalize + validate, then de-dupe by TLD (last write wins)
       const cleaned = tldPrices
         .map((r) => ({ tld: normalizeTld(r.tld), price_usd: safeNumber(r.price_usd) }))
         .filter((r) => r.tld && Number.isFinite(r.price_usd) && r.price_usd >= 0);
 
+      const dedupedMap = new Map<string, number>();
+      for (const row of cleaned) dedupedMap.set(row.tld, row.price_usd);
+      const deduped = Array.from(dedupedMap.entries()).map(([tld, price_usd]) => ({ tld, price_usd }));
+
       const { data, error } = await (supabase as any).functions.invoke("admin-order-domain-pricing", {
         body: {
           action: "set",
-          default_package_id: pkgId || null,
-          tld_prices: cleaned,
+          default_package_id: pkgId,
+          tld_prices: deduped,
         },
       });
       if (error) throw error;
@@ -451,9 +463,14 @@ export default function WebsiteDomainTools() {
               <div key={`${r.tld}-${idx}`} className="grid gap-2 rounded-md border bg-muted/20 p-3 md:grid-cols-5">
                 <div className="md:col-span-2">
                   <Label className="text-xs">TLD</Label>
-                  <div className="mt-2 flex h-10 items-center rounded-md border bg-background px-3 text-sm text-foreground">
-                    .{r.tld}
-                  </div>
+                  <Input
+                    value={String(r.tld ?? "")}
+                    onChange={(e) =>
+                      setTldPrices((prev) => prev.map((x, i) => (i === idx ? { ...x, tld: e.target.value } : x)))
+                    }
+                    placeholder="com"
+                    disabled={pricingSaving}
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <Label className="text-xs">Price (USD)</Label>
@@ -485,6 +502,14 @@ export default function WebsiteDomainTools() {
           ) : null}
 
           <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setTldPrices((prev) => [...prev, { tld: "", price_usd: 0 }])}
+              disabled={pricingSaving}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Add TLD
+            </Button>
             <Button type="button" onClick={saveDomainPricing} disabled={pricingSaving}>
               <Save className="h-4 w-4 mr-2" /> Simpan Pricing
             </Button>
