@@ -1,15 +1,13 @@
-import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Globe, BarChart3, CreditCard, Mail, KeyRound, Webhook, Save, RefreshCcw } from "lucide-react";
+import { BarChart3, CreditCard, Mail, KeyRound, Webhook } from "lucide-react";
+import { DomainrIntegrationCard } from "@/components/super-admin/DomainrIntegrationCard";
 
 async function getAccessToken() {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
@@ -40,7 +38,6 @@ async function invokeWithAuth<T>(fnName: string, body: unknown) {
 export default function SuperAdminCms() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [domainrKey, setDomainrKey] = useState("");
 
   const [domainrConfigured, setDomainrConfigured] = useState(false);
   const [domainrUpdatedAt, setDomainrUpdatedAt] = useState<string | null>(null);
@@ -70,27 +67,6 @@ export default function SuperAdminCms() {
     fetchDomainrStatus();
   }, []);
 
-  const onSaveDomainrKey = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const v = domainrKey.trim();
-      if (!v) throw new Error("Domainr API key wajib diisi");
-
-      const { error } = await invokeWithAuth<any>("super-admin-domainr-secret", { action: "set", api_key: v });
-      if (error) throw error;
-
-      setDomainrKey("");
-      toast.success("Domainr API key tersimpan");
-      await fetchDomainrStatus();
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Gagal menyimpan Domainr API key");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -99,48 +75,12 @@ export default function SuperAdminCms() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-4 w-4" /> Domain Lookup (Domainr)
-              </CardTitle>
-              <Badge variant={domainrConfigured ? "default" : "secondary"}>{domainrConfigured ? "Configured" : "Not set"}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Simpan Domainr key untuk real-time domain checking di flow Order.
-            <div className="mt-4">
-              <form onSubmit={onSaveDomainrKey} className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="domainr_key">Domainr API key</Label>
-                  <Input
-                    id="domainr_key"
-                    type="password"
-                    value={domainrKey}
-                    onChange={(e) => setDomainrKey(e.target.value)}
-                    placeholder="Tempel Domainr key di sini..."
-                    autoComplete="new-password"
-                    disabled={loading}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="submit" disabled={loading}>
-                    <Save className="h-4 w-4 mr-2" /> Simpan
-                  </Button>
-                  <Button type="button" variant="outline" onClick={fetchDomainrStatus} disabled={loading}>
-                    <RefreshCcw className="h-4 w-4 mr-2" /> Refresh status
-                  </Button>
-                </div>
-              </form>
-
-              <div className="mt-4 text-xs text-muted-foreground">
-                Disimpan sebagai <span className="font-medium text-foreground">domainr/api_key</span>.
-                {domainrUpdatedAt ? <span> Terakhir update: {new Date(domainrUpdatedAt).toLocaleString()}</span> : null}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DomainrIntegrationCard
+          loading={loading}
+          configured={domainrConfigured}
+          updatedAt={domainrUpdatedAt}
+          onRefresh={fetchDomainrStatus}
+        />
 
         <Card>
           <CardHeader>
