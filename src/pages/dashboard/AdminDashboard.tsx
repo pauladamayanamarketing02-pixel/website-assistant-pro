@@ -90,8 +90,8 @@ export default function AdminDashboard() {
           { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
           { title: "Support", url: "/dashboard/admin/website/support", icon: MessageSquare },
 
-          // Domain Tools (Order)
-          { title: "Domain Tools", url: "/dashboard/admin/website/domain-tools", icon: SlidersHorizontal },
+           // Templates (Order)
+           { title: "Templates", url: "/dashboard/admin/website/templates", icon: SlidersHorizontal },
         ],
       },
       {
@@ -197,8 +197,8 @@ export default function AdminDashboard() {
               <Route path="website/layout" element={<AdminWebsiteLayout />} />
               <Route path="website/support" element={<AdminSupport />} />
 
-              {/* Domain Tools (Order) */}
-              <Route path="website/domain-tools" element={<AdminWebsiteDomainTools />} />
+              {/* Templates (Order) */}
+              <Route path="website/templates" element={<AdminWebsiteDomainTools />} />
 
               {/* Analytics */}
               <Route path="analytics/traffic" element={<AdminPlaceholder title="Traffic" />} />
