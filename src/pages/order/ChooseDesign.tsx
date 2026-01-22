@@ -16,7 +16,6 @@ export default function ChooseDesign() {
   const { templates } = useOrderPublicSettings();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<OrderTemplate["category"] | "all">("all");
-  const [sort, setSort] = useState<"sort_order" | "name_asc" | "name_desc">("sort_order");
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -34,13 +33,9 @@ export default function ChooseDesign() {
       const byQuery = !q ? true : t.name.toLowerCase().includes(q);
       return byCategory && byQuery;
     });
-    const sorted = [...list].sort((a, b) => {
-      if (sort === "name_asc") return a.name.localeCompare(b.name);
-      if (sort === "name_desc") return b.name.localeCompare(a.name);
-      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
-    });
-    return sorted;
-  }, [category, query, sort, templates]);
+    // Keep list stable and consistent with admin `sort_order` (no user-facing sort choices).
+    return [...list].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  }, [category, query, templates]);
 
   const selected = state.selectedTemplateId;
 
@@ -54,37 +49,19 @@ export default function ChooseDesign() {
           <CardContent className="flex flex-col gap-3 md:flex-row md:items-center">
             <Input className="md:flex-1" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search templates" />
             <div className="md:w-[220px]">
-              <Select value={sort} onValueChange={(v) => setSort(v as any)}>
+              <Select value={category} onValueChange={(v) => setCategory(v as any)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Sort" />
+                  <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sort_order">Sort order</SelectItem>
-                  <SelectItem value="name_asc">Name A–Z</SelectItem>
-                  <SelectItem value="name_desc">Name Z–A</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={category === "all" ? "default" : "outline"}
-                onClick={() => setCategory("all")}
-              >
-                All
-              </Button>
-              {categories.map((c) => (
-                <Button
-                  key={c}
-                  type="button"
-                  size="sm"
-                  variant={category === c ? "default" : "outline"}
-                  onClick={() => setCategory(c)}
-                >
-                  {c}
-                </Button>
-              ))}
             </div>
           </CardContent>
         </Card>

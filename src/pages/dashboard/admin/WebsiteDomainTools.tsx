@@ -46,9 +46,22 @@ type PlanRow = {
   sort_order: number;
 };
 
+type PromoStatus = "draft" | "scheduled" | "active" | "expired";
+type PromoDiscountType = "percentage" | "fixed";
+
+type PromoRow = {
+  promo_name: string;
+  event_name: string;
+  description: string;
+  status: PromoStatus;
+  discount_type: PromoDiscountType;
+  discount_value: number;
+};
+
 const SETTINGS_TEMPLATES_KEY = "order_templates";
 const SETTINGS_TEMPLATE_CATEGORIES_KEY = "order_template_categories";
 const SETTINGS_SUBSCRIPTION_PLANS_KEY = "order_subscription_plans";
+const SETTINGS_PROMOS_KEY = "order_promos";
 
 function normalizeTld(input: unknown): string {
   return String(input ?? "").trim().toLowerCase().replace(/^\./, "");
@@ -101,6 +114,10 @@ export default function WebsiteDomainTools() {
   const [plansLoading, setPlansLoading] = useState(true);
   const [plansSaving, setPlansSaving] = useState(false);
   const [plans, setPlans] = useState<PlanRow[]>([]);
+
+  const [promosLoading, setPromosLoading] = useState(true);
+  const [promosSaving, setPromosSaving] = useState(false);
+  const [promos, setPromos] = useState<PromoRow[]>([]);
 
   const defaultTldRows: TldPriceRow[] = useMemo(
     () => ["com", "net", "org", "id"].map((tld) => ({ tld, price_usd: 0 })),
@@ -240,10 +257,52 @@ export default function WebsiteDomainTools() {
     }
   };
 
+  const fetchPromos = async () => {
+    setPromosLoading(true);
+    try {
+      const { data: row } = await (supabase as any)
+        .from("website_settings")
+        .select("value")
+        .eq("key", SETTINGS_PROMOS_KEY)
+        .maybeSingle();
+
+      const v = row?.value;
+      const parsed: PromoRow[] = Array.isArray(v)
+        ? (v as any[])
+            .map((r) => {
+              const promo_name = String(r?.promo_name ?? "").trim();
+              const event_name = String(r?.event_name ?? "").trim();
+              const description = String(r?.description ?? "").trim();
+              const statusRaw = String(r?.status ?? "draft").trim().toLowerCase();
+              const status: PromoStatus =
+                statusRaw === "scheduled" || statusRaw === "active" || statusRaw === "expired" ? (statusRaw as PromoStatus) : "draft";
+              const typeRaw = String(r?.discount_type ?? "percentage").trim().toLowerCase();
+              const discount_type: PromoDiscountType = typeRaw === "fixed" ? "fixed" : "percentage";
+              const discount_value = asNumber(r?.discount_value, 0);
+              return { promo_name, event_name, description, status, discount_type, discount_value };
+            })
+            .filter((r) => r.promo_name.length > 0)
+        : [];
+
+      setPromos(parsed);
+    } catch (e: any) {
+      console.error(e);
+      const msg = e?.message || "Gagal memuat Promo";
+      if (String(msg).toLowerCase().includes("unauthorized")) {
+        navigate("/admin/login", { replace: true });
+        return;
+      }
+      toast({ variant: "destructive", title: "Error", description: msg });
+    } finally {
+      setPromosLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchTemplates();
     fetchDomainPricing();
     fetchPlans();
+    fetchPromos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -508,8 +567,37 @@ export default function WebsiteDomainTools() {
     }
   };
 
+  const savePromos = async () => {
+    setPromosSaving(true);
+    try {
+      const payload = (promos ?? [])
+        .map((p) => ({
+          promo_name: String(p.promo_name ?? "").trim(),
+          event_name: String(p.event_name ?? "").trim(),
+          description: String(p.description ?? "").trim(),
+          status: p.status,
+          discount_type: p.discount_type,
+          discount_value: asNumber(p.discount_value, 0),
+        }))
+        .filter((p) => p.promo_name);
+
+      const { error } = await (supabase as any)
+        .from("website_settings")
+        .upsert({ key: SETTINGS_PROMOS_KEY, value: payload }, { onConflict: "key" });
+      if (error) throw error;
+
+      toast({ title: "Saved", description: "Promo updated." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Failed to save", description: e?.message ?? "Unknown error" });
+    } finally {
+      setPromosSaving(false);
+    }
+  };
+
   const templateCountLabel = useMemo(() => String(templates.length), [templates.length]);
   const plansCountLabel = useMemo(() => String(plans.length), [plans.length]);
+  const promosCountLabel = useMemo(() => String(promos.length), [promos.length]);
 
   return (
     <div className="space-y-6">
@@ -528,6 +616,7 @@ export default function WebsiteDomainTools() {
       <Tabs defaultValue="templates" className="w-full">
         <TabsList className="w-full justify-start">
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="promo">Promo</TabsTrigger>
           <TabsTrigger value="domain">Domain</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
@@ -912,6 +1001,143 @@ export default function WebsiteDomainTools() {
                     </Button>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="promo">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Promo</CardTitle>
+                  <CardDescription>Kelola promo/campaign untuk kebutuhan order (draft/scheduled/active/expired).</CardDescription>
+                </div>
+                <Badge variant="outline">Total: {promosCountLabel}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {promosLoading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
+
+              {!promosLoading && promos.length ? (
+                promos.map((p, idx) => (
+                  <div key={`${p.promo_name}-${idx}`} className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-12">
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Promo Name</Label>
+                      <Input
+                        value={p.promo_name}
+                        onChange={(e) => setPromos((prev) => prev.map((x, i) => (i === idx ? { ...x, promo_name: e.target.value } : x)))}
+                        disabled={promosSaving}
+                      />
+                    </div>
+
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Event / Campaign Name</Label>
+                      <Input
+                        value={p.event_name}
+                        onChange={(e) => setPromos((prev) => prev.map((x, i) => (i === idx ? { ...x, event_name: e.target.value } : x)))}
+                        disabled={promosSaving}
+                      />
+                    </div>
+
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Description</Label>
+                      <Input
+                        value={p.description}
+                        onChange={(e) => setPromos((prev) => prev.map((x, i) => (i === idx ? { ...x, description: e.target.value } : x)))}
+                        disabled={promosSaving}
+                      />
+                    </div>
+
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Status</Label>
+                      <Select
+                        value={p.status}
+                        onValueChange={(v) => setPromos((prev) => prev.map((x, i) => (i === idx ? { ...x, status: v as PromoStatus } : x)))}
+                      >
+                        <SelectTrigger disabled={promosSaving}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="scheduled">Scheduled</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="md:col-span-4">
+                      <Label className="text-xs">Discount Type</Label>
+                      <Select
+                        value={p.discount_type}
+                        onValueChange={(v) => setPromos((prev) => prev.map((x, i) => (i === idx ? { ...x, discount_type: v as PromoDiscountType } : x)))}
+                      >
+                        <SelectTrigger disabled={promosSaving}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">Percentage (%)</SelectItem>
+                          <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="md:col-span-6">
+                      <Label className="text-xs">Discount Value</Label>
+                      <Input
+                        value={String(p.discount_value ?? 0)}
+                        onChange={(e) =>
+                          setPromos((prev) => prev.map((x, i) => (i === idx ? { ...x, discount_value: asNumber(e.target.value, 0) } : x)))
+                        }
+                        inputMode="decimal"
+                        disabled={promosSaving}
+                      />
+                    </div>
+
+                    <div className="md:col-span-2 flex items-end justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setPromos((prev) => prev.filter((_, i) => i !== idx))}
+                        disabled={promosSaving}
+                        aria-label="Remove promo"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : !promosLoading ? (
+                <div className="text-sm text-muted-foreground">Belum ada promo. Klik “Add Promo”.</div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setPromos((prev) => [
+                      ...prev,
+                      {
+                        promo_name: "New Promo",
+                        event_name: "",
+                        description: "",
+                        status: "draft",
+                        discount_type: "percentage",
+                        discount_value: 0,
+                      },
+                    ])
+                  }
+                  disabled={promosSaving}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Promo
+                </Button>
+                <Button type="button" onClick={savePromos} disabled={promosSaving}>
+                  <Save className="h-4 w-4 mr-2" /> Simpan Promo
+                </Button>
               </div>
             </CardContent>
           </Card>
