@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
 
 type TemplateRow = {
@@ -488,7 +489,15 @@ export default function WebsiteDomainTools() {
         </div>
       </div>
 
-      <Card>
+      <Tabs defaultValue="templates" className="w-full">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="domain">Domain</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="templates">
+          <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -774,9 +783,11 @@ export default function WebsiteDomainTools() {
             </div>
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
 
-      <Card>
+        <TabsContent value="domain">
+          <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -846,9 +857,11 @@ export default function WebsiteDomainTools() {
             </Button>
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
 
-       <Card>
+        <TabsContent value="subscription">
+          <Card>
          <CardHeader>
            <div className="flex items-start justify-between gap-3">
              <div>
@@ -963,7 +976,9 @@ export default function WebsiteDomainTools() {
              </Button>
            </div>
          </CardContent>
-       </Card>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
