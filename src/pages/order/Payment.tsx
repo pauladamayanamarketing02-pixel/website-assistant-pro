@@ -79,7 +79,10 @@ export default function Payment() {
             type="button"
             size="lg"
             disabled={!canComplete}
-            onClick={() => navigate("/order/confirmation")}
+            onClick={() => {
+              toast({ title: "Order completed", description: "Terima kasih! Order Anda sudah kami terima." });
+              navigate("/order/payment", { replace: true });
+            }}
           >
             Complete Purchase
           </Button>

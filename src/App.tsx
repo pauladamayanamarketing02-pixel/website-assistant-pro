@@ -43,7 +43,6 @@ import ChooseDesign from "./pages/order/ChooseDesign";
 import Details from "./pages/order/Details";
 import SubscriptionPlan from "./pages/order/SubscriptionPlan";
 import Payment from "./pages/order/Payment";
-import Confirmation from "./pages/order/Confirmation";
 
 const queryClient = new QueryClient();
 
@@ -187,7 +186,6 @@ const App = () => (
             <Route path="/order/details" element={<Details />} />
             <Route path="/order/subscription" element={<SubscriptionPlan />} />
             <Route path="/order/payment" element={<Payment />} />
-            <Route path="/order/confirmation" element={<Confirmation />} />
             
             {/* Explicit 404 route (dipakai untuk redirect akses tanpa login) */}
             <Route path="/404" element={<NotFound />} />
