@@ -10,8 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown, Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
+import { Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
 
 type TemplateRow = {
   id: string;
@@ -70,7 +69,10 @@ export default function WebsiteDomainTools() {
   const [newCategory, setNewCategory] = useState("");
   const [uploadingTemplate, setUploadingTemplate] = useState<Record<string, boolean>>({});
 
-  const [templatesOpen, setTemplatesOpen] = useState(true);
+  const [templateQuery, setTemplateQuery] = useState("");
+  const [templateCategoryFilter, setTemplateCategoryFilter] = useState<string>("all");
+  const [templatePage, setTemplatePage] = useState(1);
+  const TEMPLATE_PAGE_SIZE = 20;
 
   const [pricingLoading, setPricingLoading] = useState(true);
   const [pricingSaving, setPricingSaving] = useState(false);
@@ -230,6 +232,28 @@ export default function WebsiteDomainTools() {
       .map(([name, count]) => ({ name, count }));
     return [...fromDb, ...extras].sort((a, b) => a.name.localeCompare(b.name));
   }, [templates, templateCategories]);
+
+  const filteredTemplates = useMemo(() => {
+    const q = templateQuery.trim().toLowerCase();
+    return (templates ?? []).filter((t) => {
+      const byQuery = !q ? true : String(t.name ?? "").toLowerCase().includes(q);
+      const byCategory = templateCategoryFilter === "all" ? true : String(t.category ?? "").trim() === templateCategoryFilter;
+      return byQuery && byCategory;
+    });
+  }, [templateCategoryFilter, templateQuery, templates]);
+
+  const totalTemplatePages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredTemplates.length / TEMPLATE_PAGE_SIZE));
+  }, [filteredTemplates.length]);
+
+  useEffect(() => {
+    setTemplatePage(1);
+  }, [templateQuery, templateCategoryFilter]);
+
+  const pagedTemplates = useMemo(() => {
+    const start = (templatePage - 1) * TEMPLATE_PAGE_SIZE;
+    return filteredTemplates.slice(start, start + TEMPLATE_PAGE_SIZE);
+  }, [filteredTemplates, templatePage]);
 
   const saveCategoriesOnly = async (nextCategories: string[]) => {
     try {
@@ -471,11 +495,54 @@ export default function WebsiteDomainTools() {
               <CardTitle>Order Templates</CardTitle>
               <CardDescription>Daftar template yang tampil di /order/choose-design.</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">Total: {templateCountLabel}</Badge>
-              <Button type="button" variant="outline" size="sm" onClick={() => setTemplatesOpen((v) => !v)}>
-                <ChevronDown className={templatesOpen ? "h-4 w-4 mr-2" : "h-4 w-4 mr-2 -rotate-90"} />
-                {templatesOpen ? "Minimize" : "Expand"}
+            <Badge variant="outline">Total: {templateCountLabel}</Badge>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-6">
+            <div className="md:col-span-4">
+              <Label className="text-xs">Search template</Label>
+              <Input value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)} placeholder="Cari nama template..." />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">Filter category</Label>
+              <Select value={templateCategoryFilter} onValueChange={setTemplateCategoryFilter}>
+                <SelectTrigger disabled={saving}>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {(categories.length ? categories : [{ name: "business", count: 0 }]).map((c) => (
+                    <SelectItem key={c.name} value={c.name}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs text-muted-foreground">
+              Menampilkan {filteredTemplates.length} template • Page {templatePage} / {totalTemplatePages}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setTemplatePage((p) => Math.max(1, p - 1))}
+                disabled={templatePage <= 1}
+              >
+                Prev
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setTemplatePage((p) => Math.min(totalTemplatePages, p + 1))}
+                disabled={templatePage >= totalTemplatePages}
+              >
+                Next
               </Button>
             </div>
           </div>
@@ -483,9 +550,7 @@ export default function WebsiteDomainTools() {
         <CardContent className="space-y-3">
           {loading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
 
-          <Collapsible open={templatesOpen} onOpenChange={setTemplatesOpen}>
-            {/* Trigger ada di header; content di-collapse di sini */}
-            <CollapsibleContent className="space-y-3">
+          <div className="space-y-3">
 
           <div className="rounded-md border bg-muted/20 p-3">
             <div className="flex items-start justify-between gap-3">
@@ -568,8 +633,10 @@ export default function WebsiteDomainTools() {
             </div>
           </div>
 
-           {!loading && templates.length ? (
-             templates.map((t, idx) => (
+           {!loading && pagedTemplates.length ? (
+             pagedTemplates.map((t) => {
+               const idx = templates.findIndex((x) => x.id === t.id);
+               return (
                <div key={t.id} className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-7">
                  <div className="md:col-span-2">
                   <Label className="text-xs">Name</Label>
@@ -681,7 +748,8 @@ export default function WebsiteDomainTools() {
                   </Button>
                 </div>
               </div>
-            ))
+               );
+             })
           ) : !loading ? (
             <div className="text-sm text-muted-foreground">Belum ada template. Klik “Add Template”.</div>
           ) : null}
@@ -703,9 +771,8 @@ export default function WebsiteDomainTools() {
             <Button type="button" onClick={saveTemplates} disabled={saving}>
               <Save className="h-4 w-4 mr-2" /> Simpan Templates
             </Button>
+            </div>
           </div>
-            </CollapsibleContent>
-          </Collapsible>
         </CardContent>
       </Card>
 
