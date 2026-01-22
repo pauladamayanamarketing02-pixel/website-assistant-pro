@@ -806,6 +806,51 @@ export type Database = {
         }
         Relationships: []
       }
+      order_promos: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          discount_type: string
+          discount_value: number
+          ends_at: string | null
+          event_name: string
+          id: string
+          promo_name: string
+          starts_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string
+          discount_type?: string
+          discount_value?: number
+          ends_at?: string | null
+          event_name?: string
+          id?: string
+          promo_name: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          discount_type?: string
+          discount_value?: number
+          ends_at?: string | null
+          event_name?: string
+          id?: string
+          promo_name?: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           amount: number | null
