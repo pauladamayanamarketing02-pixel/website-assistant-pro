@@ -7,27 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { OrderLayout } from "@/components/order/OrderLayout";
 import { OrderSummaryCard } from "@/components/order/OrderSummaryCard";
 import { useOrder } from "@/contexts/OrderContext";
-
-type Template = {
-  id: string;
-  name: string;
-  category: "business" | "portfolio" | "service" | "agency";
-};
-
-const templates: Template[] = [
-  { id: "t1", name: "Modern Business", category: "business" },
-  { id: "t2", name: "Creative Portfolio", category: "portfolio" },
-  { id: "t3", name: "Local Services", category: "service" },
-  { id: "t4", name: "Studio Agency", category: "agency" },
-  { id: "t5", name: "Clean Services", category: "service" },
-  { id: "t6", name: "Bold Business", category: "business" },
-];
+import { useOrderPublicSettings, type OrderTemplate } from "@/hooks/useOrderPublicSettings";
 
 export default function ChooseDesign() {
   const navigate = useNavigate();
   const { state, setTemplate } = useOrder();
+  const { templates } = useOrderPublicSettings();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<Template["category"] | "all">("all");
+  const [category, setCategory] = useState<OrderTemplate["category"] | "all">("all");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
