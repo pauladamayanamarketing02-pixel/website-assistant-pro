@@ -70,7 +70,7 @@ export default function Home() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden gradient-hero py-20 md:py-32">
+      <section className="relative overflow-hidden gradient-hero py-20 md:py-32 min-h-[calc(100vh-5rem)] flex items-center">
         <div className="container relative z-10">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground animate-fade-in">
