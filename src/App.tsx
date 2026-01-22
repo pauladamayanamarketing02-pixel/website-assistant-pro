@@ -18,6 +18,7 @@ import ResetPassword from "./pages/ResetPassword";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import AssistDashboard from "./pages/dashboard/AssistDashboard";
 import SuperAdminLogin from "./pages/super-admin/SuperAdminLogin";
+import SuperAdminImpersonate from "./pages/super-admin/SuperAdminImpersonate";
 import SuperAdminDashboard from "./pages/dashboard/SuperAdminDashboard";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
@@ -67,6 +68,7 @@ const App = () => (
 
             {/* Super Admin */}
             <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+            <Route path="/super-admin/impersonate" element={<SuperAdminImpersonate />} />
             <Route path="/dashboard/super-admin/*" element={<SuperAdminDashboard />} />
 
             {/* Admin Operasional */}
