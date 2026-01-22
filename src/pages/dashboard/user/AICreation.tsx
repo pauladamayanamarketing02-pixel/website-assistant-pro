@@ -46,7 +46,7 @@ const iconMap: Record<string, any> = {
 export default function AICreation() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { enabledByToolId, isToolEnabled } = usePackageAiToolRules(user?.id);
+  const { loading: loadingToolRules, enabledByToolId, isToolEnabled } = usePackageAiToolRules(user?.id);
   const { isEnabled } = usePackageMenuRules(user?.id);
 
   const [viewMode, setViewMode] = useState<ViewMode>('tools');
@@ -259,25 +259,19 @@ export default function AICreation() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {tools.map((tool) => {
                   const ToolIcon = iconMap[tool.icon] ?? Sparkles;
-                  const toolAllowed = isToolAllowed(tool.id);
+                  // While rules are loading, prevent clicks to avoid briefly allowing a disabled tool.
+                  const toolAllowed = !loadingToolRules && isToolAllowed(tool.id);
                   return (
                     <Card
                       key={tool.id}
                       className={
                         toolAllowed
                           ? 'min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50'
-                          : 'min-w-0 overflow-hidden cursor-not-allowed opacity-60 border-2'
+                          : 'min-w-0 overflow-hidden cursor-not-allowed opacity-60 border-2 pointer-events-none'
                       }
                       aria-disabled={!toolAllowed}
                       onClick={() => {
-                        if (!toolAllowed) {
-                          toast({
-                            variant: 'destructive',
-                            title: 'Tool dinonaktifkan',
-                            description: 'Tool ini tidak tersedia untuk package kamu.',
-                          });
-                          return;
-                        }
+                        if (!toolAllowed) return;
                         setSelectedTool(tool);
                         setViewMode('tool-detail');
                       }}
