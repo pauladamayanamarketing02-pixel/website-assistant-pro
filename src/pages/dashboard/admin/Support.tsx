@@ -199,6 +199,21 @@ export default function AdminSupport() {
 
   useEffect(() => {
     void fetchInquiries();
+
+    // Keep ticket lists up to date (so Tickets Business reflects /dashboard/user/support immediately)
+    const channel = supabase
+      .channel("admin-support-tickets")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "website_inquiries" },
+        () => void fetchInquiries()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = useMemo(() => {
