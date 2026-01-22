@@ -4,7 +4,13 @@ import { Separator } from "@/components/ui/separator";
 import { useOrder } from "@/contexts/OrderContext";
 import { useOrderPublicSettings } from "@/hooks/useOrderPublicSettings";
 
-export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boolean }) {
+export function OrderSummaryCard({
+  showEstPrice = true,
+  showLineItems = true,
+}: {
+  showEstPrice?: boolean;
+  showLineItems?: boolean;
+}) {
   const { state } = useOrder();
   const { pricing, contact } = useOrderPublicSettings(state.domain);
 
@@ -54,15 +60,19 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">Domain price</span>
-            <span className="text-sm font-medium text-foreground">{domainPriceLabel}</span>
-          </div>
+          {showLineItems ? (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Domain price</span>
+                <span className="text-sm font-medium text-foreground">{domainPriceLabel}</span>
+              </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">Hosting + template</span>
-            <span className="text-sm font-medium text-foreground">{packagePriceLabel}</span>
-          </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Hosting + template</span>
+                <span className="text-sm font-medium text-foreground">{packagePriceLabel}</span>
+              </div>
+            </>
+          ) : null}
 
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">Plan</span>
