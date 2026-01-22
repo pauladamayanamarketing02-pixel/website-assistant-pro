@@ -20,6 +20,7 @@ import {
   Phone,
   Package,
   ShieldCheck,
+  SlidersHorizontal,
   TrendingUp,
   User,
   Users,
@@ -77,18 +78,24 @@ export default function AdminDashboard() {
         title: "Website",
         url: "/dashboard/admin/website",
         icon: Globe,
-          children: [
-            { title: "Homepage", url: "/dashboard/admin/website/homepage", icon: HomeIcon },
-            { title: "Pages", url: "/dashboard/admin/website/pages", icon: FileText },
-            { title: "Blog", url: "/dashboard/admin/website/blog", icon: Newspaper },
-            { title: "Media Library", url: "/dashboard/admin/website/media", icon: Image },
-            { title: "Contact", url: "/dashboard/admin/website/contact", icon: Phone },
-            { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
-            { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
-            { title: "Packages", url: "/dashboard/admin/website/packages", icon: Package },
-            { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
-            { title: "Support", url: "/dashboard/admin/website/support", icon: MessageSquare },
-          ],
+        children: [
+          { title: "Homepage", url: "/dashboard/admin/website/homepage", icon: HomeIcon },
+          { title: "Pages", url: "/dashboard/admin/website/pages", icon: FileText },
+          { title: "Blog", url: "/dashboard/admin/website/blog", icon: Newspaper },
+          { title: "Media Library", url: "/dashboard/admin/website/media", icon: Image },
+          { title: "Contact", url: "/dashboard/admin/website/contact", icon: Phone },
+          { title: "Services", url: "/dashboard/admin/website/services", icon: Briefcase },
+          { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
+          { title: "Packages", url: "/dashboard/admin/website/packages", icon: Package },
+          { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
+          { title: "Support", url: "/dashboard/admin/website/support", icon: MessageSquare },
+
+          // Domain Tools (Order)
+          { title: "Domain Tools", url: "/dashboard/admin/website/domain-tools", icon: SlidersHorizontal },
+          { title: "Order Flow", url: "/dashboard/admin/website/domain-tools/order-flow", icon: SlidersHorizontal },
+          { title: "Domain Pricing", url: "/dashboard/admin/website/domain-tools/domain-pricing", icon: SlidersHorizontal },
+          { title: "TLD Prices", url: "/dashboard/admin/website/domain-tools/tld-prices", icon: SlidersHorizontal },
+        ],
       },
       {
         title: "Analytics",
@@ -193,6 +200,12 @@ export default function AdminDashboard() {
               <Route path="website/packages" element={<AdminWebsitePackages />} />
               <Route path="website/layout" element={<AdminWebsiteLayout />} />
               <Route path="website/support" element={<AdminSupport />} />
+
+              {/* Domain Tools (Order) */}
+              <Route path="website/domain-tools" element={<AdminPlaceholder title="Domain Tools" />} />
+              <Route path="website/domain-tools/order-flow" element={<AdminPlaceholder title="Order Flow" />} />
+              <Route path="website/domain-tools/domain-pricing" element={<AdminPlaceholder title="Domain Pricing" />} />
+              <Route path="website/domain-tools/tld-prices" element={<AdminPlaceholder title="TLD Prices" />} />
 
               {/* Analytics */}
               <Route path="analytics/traffic" element={<AdminPlaceholder title="Traffic" />} />
