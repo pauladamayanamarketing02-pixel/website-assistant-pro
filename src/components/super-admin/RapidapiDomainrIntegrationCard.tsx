@@ -3,17 +3,27 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Globe, RefreshCcw, TestTube2 } from "lucide-react";
+import type { FormEvent } from "react";
+import { Globe, RefreshCcw, Save, TestTube2, Trash2 } from "lucide-react";
 
 export type RapidapiDomainrTestResult = {
   domain: string;
   status: "available" | "unavailable" | "premium" | "unknown";
 };
 
+type Status = {
+  configured: boolean;
+  updatedAt: string | null;
+};
+
 type Props = {
   loading: boolean;
-  configured: boolean;
+  status: Status;
+  apiKeyValue: string;
+  onApiKeyChange: (v: string) => void;
+  onSave: (e: FormEvent) => void;
   onRefresh: () => void;
+  onClear: () => void;
   testDomainValue: string;
   onTestDomainChange: (v: string) => void;
   onTest: () => void;
@@ -22,8 +32,12 @@ type Props = {
 
 export function RapidapiDomainrIntegrationCard({
   loading,
-  configured,
+  status,
+  apiKeyValue,
+  onApiKeyChange,
+  onSave,
   onRefresh,
+  onClear,
   testDomainValue,
   onTestDomainChange,
   onTest,
@@ -36,18 +50,38 @@ export function RapidapiDomainrIntegrationCard({
           <CardTitle className="flex items-center gap-2">
             <Globe className="h-4 w-4" /> Domain Lookup (RapidAPI → Domainr)
           </CardTitle>
-          <Badge variant={configured ? "default" : "secondary"}>{configured ? "Configured" : "Not set"}</Badge>
+          <Badge variant={status.configured ? "default" : "secondary"}>{status.configured ? "Configured" : "Not set"}</Badge>
         </div>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
-        Menggunakan <span className="font-medium text-foreground">RAPIDAPI_DOMAINR_KEY</span> (Function Secret).
+        Simpan RapidAPI key dan test domain check.
 
         <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
-              <RefreshCcw className="h-4 w-4 mr-2" /> Refresh status
-            </Button>
-          </div>
+          <form onSubmit={onSave} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="rapidapi_key">RapidAPI key</Label>
+              <Input
+                id="rapidapi_key"
+                type="password"
+                value={apiKeyValue}
+                onChange={(e) => onApiKeyChange(e.target.value)}
+                placeholder="Tempel RapidAPI key di sini..."
+                autoComplete="new-password"
+                disabled={loading}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={loading}>
+                <Save className="h-4 w-4 mr-2" /> Simpan
+              </Button>
+              <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
+                <RefreshCcw className="h-4 w-4 mr-2" /> Refresh status
+              </Button>
+              <Button type="button" variant="destructive" onClick={onClear} disabled={loading || !status.configured}>
+                <Trash2 className="h-4 w-4 mr-2" /> Reset key
+              </Button>
+            </div>
+          </form>
 
           <div className="rounded-md border bg-muted/30 p-3">
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
@@ -61,7 +95,7 @@ export function RapidapiDomainrIntegrationCard({
                   disabled={loading}
                 />
               </div>
-              <Button type="button" variant="secondary" onClick={onTest} disabled={loading || !configured}>
+              <Button type="button" variant="secondary" onClick={onTest} disabled={loading || !status.configured}>
                 <TestTube2 className="h-4 w-4 mr-2" /> Test
               </Button>
             </div>
@@ -72,6 +106,11 @@ export function RapidapiDomainrIntegrationCard({
                 <span className="font-medium text-foreground">{testResult.status}</span>
               </div>
             ) : null}
+          </div>
+
+          <div className="text-xs text-muted-foreground">
+            Disimpan sebagai <span className="font-medium text-foreground">rapidapi_domainr/api_key</span>.
+            {status.updatedAt ? <span> Terakhir update: {new Date(status.updatedAt).toLocaleString()}</span> : null}
           </div>
         </div>
       </CardContent>
