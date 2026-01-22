@@ -168,35 +168,6 @@ export default function AdminTaskCreate() {
       return;
     }
 
-    // Block task creation for clients with inactive monthly payment
-    try {
-      const { data: paymentRow, error: paymentErr } = await (supabase as any)
-        .from("profiles")
-        .select("payment_active")
-        .eq("id", formData.clientId)
-        .maybeSingle();
-
-      if (paymentErr) throw paymentErr;
-
-      const paymentActive = Boolean((paymentRow as any)?.payment_active);
-      if (!paymentActive) {
-        toast({
-          title: "Payment inactive",
-          description: "This client has Monthly OFF, so task creation is disabled.",
-          variant: "destructive",
-        });
-        return;
-      }
-    } catch (e) {
-      console.error("Error checking payment_active:", e);
-      toast({
-        title: "Failed",
-        description: "Could not verify client's payment status. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setCreating(true);
 
