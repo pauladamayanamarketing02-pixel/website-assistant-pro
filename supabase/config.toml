@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.super-admin-rapidapi-domainr-status]
 verify_jwt = false
 
+[functions.super-admin-rapidapi-domainr-secret]
+verify_jwt = false
+
 [functions.super-admin-domainr-secret]
 verify_jwt = false
 

@@ -67,6 +67,27 @@ const DEFAULT_PRICES_USD: Record<string, number> = {
   ".org": 12.99,
 };
 
+async function getRapidapiDomainrKey(admin: any) {
+  const { data: row, error } = await admin
+    .from("integration_secrets")
+    .select("ciphertext,iv")
+    .eq("provider", "rapidapi_domainr")
+    .eq("name", "api_key")
+    .maybeSingle();
+  if (error) throw error;
+  if (!row) return null;
+
+  const ciphertext = String((row as any).ciphertext ?? "");
+  const iv = String((row as any).iv ?? "");
+  if (!ciphertext || !iv) return null;
+  if (iv !== "plain") {
+    const err = new Error("RapidAPI key harus disimpan plaintext (iv='plain')");
+    (err as any).status = 400;
+    throw err;
+  }
+  return ciphertext;
+}
+
 async function domainrStatusRapidApi(domains: string[], apiKey: string) {
   const qs = encodeURIComponent(domains.join(","));
   const url = `https://domainr.p.rapidapi.com/v2/status?domain=${qs}`;
@@ -103,14 +124,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("RAPIDAPI_DOMAINR_KEY") ?? "";
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Missing RAPIDAPI_DOMAINR_KEY" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = (await req.json()) as CheckRequest;
     const query = normalizeQuery(body?.query);
     if (!query) {
@@ -120,8 +133,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // (Optional) instantiate admin for future enhancements; not used for now.
-    createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const apiKey = await getRapidapiDomainrKey(admin);
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "RapidAPI key belum diset (rapidapi_domainr/api_key)" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const candidates = buildCandidates(query, POPULAR_TLDS);
     const statusRows = await domainrStatusRapidApi(candidates, apiKey);

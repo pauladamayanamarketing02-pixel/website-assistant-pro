@@ -1,3 +1,4 @@
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -7,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarChart3, CreditCard, Mail, KeyRound, Webhook } from "lucide-react";
-import { DomainrIntegrationCard } from "@/components/super-admin/DomainrIntegrationCard";
 import { RapidapiDomainrIntegrationCard, type RapidapiDomainrTestResult } from "@/components/super-admin/RapidapiDomainrIntegrationCard";
 
 async function getAccessToken() {
@@ -40,40 +40,19 @@ export default function SuperAdminCms() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const [domainrConfigured, setDomainrConfigured] = useState(false);
-  const [domainrUpdatedAt, setDomainrUpdatedAt] = useState<string | null>(null);
-
+  const [rapidapiKey, setRapidapiKey] = useState("");
   const [rapidapiConfigured, setRapidapiConfigured] = useState(false);
+  const [rapidapiUpdatedAt, setRapidapiUpdatedAt] = useState<string | null>(null);
   const [rapidapiTestDomain, setRapidapiTestDomain] = useState("example.com");
   const [rapidapiTestResult, setRapidapiTestResult] = useState<RapidapiDomainrTestResult | null>(null);
-
-  const fetchDomainrStatus = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await invokeWithAuth<any>("super-admin-domainr-secret", { action: "get" });
-      if (error) throw error;
-
-      setDomainrConfigured(Boolean((data as any)?.configured));
-      setDomainrUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
-    } catch (e: any) {
-      console.error(e);
-      if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
-        toast.error("Session expired. Silakan login ulang.");
-        navigate("/super-admin/login", { replace: true });
-        return;
-      }
-      toast.error(e?.message || "Gagal memuat status Domainr");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchRapidapiStatus = async () => {
     setLoading(true);
     try {
-      const { data, error } = await invokeWithAuth<any>("super-admin-rapidapi-domainr-status", { action: "get" });
+      const { data, error } = await invokeWithAuth<any>("super-admin-rapidapi-domainr-secret", { action: "get" });
       if (error) throw error;
       setRapidapiConfigured(Boolean((data as any)?.configured));
+      setRapidapiUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
     } catch (e: any) {
       console.error(e);
       if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
@@ -88,9 +67,45 @@ export default function SuperAdminCms() {
   };
 
   useEffect(() => {
-    fetchDomainrStatus();
     fetchRapidapiStatus();
   }, []);
+
+  const onSaveRapidapiKey = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const v = rapidapiKey.trim();
+      if (!v) throw new Error("RapidAPI key wajib diisi");
+      if (/\s/.test(v) || v.length < 10) throw new Error("RapidAPI key tidak valid");
+
+      const { error } = await invokeWithAuth<any>("super-admin-rapidapi-domainr-secret", { action: "set", api_key: v });
+      if (error) throw error;
+
+      setRapidapiKey("");
+      toast.success("RapidAPI key tersimpan");
+      await fetchRapidapiStatus();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal menyimpan RapidAPI key");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onClearRapidapiKey = async () => {
+    setLoading(true);
+    try {
+      const { error } = await invokeWithAuth<any>("super-admin-rapidapi-domainr-secret", { action: "clear" });
+      if (error) throw error;
+      toast.success("RapidAPI key di-reset");
+      await fetchRapidapiStatus();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal reset RapidAPI key");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onTestRapidapiDomainr = async () => {
     setLoading(true);
@@ -138,17 +153,14 @@ export default function SuperAdminCms() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <DomainrIntegrationCard
-          loading={loading}
-          configured={domainrConfigured}
-          updatedAt={domainrUpdatedAt}
-          onRefresh={fetchDomainrStatus}
-        />
-
         <RapidapiDomainrIntegrationCard
           loading={loading}
-          configured={rapidapiConfigured}
+          status={{ configured: rapidapiConfigured, updatedAt: rapidapiUpdatedAt }}
+          apiKeyValue={rapidapiKey}
+          onApiKeyChange={setRapidapiKey}
+          onSave={onSaveRapidapiKey}
           onRefresh={fetchRapidapiStatus}
+          onClear={onClearRapidapiKey}
           testDomainValue={rapidapiTestDomain}
           onTestDomainChange={setRapidapiTestDomain}
           onTest={onTestRapidapiDomainr}
