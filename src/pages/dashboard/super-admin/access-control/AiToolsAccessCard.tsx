@@ -1,0 +1,139 @@
+import { useEffect, useMemo, useState } from "react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+type ToolRow = {
+  id: string;
+  title: string;
+  is_active: boolean;
+};
+
+type RuleRow = {
+  tool_id: string;
+  is_enabled: boolean;
+};
+
+export function AiToolsAccessCard({ packageId }: { packageId: string }) {
+  const [loading, setLoading] = useState(true);
+  const [tools, setTools] = useState<ToolRow[]>([]);
+  const [ruleByToolId, setRuleByToolId] = useState<Record<string, boolean>>({});
+
+  const visibleTools = useMemo(() => tools.filter((t) => t.is_active), [tools]);
+
+  useEffect(() => {
+    if (!packageId) return;
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [{ data: toolRows, error: toolErr }, { data: rules, error: ruleErr }] = await Promise.all([
+          (supabase as any)
+            .from("assist_ai_tools")
+            .select("id,title,is_active")
+            .order("created_at", { ascending: false }),
+          (supabase as any)
+            .from("package_ai_tool_rules")
+            .select("tool_id,is_enabled")
+            .eq("package_id", packageId),
+        ]);
+
+        if (toolErr) throw toolErr;
+        if (ruleErr) throw ruleErr;
+
+        const nextTools: ToolRow[] = (toolRows ?? []).map((t: any) => ({
+          id: String(t.id),
+          title: String(t.title ?? ""),
+          is_active: Boolean(t.is_active ?? true),
+        }));
+
+        const nextRules: Record<string, boolean> = {};
+        (rules as unknown as RuleRow[] | null)?.forEach((r) => {
+          nextRules[String(r.tool_id)] = Boolean(r.is_enabled);
+        });
+
+        // Default: enabled unless explicitly disabled
+        nextTools.forEach((t) => {
+          if (nextRules[t.id] === undefined) nextRules[t.id] = true;
+        });
+
+        if (!cancelled) {
+          setTools(nextTools);
+          setRuleByToolId(nextRules);
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error("Failed to load AI tool rules");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [packageId]);
+
+  const setRule = async (toolId: string, enabled: boolean) => {
+    if (!packageId) return;
+    setRuleByToolId((prev) => ({ ...prev, [toolId]: enabled }));
+
+    const { error } = await (supabase as any)
+      .from("package_ai_tool_rules")
+      .upsert(
+        {
+          package_id: packageId,
+          tool_id: toolId,
+          is_enabled: enabled,
+        },
+        { onConflict: "package_id,tool_id" }
+      );
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to save tool rule");
+      setRuleByToolId((prev) => ({ ...prev, [toolId]: !enabled }));
+      return;
+    }
+
+    toast.success("Tool rule saved");
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>AI Agents — All Tools</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {loading ? (
+          <p className="text-muted-foreground text-sm">Loading...</p>
+        ) : visibleTools.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No active tools found.</p>
+        ) : (
+          <div className="space-y-3">
+            {visibleTools.map((tool) => (
+              <div
+                key={tool.id}
+                className="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">{tool.title || "(Untitled tool)"}</div>
+                  <div className="text-xs text-muted-foreground">Show/hide this tool in AI Agents</div>
+                </div>
+
+                <Switch
+                  checked={Boolean(ruleByToolId[tool.id])}
+                  onCheckedChange={(v: boolean) => setRule(tool.id, Boolean(v))}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

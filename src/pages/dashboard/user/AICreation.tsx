@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildToolPreviewSrcDoc, type ToolLanguage } from '@/lib/aiToolPreview';
+import { usePackageAiToolRules } from '@/hooks/usePackageAiToolRules';
 
 interface AITool {
   id: string;
@@ -44,6 +45,7 @@ const iconMap: Record<string, any> = {
 export default function AICreation() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isToolEnabled } = usePackageAiToolRules(user?.id);
 
   const [viewMode, setViewMode] = useState<ViewMode>('tools');
   const [tools, setTools] = useState<AITool[]>([]);
@@ -51,6 +53,10 @@ export default function AICreation() {
   const [loadingTools, setLoadingTools] = useState(false);
 
   const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
+
+  const visibleTools = useMemo(() => {
+    return tools.filter((t) => isToolEnabled(t.id));
+  }, [isToolEnabled, tools]);
 
   const loadTools = async () => {
     setLoadingTools(true);
@@ -210,9 +216,13 @@ export default function AICreation() {
               <div className="py-10 text-muted-foreground">
                 Belum ada tools yang dipublish.
               </div>
+            ) : visibleTools.length === 0 ? (
+              <div className="py-10 text-muted-foreground">
+                Tools tidak tersedia untuk package ini.
+              </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {tools.map((tool) => {
+                {visibleTools.map((tool) => {
                   const ToolIcon = iconMap[tool.icon] ?? Sparkles;
                   return (
                     <Card

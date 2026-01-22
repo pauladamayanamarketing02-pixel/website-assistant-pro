@@ -41,6 +41,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
 
 interface Task {
   id: string;
@@ -139,6 +140,8 @@ type ViewMode = 'list' | 'create' | 'view';
 export default function TasksProgress() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isEnabled } = usePackageMenuRules(user?.id);
+  const canCreateTasks = isEnabled('tasks_progress');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -347,6 +350,7 @@ export default function TasksProgress() {
   };
 
   const handleSubmit = async () => {
+    if (!canCreateTasks) return;
     if (!formData.title || !user) {
       toast({
         variant: 'destructive',
@@ -1350,7 +1354,7 @@ export default function TasksProgress() {
 
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={resetForm}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={uploading}>
+              <Button onClick={handleSubmit} disabled={uploading || !canCreateTasks}>
                 {uploading ? 'Creating...' : 'Create Task'}
               </Button>
             </div>
@@ -1367,7 +1371,7 @@ export default function TasksProgress() {
           <h1 className="text-3xl font-bold text-foreground">Tasks & Progress</h1>
           <p className="text-muted-foreground">Track the progress of your marketing tasks</p>
         </div>
-        <Button onClick={() => setViewMode('create')}>
+        <Button onClick={() => setViewMode('create')} disabled={!canCreateTasks}>
           <Plus className="h-4 w-4 mr-2" />
           New Task
         </Button>
@@ -1434,7 +1438,7 @@ export default function TasksProgress() {
                   Show All Tasks
                 </Button>
               )}
-              <Button onClick={() => setViewMode('create')}>
+              <Button onClick={() => setViewMode('create')} disabled={!canCreateTasks}>
                 <Plus className="h-4 w-4 mr-2" />
                 {tasks.length === 0 ? 'Create Task' : 'New Task'}
               </Button>

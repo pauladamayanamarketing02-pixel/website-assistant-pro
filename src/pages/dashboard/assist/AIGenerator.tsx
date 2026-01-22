@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Trash2, Pencil, Sparkles, ArrowLeft, Copy } from 'lucide-react';
+import { usePackageAiToolRules } from '@/hooks/usePackageAiToolRules';
 
 type ToolLanguage = 'html' | 'react' | 'nextjs';
 
@@ -38,6 +39,7 @@ type ViewMode = 'tools' | 'tool-detail' | 'tool-create';
 export default function AIGenerator() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isToolEnabled } = usePackageAiToolRules(user?.id);
 
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState('');
@@ -62,6 +64,10 @@ export default function AIGenerator() {
   });
 
   const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
+
+  const visibleTools = useMemo(() => {
+    return tools.filter((t) => isToolEnabled(t.id));
+  }, [isToolEnabled, tools]);
 
   const loadTools = async () => {
     if (!user?.id) return;
@@ -541,81 +547,85 @@ export default function AIGenerator() {
             <CardDescription>Click on a tool to use it, or edit/delete from actions</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tools.map((tool) => (
-                <Card 
-                  key={tool.id}
-                  className="min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between gap-2 min-w-0">
-                      <div
-                        className="flex items-center gap-3 flex-1 min-w-0"
-                        onClick={() => {
-                          setSelectedTool(tool);
-                          setViewMode('tool-detail');
-                        }}
-                      >
-                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tool.color} shrink-0`}>
-                          <Sparkles className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <CardTitle className="text-base break-words">{tool.title}</CardTitle>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditTool(tool);
+            {visibleTools.length === 0 ? (
+              <div className="py-10 text-muted-foreground">Tools tidak tersedia untuk package ini.</div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {visibleTools.map((tool) => (
+                  <Card 
+                    key={tool.id}
+                    className="min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <div
+                          className="flex items-center gap-3 flex-1 min-w-0"
+                          onClick={() => {
+                            setSelectedTool(tool);
+                            setViewMode('tool-detail');
                           }}
                         >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                          <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tool.color} shrink-0`}>
+                            <Sparkles className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <CardTitle className="text-base break-words">{tool.title}</CardTitle>
+                          </div>
+                        </div>
 
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={(e) => e.stopPropagation()}
-                              aria-label={`Delete ${tool.title}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus tool ini?</AlertDialogTitle>
-                              <AlertDialogDescription className="break-words">
-                                Tool "{tool.title}" akan dihapus permanen dan tidak bisa dikembalikan.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void handleDeleteTool(tool.id);
-                                }}
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditTool(tool);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`Delete ${tool.title}`}
                               >
-                                Ya, hapus
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus tool ini?</AlertDialogTitle>
+                                <AlertDialogDescription className="break-words">
+                                  Tool "{tool.title}" akan dihapus permanen dan tidak bisa dikembalikan.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handleDeleteTool(tool.id);
+                                  }}
+                                >
+                                  Ya, hapus
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

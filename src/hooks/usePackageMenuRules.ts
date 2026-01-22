@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type MenuKey = "ai_agents" | "messages" | "content_planner" | "reporting";
+export type MenuKey = "ai_agents" | "messages" | "content_planner" | "reporting" | "tasks_progress";
 
-const CONTROLLED_KEYS: MenuKey[] = ["ai_agents", "messages", "content_planner", "reporting"];
+const CONTROLLED_KEYS: MenuKey[] = [
+  "ai_agents",
+  "messages",
+  "content_planner",
+  "reporting",
+  "tasks_progress",
+];
 
 type RuleRow = {
   menu_key: string;
@@ -49,6 +55,7 @@ export function usePackageMenuRules(userId?: string) {
           messages: true,
           content_planner: true,
           reporting: true,
+          tasks_progress: true,
         };
 
         let foundAny = false;
