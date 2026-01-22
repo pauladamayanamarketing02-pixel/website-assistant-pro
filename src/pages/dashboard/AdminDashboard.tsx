@@ -73,7 +73,7 @@ export default function AdminDashboard() {
       { title: "Assistant", url: "/dashboard/admin/assistants", icon: ShieldCheck },
       { title: "Tasks", url: "/dashboard/admin/tasks", icon: CheckSquare },
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
-      { title: "Messages", url: "/dashboard/admin/messages", icon: MessageSquare },
+      { title: "Messages (soon)", url: "/dashboard/admin/messages", icon: MessageSquare },
       {
         title: "Website",
         url: "/dashboard/admin/website",
@@ -106,8 +106,8 @@ export default function AdminDashboard() {
           { title: "Conversion (read-only)", url: "/dashboard/admin/analytics/conversion", icon: BarChart3 },
         ],
       },
-      { title: "Announcements", url: "/dashboard/admin/announcements", icon: Bell },
-      { title: "Activity Logs", url: "/dashboard/admin/logs", icon: AlertCircle },
+      { title: "Announcements (soon)", url: "/dashboard/admin/announcements", icon: Bell },
+      { title: "Activity Logs (soon)", url: "/dashboard/admin/logs", icon: AlertCircle },
       { title: "My Account", url: "/dashboard/admin/account", icon: User },
     ],
     []
