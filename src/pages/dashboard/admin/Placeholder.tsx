@@ -18,6 +18,15 @@ const roadmap: Record<string, string[]> = {
   Services: ["Daftar layanan", "Harga/paket", "Highlight fitur", "CTA order"],
   Layout: ["Header/footer", "Navigasi", "Komponen global", "Theme/branding"],
 
+  "Domain Tools": [
+    "Atur flow /order (step, copy, CTA)",
+    "Atur aturan validasi domain (format, auto-normalize)",
+    "Kaitkan harga domain ke paket (read-only dulu)",
+  ],
+  "Order Flow": ["Atur step order", "Ubah CTA & copy per step", "Atur template default (opsional)"],
+  "Domain Pricing": ["Default package untuk harga domain", "Fallback price", "Aturan pricing per paket"],
+  "TLD Prices": ["Daftar harga per TLD", "Import/export", "Aktif/nonaktif TLD"],
+
   Analytics: ["Traffic", "Pages", "Blog Performance", "Campaign (UTM)", "Conversion (read-only)"],
   Traffic: ["Overview traffic", "Source/medium", "Device", "Tren harian"],
   "Analytics Pages": ["Top pages", "Landing pages", "Exit pages", "Time on page"],
