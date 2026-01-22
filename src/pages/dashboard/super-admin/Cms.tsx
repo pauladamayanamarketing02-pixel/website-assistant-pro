@@ -43,6 +43,7 @@ export default function SuperAdminCms() {
   const [domainduckKey, setDomainduckKey] = useState("");
   const [domainduckConfigured, setDomainduckConfigured] = useState(false);
   const [domainduckUpdatedAt, setDomainduckUpdatedAt] = useState<string | null>(null);
+  const [domainduckUsage, setDomainduckUsage] = useState<{ used: number; limit: number; exhausted: boolean } | null>(null);
   const [domainduckTestDomain, setDomainduckTestDomain] = useState("example.com");
   const [domainduckTestResult, setDomainduckTestResult] = useState<DomainDuckTestResult | null>(null);
 
@@ -53,6 +54,7 @@ export default function SuperAdminCms() {
       if (error) throw error;
       setDomainduckConfigured(Boolean((data as any)?.configured));
       setDomainduckUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
+      setDomainduckUsage(((data as any)?.usage ?? null) as any);
     } catch (e: any) {
       console.error(e);
       if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
@@ -105,6 +107,7 @@ export default function SuperAdminCms() {
       if (error) throw error;
       toast.success("API key di-reset");
       setDomainduckTestResult(null);
+      setDomainduckUsage(null);
       await fetchDomainDuckStatus();
     } catch (e: any) {
       console.error(e);
@@ -135,6 +138,13 @@ export default function SuperAdminCms() {
       const result: DomainDuckTestResult = { domain: d, availability };
       setDomainduckTestResult(result);
 
+      const usage = (data as any)?.usage;
+      if (usage && typeof usage === "object") {
+        const used = Number((usage as any)?.used ?? 0);
+        const limit = Number((usage as any)?.limit ?? 250);
+        setDomainduckUsage({ used, limit, exhausted: used >= limit });
+      }
+
       if (availability === "true") toast.success("Available");
       else if (availability === "false") toast.error("Unavailable");
       else if (availability === "premium") toast.message("Premium Domain");
@@ -157,7 +167,7 @@ export default function SuperAdminCms() {
       <div className="grid gap-4 md:grid-cols-2">
         <DomainDuckIntegrationCard
           loading={loading}
-          status={{ configured: domainduckConfigured, updatedAt: domainduckUpdatedAt }}
+          status={{ configured: domainduckConfigured, updatedAt: domainduckUpdatedAt, usage: domainduckUsage }}
           apiKeyValue={domainduckKey}
           onApiKeyChange={setDomainduckKey}
           onSave={onSaveDomainDuckKey}

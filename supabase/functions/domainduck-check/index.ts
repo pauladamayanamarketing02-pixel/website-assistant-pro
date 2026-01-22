@@ -44,6 +44,14 @@ async function getDomainDuckKey(admin: any): Promise<string | null> {
   return ciphertext;
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -84,6 +92,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Enforce quota (250 calls per API key) and increment atomically
+    const keyHash = await sha256Hex(apiKey);
+    const { data: usageRows, error: usageErr } = await admin.rpc("increment_domainduck_usage", { p_key_hash: keyHash });
+    if (usageErr) throw usageErr;
+    const usage = Array.isArray(usageRows) ? usageRows[0] : usageRows;
+    const exhausted = Boolean((usage as any)?.exhausted);
+    if (exhausted) {
+      return new Response(
+        JSON.stringify({
+          error: "Kuota DomainDuck habis",
+          usage: { used: (usage as any)?.used_count ?? 250, limit: (usage as any)?.usage_limit ?? 250 },
+        }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const url = new URL("https://v1.api.domainduck.io/api/get/");
     url.searchParams.set("domain", domain);
     url.searchParams.set("apikey", apiKey);
@@ -110,7 +137,7 @@ Deno.serve(async (req) => {
     const json = JSON.parse(text) as Record<string, unknown>;
     const availability = coerceAvailability(json?.availability);
 
-    return new Response(JSON.stringify({ availability }), {
+    return new Response(JSON.stringify({ availability, usage: { used: (usage as any)?.used_count ?? null, limit: (usage as any)?.usage_limit ?? 250 } }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

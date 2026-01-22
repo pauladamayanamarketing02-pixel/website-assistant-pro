@@ -17,6 +17,33 @@ type Payload =
       api_key: string;
     };
 
+type Usage = {
+  used: number;
+  limit: number;
+  exhausted: boolean;
+};
+
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function getUsage(admin: any, keyHash: string): Promise<Usage> {
+  const { data, error } = await admin
+    .from("domainduck_api_usage")
+    .select("used_count,usage_limit")
+    .eq("key_hash", keyHash)
+    .maybeSingle();
+  if (error) throw error;
+
+  const used = Number((data as any)?.used_count ?? 0);
+  const limit = Number((data as any)?.usage_limit ?? 250);
+  return { used, limit, exhausted: used >= limit };
+}
+
 async function requireSuperAdmin(admin: any, userId: string) {
   const { data: roleRow, error: roleErr } = await admin
     .from("user_roles")
@@ -79,16 +106,27 @@ Deno.serve(async (req) => {
     if (body.action === "get") {
       const { data, error } = await admin
         .from("integration_secrets")
-        .select("updated_at")
+        .select("updated_at,ciphertext,iv")
         .eq("provider", "domainduck")
         .eq("name", "api_key")
         .maybeSingle();
       if (error) throw error;
 
+      let usage: Usage | null = null;
+      if (data) {
+        const iv = String((data as any)?.iv ?? "");
+        const ciphertext = String((data as any)?.ciphertext ?? "");
+        if (iv === "plain" && ciphertext) {
+          const keyHash = await sha256Hex(ciphertext);
+          usage = await getUsage(admin, keyHash);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           configured: Boolean(data),
           updated_at: data ? String((data as any).updated_at) : null,
+          usage,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -109,6 +147,18 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Read old key hash (to reset usage properly)
+      const { data: oldRow } = await admin
+        .from("integration_secrets")
+        .select("ciphertext,iv")
+        .eq("provider", "domainduck")
+        .eq("name", "api_key")
+        .maybeSingle();
+
+      const oldCipher = String((oldRow as any)?.ciphertext ?? "");
+      const oldIv = String((oldRow as any)?.iv ?? "");
+      const oldHash = oldIv === "plain" && oldCipher ? await sha256Hex(oldCipher) : null;
+
       const { error } = await admin.from("integration_secrets").upsert(
         {
           provider: "domainduck",
@@ -120,14 +170,46 @@ Deno.serve(async (req) => {
       );
       if (error) throw error;
 
-      return new Response(JSON.stringify({ ok: true }), {
+      // Reset usage for new key (0/250). Remove old usage row if exists.
+      const newHash = await sha256Hex(apiKey);
+      if (oldHash && oldHash !== newHash) {
+        await admin.from("domainduck_api_usage").delete().eq("key_hash", oldHash);
+      }
+      const { error: usageErr } = await admin.from("domainduck_api_usage").upsert(
+        {
+          key_hash: newHash,
+          used_count: 0,
+          usage_limit: 250,
+        },
+        { onConflict: "key_hash" },
+      );
+      if (usageErr) throw usageErr;
+
+      const usage = await getUsage(admin, newHash);
+
+      return new Response(JSON.stringify({ ok: true, usage }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (body.action === "clear") {
+      const { data: oldRow } = await admin
+        .from("integration_secrets")
+        .select("ciphertext,iv")
+        .eq("provider", "domainduck")
+        .eq("name", "api_key")
+        .maybeSingle();
+
+      const oldCipher = String((oldRow as any)?.ciphertext ?? "");
+      const oldIv = String((oldRow as any)?.iv ?? "");
+      const oldHash = oldIv === "plain" && oldCipher ? await sha256Hex(oldCipher) : null;
+
       const { error } = await admin.from("integration_secrets").delete().eq("provider", "domainduck").eq("name", "api_key");
       if (error) throw error;
+
+      if (oldHash) {
+        await admin.from("domainduck_api_usage").delete().eq("key_hash", oldHash);
+      }
 
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
