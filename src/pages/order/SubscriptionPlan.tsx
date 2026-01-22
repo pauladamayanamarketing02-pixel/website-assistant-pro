@@ -21,7 +21,7 @@ function formatUsd(value: number) {
 export default function SubscriptionPlan() {
   const navigate = useNavigate();
   const { state, setSubscriptionYears } = useOrder();
-  const { pricing } = useOrderPublicSettings(state.domain);
+  const { pricing, subscriptionPlans } = useOrderPublicSettings(state.domain);
 
   const baseAnnualUsd = useMemo(() => {
     const domain = pricing.domainPriceUsd ?? 0;
@@ -31,11 +31,12 @@ export default function SubscriptionPlan() {
 
   const options = useMemo(
     () =>
-      ([1, 2, 3] as const).map((years) => ({
-        years,
-        totalUsd: baseAnnualUsd > 0 ? baseAnnualUsd * years : null,
+      subscriptionPlans.map((p) => ({
+        years: p.years,
+        label: p.label,
+        totalUsd: baseAnnualUsd > 0 ? baseAnnualUsd * p.years : null,
       })),
-    [baseAnnualUsd],
+    [baseAnnualUsd, subscriptionPlans],
   );
 
   const selected = state.subscriptionYears;
@@ -53,7 +54,7 @@ export default function SubscriptionPlan() {
             </p>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              {options.map((opt) => {
+               {options.map((opt) => {
                 const isSelected = selected === opt.years;
                 return (
                   <button
@@ -69,7 +70,7 @@ export default function SubscriptionPlan() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-base font-semibold text-foreground">{opt.years} Tahun</p>
+                        <p className="text-base font-semibold text-foreground">{opt.label ?? `${opt.years} Tahun`}</p>
                         <p className="mt-1 text-sm text-muted-foreground">All-in (domain + hosting + template)</p>
                       </div>
                       {isSelected ? <Badge variant="secondary">Selected</Badge> : <Badge variant="outline">Plan</Badge>}

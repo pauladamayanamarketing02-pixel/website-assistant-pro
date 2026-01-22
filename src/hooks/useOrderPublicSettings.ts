@@ -18,8 +18,22 @@ export type OrderContactSettings = {
   email?: string;
 };
 
+export type OrderSubscriptionPlan = {
+  years: number;
+  label?: string;
+  is_active?: boolean;
+  sort_order?: number;
+};
+
 const SETTINGS_TEMPLATES_KEY = "order_templates";
 const SETTINGS_CONTACT_KEY = "order_contact";
+const SETTINGS_SUBSCRIPTION_PLANS_KEY = "order_subscription_plans";
+
+const fallbackSubscriptionPlans: OrderSubscriptionPlan[] = [
+  { years: 1, label: "1 Tahun", is_active: true, sort_order: 1 },
+  { years: 2, label: "2 Tahun", is_active: true, sort_order: 2 },
+  { years: 3, label: "3 Tahun", is_active: true, sort_order: 3 },
+];
 
 const fallbackTemplates: OrderTemplate[] = [
   { id: "t1", name: "Modern Business", category: "business" },
@@ -68,6 +82,29 @@ function parseContact(value: unknown): OrderContactSettings {
   return { heading, description, whatsapp_phone, whatsapp_message, email };
 }
 
+function parseSubscriptionPlans(value: unknown): OrderSubscriptionPlan[] {
+  if (!Array.isArray(value)) return fallbackSubscriptionPlans;
+
+  const normalized = value
+    .map((raw) => {
+      const obj = raw as any;
+      const years = safeNumber(obj?.years);
+      const label = safeString(obj?.label).trim();
+      const is_active = typeof obj?.is_active === "boolean" ? obj.is_active : true;
+      const sort_order = safeNumber(obj?.sort_order);
+      if (!years || years <= 0) return null;
+      return {
+        years,
+        label: label || `${years} Tahun`,
+        is_active,
+        sort_order: sort_order ?? years,
+      } satisfies OrderSubscriptionPlan;
+    })
+    .filter(Boolean) as OrderSubscriptionPlan[];
+
+  return normalized.length ? normalized : fallbackSubscriptionPlans;
+}
+
 function extractTld(domain: string): string | null {
   const d = (domain ?? "").trim().toLowerCase();
   if (!d.includes(".")) return null;
@@ -86,6 +123,7 @@ export function useOrderPublicSettings(domain?: string) {
 
   const [templates, setTemplates] = useState<OrderTemplate[]>(fallbackTemplates);
   const [contact, setContact] = useState<OrderContactSettings>(() => parseContact(null));
+  const [subscriptionPlans, setSubscriptionPlans] = useState<OrderSubscriptionPlan[]>(() => parseSubscriptionPlans(null));
 
   const [defaultPackageId, setDefaultPackageId] = useState<string | null>(null);
   const [tldPrices, setTldPrices] = useState<Array<{ tld: string; price_usd: number }>>([]);
@@ -98,13 +136,19 @@ export function useOrderPublicSettings(domain?: string) {
       setLoading(true);
       setError(null);
       try {
-        const [{ data: tplRow }, { data: contactRow }] = await Promise.all([
+        const [{ data: tplRow }, { data: contactRow }, { data: plansRow }] = await Promise.all([
           (supabase as any).from("website_settings").select("value").eq("key", SETTINGS_TEMPLATES_KEY).maybeSingle(),
           (supabase as any).from("website_settings").select("value").eq("key", SETTINGS_CONTACT_KEY).maybeSingle(),
+          (supabase as any)
+            .from("website_settings")
+            .select("value")
+            .eq("key", SETTINGS_SUBSCRIPTION_PLANS_KEY)
+            .maybeSingle(),
         ]);
 
         setTemplates(parseTemplates(tplRow?.value));
         setContact(parseContact(contactRow?.value));
+        setSubscriptionPlans(parseSubscriptionPlans(plansRow?.value));
 
         const { data: pricingRow } = await (supabase as any)
           .from("domain_pricing_settings")
@@ -164,6 +208,9 @@ export function useOrderPublicSettings(domain?: string) {
       .filter((t) => t.is_active !== false)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
     contact,
+    subscriptionPlans: subscriptionPlans
+      .filter((p) => p.is_active !== false)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
     pricing: {
       defaultPackageId,
       tldPrices,
