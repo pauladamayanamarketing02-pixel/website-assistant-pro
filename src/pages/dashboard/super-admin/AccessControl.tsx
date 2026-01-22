@@ -14,10 +14,27 @@ type PackageRow = {
   is_active: boolean;
 };
 
-type MenuKey = "ai_agents" | "messages" | "content_planner" | "reporting" | "tasks_progress";
+type MenuKey =
+  | "ai_agents"
+  | "messages"
+  | "content_planner"
+  | "content_planner_send_to_tasks"
+  | "content_planner_edit_scheduled"
+  | "reporting"
+  | "tasks_progress";
 
 const MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
   { key: "content_planner", label: "Content Planner", description: "Show/hide Content Planner in User Dashboard." },
+  {
+    key: "content_planner_send_to_tasks",
+    label: "↳ Send to Tasks",
+    description: 'Enable/disable button “Send to Tasks” in /dashboard/user/content-planner.',
+  },
+  {
+    key: "content_planner_edit_scheduled",
+    label: "↳ Edit Scheduled Content",
+    description: "Enable/disable editing fields (read-only when disabled) in /dashboard/user/content-planner.",
+  },
   { key: "tasks_progress", label: "Tasks & Progress", description: "Enable/disable creating tasks (New Task / Create Task) in User Dashboard." },
   { key: "ai_agents", label: "AI Agents", description: "Enable/disable clicking tools in AI Agents — All Tools." },
   { key: "messages", label: "Messages", description: "Show/hide Messages in User Dashboard." },
@@ -37,6 +54,8 @@ export default function SuperAdminAccessControl() {
     ai_agents: true,
     messages: true,
     content_planner: true,
+    content_planner_send_to_tasks: true,
+    content_planner_edit_scheduled: true,
     reporting: true,
     tasks_progress: true,
   });
@@ -108,6 +127,8 @@ export default function SuperAdminAccessControl() {
           ai_agents: true,
           messages: true,
           content_planner: true,
+          content_planner_send_to_tasks: true,
+          content_planner_edit_scheduled: true,
           reporting: true,
           tasks_progress: true,
         };

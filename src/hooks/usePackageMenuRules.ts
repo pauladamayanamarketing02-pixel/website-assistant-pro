@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type MenuKey = "ai_agents" | "messages" | "content_planner" | "reporting" | "tasks_progress";
+export type MenuKey =
+  | "ai_agents"
+  | "messages"
+  | "content_planner"
+  | "content_planner_send_to_tasks"
+  | "content_planner_edit_scheduled"
+  | "reporting"
+  | "tasks_progress";
 
 const CONTROLLED_KEYS: MenuKey[] = [
   "ai_agents",
   "messages",
   "content_planner",
+  "content_planner_send_to_tasks",
+  "content_planner_edit_scheduled",
   "reporting",
   "tasks_progress",
 ];
@@ -54,6 +63,8 @@ export function usePackageMenuRules(userId?: string) {
           ai_agents: true,
           messages: true,
           content_planner: true,
+          content_planner_send_to_tasks: true,
+          content_planner_edit_scheduled: true,
           reporting: true,
           tasks_progress: true,
         };
