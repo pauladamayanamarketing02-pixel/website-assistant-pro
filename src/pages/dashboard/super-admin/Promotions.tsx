@@ -11,6 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Save, Trash2 } from "lucide-react";
 
 type PromoStatus = "draft" | "scheduled" | "active" | "expired";
@@ -53,6 +63,7 @@ export default function SuperAdminPromotions() {
     ends_at: null,
   });
   const [editingPromoId, setEditingPromoId] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; promo: PromoDbRow | null }>({ open: false, promo: null });
 
   const toLocalInputValue = (iso: string | null) => {
     if (!iso) return "";
@@ -372,20 +383,7 @@ export default function SuperAdminPromotions() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={async () => {
-                                setPromosSaving(true);
-                                try {
-                                  const { error } = await (supabase as any).from("order_promos").delete().eq("id", p.id);
-                                  if (error) throw error;
-                                  toast({ title: "Deleted", description: "Promo dihapus." });
-                                  await fetchPromos();
-                                } catch (e: any) {
-                                  console.error(e);
-                                  toast({ variant: "destructive", title: "Delete failed", description: e?.message ?? "Unknown error" });
-                                } finally {
-                                  setPromosSaving(false);
-                                }
-                              }}
+                              onClick={() => setDeleteDialog({ open: true, promo: p })}
                               disabled={promosSaving}
                             >
                               <Trash2 className="h-4 w-4 mr-2" /> Delete
@@ -401,8 +399,45 @@ export default function SuperAdminPromotions() {
           ) : !promosLoading ? (
             <div className="text-sm text-muted-foreground">Belum ada promo.</div>
           ) : null}
+
+          <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog((s) => ({ ...s, open }))}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Hapus promo?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Anda yakin ingin menghapus promo <span className="font-medium">{deleteDialog.promo?.code ?? ""}</span>? Tindakan ini tidak bisa dibatalkan.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={promosSaving}>No</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={promosSaving}
+                  onClick={async () => {
+                    const promo = deleteDialog.promo;
+                    if (!promo) return;
+                    setPromosSaving(true);
+                    try {
+                      const { error } = await (supabase as any).from("order_promos").delete().eq("id", promo.id);
+                      if (error) throw error;
+                      toast({ title: "Deleted", description: "Promo dihapus." });
+                      setDeleteDialog({ open: false, promo: null });
+                      await fetchPromos();
+                    } catch (e: any) {
+                      console.error(e);
+                      toast({ variant: "destructive", title: "Delete failed", description: e?.message ?? "Unknown error" });
+                    } finally {
+                      setPromosSaving(false);
+                    }
+                  }}
+                >
+                  Yes, delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>
   );
 }
+

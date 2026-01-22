@@ -30,6 +30,7 @@ import SuperAdminUsersAssists from "./super-admin/UsersAssists";
 import SuperAdminAccessControl from "./super-admin/AccessControl";
 import SuperAdminCms from "./super-admin/Cms";
 import SuperAdminPromotions from "./super-admin/Promotions";
+import SuperAdminSubscriptions from "./super-admin/Subscriptions";
 
 function LoadingScreen() {
   return (
@@ -139,7 +140,7 @@ export default function SuperAdminDashboard() {
               <Route path="packages" element={<SuperAdminPackages />} />
               <Route path="packages/:id" element={<SuperAdminPackageEdit />} />
               <Route path="payments" element={<SuperAdminPlaceholder title="Payments" />} />
-              <Route path="subscriptions" element={<SuperAdminPlaceholder title="Subscriptions" />} />
+              <Route path="subscriptions" element={<SuperAdminSubscriptions />} />
               <Route path="promotions" element={<SuperAdminPromotions />} />
               <Route path="security" element={<SuperAdminPlaceholder title="Security" />} />
               <Route path="access-control" element={<SuperAdminAccessControl />} />
