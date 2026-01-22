@@ -94,6 +94,12 @@ export default function AdminDashboard() {
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
       { title: "Messages (soon)", url: "/dashboard/admin/messages", icon: MessageSquare },
       {
+        title: "Support",
+        url: "/dashboard/admin/support",
+        icon: MessageSquare,
+        badgeCount: supportNewCount > 0 ? supportNewCount : undefined,
+      },
+      {
         title: "Website",
         url: "/dashboard/admin/website",
         icon: Globe,
@@ -107,13 +113,6 @@ export default function AdminDashboard() {
           { title: "FAQs", url: "/dashboard/admin/website/services/faqs", icon: FileQuestion },
           { title: "Packages", url: "/dashboard/admin/website/packages", icon: Package },
           { title: "Layout", url: "/dashboard/admin/website/layout", icon: LayoutTemplate },
-          {
-            title: "Support",
-            url: "/dashboard/admin/website/support",
-            icon: MessageSquare,
-            badgeCount: supportNewCount > 0 ? supportNewCount : undefined,
-          },
-
            // Templates (Order)
            { title: "Templates", url: "/dashboard/admin/website/templates", icon: SlidersHorizontal },
         ],
@@ -227,6 +226,7 @@ export default function AdminDashboard() {
               <Route path="tasks/new" element={<AdminTaskCreate />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
               <Route path="messages" element={<AdminPlaceholder title="Messages" />} />
+              <Route path="support" element={<AdminSupport />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
               <Route path="website/homepage" element={<AdminWebsiteHomepage />} />
               <Route path="website/blog" element={<AdminWebsiteBlog />} />
@@ -238,8 +238,6 @@ export default function AdminDashboard() {
               <Route path="website/services/faqs" element={<AdminWebsiteFaqs />} />
               <Route path="website/packages" element={<AdminWebsitePackages />} />
               <Route path="website/layout" element={<AdminWebsiteLayout />} />
-              <Route path="website/support" element={<AdminSupport />} />
-
               {/* Templates (Order) */}
               <Route path="website/templates" element={<AdminWebsiteDomainTools />} />
 

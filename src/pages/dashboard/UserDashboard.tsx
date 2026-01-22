@@ -7,6 +7,7 @@ import {
   ImageIcon,
   CheckSquare,
   MessageCircle,
+  LifeBuoy,
   Package,
   BarChart3,
   Activity,
@@ -26,6 +27,7 @@ import AICreation from './user/AICreation';
 import MyGallery from './user/MyGallery';
 import TasksProgress from './user/TasksProgress';
 import Messages from './user/Messages';
+import UserSupport from './user/Support';
 import MyPackage from './user/MyPackage';
 import Reporting from './user/Reporting';
 import LogActivity from './user/LogActivity';
@@ -40,6 +42,7 @@ const menuItems: UserNavItem[] = [
   { title: 'My Gallery', url: '/dashboard/user/gallery', icon: ImageIcon },
   { title: 'Reporting & Visibility', url: '/dashboard/user/reporting', icon: BarChart3 },
   { title: 'Messages', url: '/dashboard/user/messages', icon: MessageCircle },
+  { title: 'Support', url: '/dashboard/user/support', icon: LifeBuoy },
   { title: 'My Package', url: '/dashboard/user/package', icon: Package },
   { title: 'Log Activity', url: '/dashboard/user/log-activity', icon: Activity },
   { title: 'Settings', url: '/dashboard/user/settings', icon: Settings },
@@ -226,6 +229,10 @@ export default function UserDashboard() {
               <Route
                 path="messages"
                 element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <Messages />}
+              />
+              <Route
+                path="support"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <UserSupport />}
               />
               <Route path="package" element={<MyPackage />} />
               <Route
