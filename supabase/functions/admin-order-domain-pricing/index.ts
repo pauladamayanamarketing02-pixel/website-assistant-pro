@@ -15,7 +15,15 @@ type Payload =
     };
 
 function normalizeTld(input: unknown): string {
-  return String(input ?? "").trim().toLowerCase().replace(/^\./, "");
+  const raw = String(input ?? "").trim().toLowerCase();
+  const cleaned = raw.replace(/^\.+/, "");
+  if (!cleaned) return "";
+  // DB constraint: domain_tld_prices.tld must be like ".com"
+  return `.${cleaned}`;
+}
+
+function isValidDbTld(tldWithDot: string): boolean {
+  return /^\.[a-z0-9-]{2,}$/.test(tldWithDot);
 }
 
 async function requireAdminOrSuperAdmin(admin: any, userId: string) {
@@ -111,12 +119,23 @@ Deno.serve(async (req) => {
       }
 
       const rows = Array.isArray((body as any).tld_prices) ? ((body as any).tld_prices as any[]) : [];
-      const cleaned = rows
-        .map((r) => ({
-          tld: normalizeTld(r?.tld),
-          price_usd: Number(r?.price_usd),
-        }))
-        .filter((r) => r.tld && Number.isFinite(r.price_usd) && r.price_usd >= 0);
+      const mapped = rows.map((r) => ({
+        tld: normalizeTld(r?.tld),
+        price_usd: Number(r?.price_usd),
+      }));
+
+      const invalidTlds = mapped.map((r) => r.tld).filter((tld) => tld && !isValidDbTld(tld));
+      if (invalidTlds.length) {
+        return new Response(
+          JSON.stringify({
+            error: "Format TLD tidak valid. Contoh yang benar: com, net, co-id (tanpa spasi/karakter aneh).",
+            invalid_tlds: Array.from(new Set(invalidTlds)),
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const cleaned = mapped.filter((r) => r.tld && isValidDbTld(r.tld) && Number.isFinite(r.price_usd) && r.price_usd >= 0);
 
       const { error: upsertSettingsErr } = await admin
         .from("domain_pricing_settings")
