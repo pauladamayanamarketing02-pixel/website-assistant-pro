@@ -18,12 +18,12 @@ export default function SuperAdminImpersonate() {
     (async () => {
       try {
         if (!token || !redirectTo) {
-          throw new Error("Missing token atau redirect_to.");
+          throw new Error("Missing token or redirect_to.");
         }
 
         // Prevent open-redirect: only allow redirect within current origin
         if (!redirectTo.startsWith(window.location.origin)) {
-          throw new Error("redirect_to tidak valid.");
+          throw new Error("Invalid redirect_to.");
         }
 
         const { error } = await supabase.auth.verifyOtp({
@@ -36,7 +36,7 @@ export default function SuperAdminImpersonate() {
         // Navigate to the target dashboard (includes ?imp=... for bypass checks)
         window.location.assign(redirectTo);
       } catch (e: any) {
-        const msg = e?.message || "Gagal masuk ke akun target.";
+        const msg = e?.message || "Failed to log in as the target account.";
         console.error(e);
         toast.error(msg);
         setFatalError(msg);
@@ -50,26 +50,26 @@ export default function SuperAdminImpersonate() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Login sebagai akun target</CardTitle>
+          <CardTitle>Logging in as target account</CardTitle>
           <CardDescription>
-            {loading ? "Memproses..." : fatalError ? "Gagal" : "Selesai"}
+            {loading ? "Processing..." : fatalError ? "Failed" : "Done"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Mohon tunggu, sedang mengalihkan...</p>
+            <p className="text-sm text-muted-foreground">Please wait, redirecting...</p>
           ) : fatalError ? (
             <>
               <p className="text-sm text-destructive">{fatalError}</p>
               <div className="flex gap-2">
                 <Button asChild variant="outline">
-                  <Link to="/dashboard/super-admin/users-assists">Kembali</Link>
+                  <Link to="/dashboard/super-admin/users-assists">Back</Link>
                 </Button>
               </div>
             </>
           ) : (
             <Button asChild>
-              <a href={redirectTo ?? "/dashboard/super-admin/users-assists"}>Lanjut</a>
+              <a href={redirectTo ?? "/dashboard/super-admin/users-assists"}>Continue</a>
             </Button>
           )}
         </CardContent>
