@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,13 +10,6 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Globe, BarChart3, CreditCard, Mail, KeyRound, Webhook, Save, RefreshCcw } from "lucide-react";
-
-type IntegrationSecretMeta = {
-  provider: string;
-  name: string;
-  updated_at: string;
-  is_master_key?: boolean;
-};
 
 async function getAccessToken() {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
@@ -47,28 +40,19 @@ async function invokeWithAuth<T>(fnName: string, body: unknown) {
 export default function SuperAdminCms() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [secrets, setSecrets] = useState<IntegrationSecretMeta[]>([]);
-
-  const [masterKey, setMasterKey] = useState("");
-  const [oldMasterKey, setOldMasterKey] = useState("");
-  const [newMasterKey, setNewMasterKey] = useState("");
-
-  const [provider, setProvider] = useState("stripe");
-  const [name, setName] = useState("SECRET_KEY");
-  const [value, setValue] = useState("");
-
   const [domainrKey, setDomainrKey] = useState("");
 
-  const masterKeyConfigured = useMemo(() => {
-    return secrets.some((s) => s.provider === "system" && s.name === "INTEGRATIONS_MASTER_KEY");
-  }, [secrets]);
+  const [domainrConfigured, setDomainrConfigured] = useState(false);
+  const [domainrUpdatedAt, setDomainrUpdatedAt] = useState<string | null>(null);
 
-  const fetchSecrets = async () => {
+  const fetchDomainrStatus = async () => {
     setLoading(true);
     try {
-      const { data, error } = await invokeWithAuth<any>("super-admin-integration-secrets", { action: "list" });
+      const { data, error } = await invokeWithAuth<any>("super-admin-domainr-secret", { action: "get" });
       if (error) throw error;
-      setSecrets(((data as any)?.items ?? []) as IntegrationSecretMeta[]);
+
+      setDomainrConfigured(Boolean((data as any)?.configured));
+      setDomainrUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
     } catch (e: any) {
       console.error(e);
       if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
@@ -76,94 +60,15 @@ export default function SuperAdminCms() {
         navigate("/super-admin/login", { replace: true });
         return;
       }
-      toast.error(e?.message || "Gagal memuat status integrations");
+      toast.error(e?.message || "Gagal memuat status Domainr");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSecrets();
+    fetchDomainrStatus();
   }, []);
-
-  const onSetMasterKey = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const key = masterKey.trim();
-      if (!key) throw new Error("Master key wajib diisi");
-
-      const { error } = await invokeWithAuth<any>("super-admin-integration-secrets", {
-        action: "set_master_key",
-        master_key: key,
-      });
-      if (error) throw error;
-
-      setMasterKey("");
-      toast.success("Master key tersimpan");
-      await fetchSecrets();
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Gagal menyimpan master key");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onRotateMasterKey = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const oldKey = oldMasterKey.trim();
-      const newKey = newMasterKey.trim();
-      if (!oldKey || !newKey) throw new Error("Old & New master key wajib diisi");
-
-      const { error } = await invokeWithAuth<any>("super-admin-integration-secrets", {
-        action: "rotate_master_key",
-        old_master_key: oldKey,
-        new_master_key: newKey,
-      });
-      if (error) throw error;
-
-      setOldMasterKey("");
-      setNewMasterKey("");
-      toast.success("Master key berhasil di-rotate");
-      await fetchSecrets();
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Gagal rotate master key");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onSaveIntegrationKey = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const p = provider.trim();
-      const n = name.trim();
-      const v = value;
-      if (!p || !n || !v) throw new Error("Provider, Name, dan Value wajib diisi");
-
-      const { error } = await invokeWithAuth<any>("super-admin-integration-secrets", {
-        action: "upsert_secret",
-        provider: p,
-        name: n,
-        value: v,
-      });
-      if (error) throw error;
-
-      setValue("");
-      toast.success("API key tersimpan");
-      await fetchSecrets();
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Gagal menyimpan API key");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onSaveDomainrKey = async (e: FormEvent) => {
     e.preventDefault();
@@ -172,17 +77,12 @@ export default function SuperAdminCms() {
       const v = domainrKey.trim();
       if (!v) throw new Error("Domainr API key wajib diisi");
 
-      const { error } = await invokeWithAuth<any>("super-admin-integration-secrets", {
-        action: "upsert_secret",
-        provider: "domainr",
-        name: "api_key",
-        value: v,
-      });
+      const { error } = await invokeWithAuth<any>("super-admin-domainr-secret", { action: "set", api_key: v });
       if (error) throw error;
 
       setDomainrKey("");
       toast.success("Domainr API key tersimpan");
-      await fetchSecrets();
+      await fetchDomainrStatus();
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Gagal menyimpan Domainr API key");
@@ -203,81 +103,9 @@ export default function SuperAdminCms() {
           <CardHeader>
             <div className="flex items-start justify-between gap-3">
               <CardTitle className="flex items-center gap-2">
-                <KeyRound className="h-4 w-4" /> Integrations Master Key
-              </CardTitle>
-              <Badge variant={masterKeyConfigured ? "default" : "secondary"}>
-                {masterKeyConfigured ? "Active" : "Not set"}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Dipakai untuk enkripsi API keys integrasi (disimpan terenkripsi di database).
-            <div className="mt-4 space-y-6">
-              {!masterKeyConfigured ? (
-                <form onSubmit={onSetMasterKey} className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="master_key">Master Key</Label>
-                    <Input
-                      id="master_key"
-                      type="password"
-                      value={masterKey}
-                      onChange={(e) => setMasterKey(e.target.value)}
-                      placeholder="Masukkan master key..."
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  <Button type="submit" disabled={loading}>
-                    <Save className="h-4 w-4 mr-2" /> Simpan
-                  </Button>
-                </form>
-              ) : (
-                <form onSubmit={onRotateMasterKey} className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="old_master_key">Old Master Key</Label>
-                    <Input
-                      id="old_master_key"
-                      type="password"
-                      value={oldMasterKey}
-                      onChange={(e) => setOldMasterKey(e.target.value)}
-                      placeholder="Old master key..."
-                      autoComplete="current-password"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="new_master_key">New Master Key</Label>
-                    <Input
-                      id="new_master_key"
-                      type="password"
-                      value={newMasterKey}
-                      onChange={(e) => setNewMasterKey(e.target.value)}
-                      placeholder="New master key..."
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  <Button type="submit" disabled={loading}>
-                    <Save className="h-4 w-4 mr-2" /> Rotate
-                  </Button>
-                </form>
-              )}
-
-              <div>
-                <Button type="button" variant="outline" onClick={fetchSecrets} disabled={loading}>
-                  <RefreshCcw className="h-4 w-4 mr-2" /> Refresh status
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
                 <Globe className="h-4 w-4" /> Domain Lookup (Domainr)
               </CardTitle>
-              <Badge variant={masterKeyConfigured ? "default" : "secondary"}>
-                {masterKeyConfigured ? "Ready" : "Need master key"}
-              </Badge>
+              <Badge variant={domainrConfigured ? "default" : "secondary"}>{domainrConfigured ? "Configured" : "Not set"}</Badge>
             </div>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
@@ -293,87 +121,22 @@ export default function SuperAdminCms() {
                     onChange={(e) => setDomainrKey(e.target.value)}
                     placeholder="Tempel Domainr key di sini..."
                     autoComplete="new-password"
-                    disabled={!masterKeyConfigured}
+                    disabled={loading}
                   />
                 </div>
-                <Button type="submit" disabled={loading || !masterKeyConfigured}>
-                  <Save className="h-4 w-4 mr-2" /> Simpan
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="submit" disabled={loading}>
+                    <Save className="h-4 w-4 mr-2" /> Simpan
+                  </Button>
+                  <Button type="button" variant="outline" onClick={fetchDomainrStatus} disabled={loading}>
+                    <RefreshCcw className="h-4 w-4 mr-2" /> Refresh status
+                  </Button>
+                </div>
               </form>
 
               <div className="mt-4 text-xs text-muted-foreground">
-                Disimpan sebagai <span className="font-medium text-foreground">domainr/api_key</span> (terenkripsi).
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <KeyRound className="h-4 w-4" /> API Keys (Encrypted)
-              </CardTitle>
-              <Badge variant={masterKeyConfigured ? "default" : "secondary"}>
-                {masterKeyConfigured ? "Ready" : "Need master key"}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Simpan API key apa pun (Stripe, Namecheap, dll). Nilai tidak akan ditampilkan lagi.
-            <div className="mt-4">
-              <form onSubmit={onSaveIntegrationKey} className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="provider">Provider</Label>
-                    <Input
-                      id="provider"
-                      value={provider}
-                      onChange={(e) => setProvider(e.target.value)}
-                      placeholder="stripe / namecheap / dll"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="name">Name</Label>
-                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="SECRET_KEY" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="value">Value</Label>
-                  <Input
-                    id="value"
-                    type="password"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    placeholder="Tempel API key di sini..."
-                    autoComplete="new-password"
-                    disabled={!masterKeyConfigured}
-                  />
-                </div>
-                <Button type="submit" disabled={loading || !masterKeyConfigured}>
-                  <Save className="h-4 w-4 mr-2" /> Simpan API Key
-                </Button>
-              </form>
-
-              <div className="mt-4 rounded-md border border-border p-3">
-                <div className="text-xs font-medium text-foreground">Tersimpan</div>
-                <div className="mt-2 space-y-1 text-xs">
-                  {secrets.filter((s) => !(s.provider === "system" && s.name === "INTEGRATIONS_MASTER_KEY")).length === 0 ? (
-                    <div className="text-muted-foreground">Belum ada API key tersimpan.</div>
-                  ) : (
-                    secrets
-                      .filter((s) => !(s.provider === "system" && s.name === "INTEGRATIONS_MASTER_KEY"))
-                      .slice(0, 8)
-                      .map((s) => (
-                        <div key={`${s.provider}:${s.name}`} className="flex items-center justify-between gap-3">
-                          <span className="text-foreground">
-                            {s.provider}/{s.name}
-                          </span>
-                          <span className="text-muted-foreground">{new Date(s.updated_at).toLocaleString()}</span>
-                        </div>
-                      ))
-                  )}
-                </div>
+                Disimpan sebagai <span className="font-medium text-foreground">domainr/api_key</span>.
+                {domainrUpdatedAt ? <span> Terakhir update: {new Date(domainrUpdatedAt).toLocaleString()}</span> : null}
               </div>
             </div>
           </CardContent>
