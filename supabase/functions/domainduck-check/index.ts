@@ -11,6 +11,38 @@ type CheckRequest = {
 
 type DomainDuckAvailability = "true" | "false" | "premium" | "blocked";
 
+function toError(e: unknown, fallbackMessage = "Unknown error"): Error {
+  if (e instanceof Error) return e;
+  // Supabase/PostgREST errors are often plain objects (not instanceof Error)
+  if (e && typeof e === "object") {
+    const anyE = e as any;
+    const msg =
+      typeof anyE?.message === "string"
+        ? anyE.message
+        : typeof anyE?.error_description === "string"
+          ? anyE.error_description
+          : fallbackMessage;
+    const err = new Error(msg);
+    // Attach useful fields for debugging (will be stringified in response)
+    (err as any).code = anyE?.code;
+    (err as any).details = anyE?.details;
+    (err as any).hint = anyE?.hint;
+    return err;
+  }
+  return new Error(typeof e === "string" ? e : fallbackMessage);
+}
+
+function errorToJson(e: unknown) {
+  const err = toError(e);
+  const anyErr = err as any;
+  return {
+    message: err.message,
+    code: anyErr.code ?? null,
+    details: anyErr.details ?? null,
+    hint: anyErr.hint ?? null,
+  };
+}
+
 function normalizeDomain(raw: string): string {
   const v = String(raw ?? "").trim().toLowerCase();
   if (!v) return "";
@@ -30,7 +62,7 @@ async function getDomainDuckKey(admin: any): Promise<string | null> {
     .eq("provider", "domainduck")
     .eq("name", "api_key")
     .maybeSingle();
-  if (error) throw error;
+  if (error) throw toError(error, "Gagal mengambil DomainDuck key");
   if (!row) return null;
 
   const ciphertext = String((row as any).ciphertext ?? "");
@@ -94,8 +126,8 @@ Deno.serve(async (req) => {
 
     // Enforce quota (250 calls per API key) and increment atomically
     const keyHash = await sha256Hex(apiKey);
-    const { data: usageRows, error: usageErr } = await admin.rpc("increment_domainduck_usage", { p_key_hash: keyHash });
-    if (usageErr) throw usageErr;
+     const { data: usageRows, error: usageErr } = await admin.rpc("increment_domainduck_usage", { p_key_hash: keyHash });
+     if (usageErr) throw toError(usageErr, "Gagal update quota DomainDuck");
     const usage = Array.isArray(usageRows) ? usageRows[0] : usageRows;
     const exhausted = Boolean((usage as any)?.exhausted);
     if (exhausted) {
@@ -142,9 +174,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
     const status = (e as any)?.status && Number.isFinite((e as any).status) ? Number((e as any).status) : 500;
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: errorToJson(e) }), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
