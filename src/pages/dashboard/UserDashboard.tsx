@@ -59,8 +59,6 @@ export default function UserDashboard() {
   const visibleMenuItems = useMemo(() => {
     const urlToKey: Record<string, any> = {
       '/dashboard/user/content-planner': 'content_planner',
-      '/dashboard/user/tasks': 'tasks_progress',
-      '/dashboard/user/ai-agents': 'ai_agents',
       '/dashboard/user/messages': 'messages',
       '/dashboard/user/reporting': 'reporting',
     };

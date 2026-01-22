@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildToolPreviewSrcDoc, type ToolLanguage } from '@/lib/aiToolPreview';
 import { usePackageAiToolRules } from '@/hooks/usePackageAiToolRules';
+import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
 
 interface AITool {
   id: string;
@@ -46,6 +47,7 @@ export default function AICreation() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isToolEnabled } = usePackageAiToolRules(user?.id);
+  const { isEnabled } = usePackageMenuRules(user?.id);
 
   const [viewMode, setViewMode] = useState<ViewMode>('tools');
   const [tools, setTools] = useState<AITool[]>([]);
@@ -54,9 +56,7 @@ export default function AICreation() {
 
   const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
 
-  const visibleTools = useMemo(() => {
-    return tools.filter((t) => isToolEnabled(t.id));
-  }, [isToolEnabled, tools]);
+  const canUseTools = useMemo(() => isEnabled('ai_agents'), [isEnabled]);
 
   const loadTools = async () => {
     setLoadingTools(true);
@@ -216,19 +216,29 @@ export default function AICreation() {
               <div className="py-10 text-muted-foreground">
                 Belum ada tools yang dipublish.
               </div>
-            ) : visibleTools.length === 0 ? (
-              <div className="py-10 text-muted-foreground">
-                Tools tidak tersedia untuk package ini.
-              </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {visibleTools.map((tool) => {
+                {tools.map((tool) => {
                   const ToolIcon = iconMap[tool.icon] ?? Sparkles;
+                  const toolClickable = canUseTools && isToolEnabled(tool.id);
                   return (
                     <Card
                       key={tool.id}
-                      className="min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50"
+                      className={
+                        toolClickable
+                          ? 'min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50'
+                          : 'min-w-0 overflow-hidden cursor-not-allowed opacity-60 border-2'
+                      }
+                      aria-disabled={!toolClickable}
                       onClick={() => {
+                        if (!toolClickable) {
+                          toast({
+                            variant: 'destructive',
+                            title: 'Tool tidak tersedia',
+                            description: 'Tool ini dinonaktifkan untuk package kamu.',
+                          });
+                          return;
+                        }
                         setSelectedTool(tool);
                         setViewMode('tool-detail');
                       }}
