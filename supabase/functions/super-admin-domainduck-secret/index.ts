@@ -1,5 +1,5 @@
-// Supabase Edge Function: super-admin-rapidapi-domainr-secret
-// Stores RapidAPI Domainr key in public.integration_secrets (plaintext, iv='plain').
+// Supabase Edge Function: super-admin-domainduck-secret
+// Stores DomainDuck API key in public.integration_secrets (plaintext, iv='plain').
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -23,11 +23,9 @@ async function requireSuperAdmin(admin: any, userId: string) {
     .select("role")
     .eq("user_id", userId)
     .maybeSingle();
-  if (roleErr) return { ok: false as const, status: 500, error: roleErr.message };
-  if ((roleRow as any)?.role !== "super_admin") {
-    return { ok: false as const, status: 403, error: "Forbidden" };
-  }
 
+  if (roleErr) return { ok: false as const, status: 500, error: roleErr.message };
+  if ((roleRow as any)?.role !== "super_admin") return { ok: false as const, status: 403, error: "Forbidden" };
   return { ok: true as const, userId };
 }
 
@@ -82,7 +80,7 @@ Deno.serve(async (req) => {
       const { data, error } = await admin
         .from("integration_secrets")
         .select("updated_at")
-        .eq("provider", "rapidapi_domainr")
+        .eq("provider", "domainduck")
         .eq("name", "api_key")
         .maybeSingle();
       if (error) throw error;
@@ -104,8 +102,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      if (/\s/.test(apiKey)) {
+      if (/\s/.test(apiKey) || apiKey.length < 8) {
         return new Response(JSON.stringify({ error: "Invalid api_key format" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -114,7 +111,7 @@ Deno.serve(async (req) => {
 
       const { error } = await admin.from("integration_secrets").upsert(
         {
-          provider: "rapidapi_domainr",
+          provider: "domainduck",
           name: "api_key",
           ciphertext: apiKey,
           iv: "plain",
@@ -129,11 +126,7 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "clear") {
-      const { error } = await admin
-        .from("integration_secrets")
-        .delete()
-        .eq("provider", "rapidapi_domainr")
-        .eq("name", "api_key");
+      const { error } = await admin.from("integration_secrets").delete().eq("provider", "domainduck").eq("name", "api_key");
       if (error) throw error;
 
       return new Response(JSON.stringify({ ok: true }), {

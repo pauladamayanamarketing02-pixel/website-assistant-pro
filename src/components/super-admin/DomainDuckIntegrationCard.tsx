@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import type { FormEvent } from "react";
 import { Globe, RefreshCcw, Save, TestTube2, Trash2 } from "lucide-react";
 
-export type RapidapiDomainrTestResult = {
+export type DomainDuckTestResult = {
   domain: string;
-  status: "available" | "unavailable" | "premium" | "unknown";
+  availability: "true" | "false" | "premium" | "blocked";
 };
 
 type Status = {
@@ -27,10 +27,17 @@ type Props = {
   testDomainValue: string;
   onTestDomainChange: (v: string) => void;
   onTest: () => void;
-  testResult: RapidapiDomainrTestResult | null;
+  testResult: DomainDuckTestResult | null;
 };
 
-export function RapidapiDomainrIntegrationCard({
+function mapAvailability(a: DomainDuckTestResult["availability"]) {
+  if (a === "true") return "Available";
+  if (a === "false") return "Unavailable";
+  if (a === "premium") return "Premium Domain";
+  return "Not Available";
+}
+
+export function DomainDuckIntegrationCard({
   loading,
   status,
   apiKeyValue,
@@ -48,24 +55,24 @@ export function RapidapiDomainrIntegrationCard({
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
-            <Globe className="h-4 w-4" /> Domain Lookup (RapidAPI → Domainr)
+            <Globe className="h-4 w-4" /> Domain Lookup (DomainDuck)
           </CardTitle>
           <Badge variant={status.configured ? "default" : "secondary"}>{status.configured ? "Configured" : "Not set"}</Badge>
         </div>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
-        Simpan RapidAPI key dan test domain check.
+        Simpan API key DomainDuck, lalu test domain.
 
         <div className="mt-4 space-y-4">
           <form onSubmit={onSave} className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="rapidapi_key">RapidAPI key</Label>
+              <Label htmlFor="domainduck_key">API key</Label>
               <Input
-                id="rapidapi_key"
+                id="domainduck_key"
                 type="password"
                 value={apiKeyValue}
                 onChange={(e) => onApiKeyChange(e.target.value)}
-                placeholder="Tempel RapidAPI key di sini..."
+                placeholder="Tempel API key DomainDuck di sini..."
                 autoComplete="new-password"
                 disabled={loading}
               />
@@ -86,9 +93,9 @@ export function RapidapiDomainrIntegrationCard({
           <div className="rounded-md border bg-muted/30 p-3">
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div className="flex-1 space-y-1.5">
-                <Label htmlFor="rapidapi_domain_test">Test domain</Label>
+                <Label htmlFor="domainduck_domain_test">Test domain</Label>
                 <Input
-                  id="rapidapi_domain_test"
+                  id="domainduck_domain_test"
                   value={testDomainValue}
                   onChange={(e) => onTestDomainChange(e.target.value)}
                   placeholder="contoh: example.com"
@@ -103,13 +110,13 @@ export function RapidapiDomainrIntegrationCard({
             {testResult ? (
               <div className="mt-3 text-xs text-muted-foreground">
                 Hasil: <span className="font-medium text-foreground">{testResult.domain}</span> →{" "}
-                <span className="font-medium text-foreground">{testResult.status}</span>
+                <span className="font-medium text-foreground">{mapAvailability(testResult.availability)}</span>
               </div>
             ) : null}
           </div>
 
           <div className="text-xs text-muted-foreground">
-            Disimpan sebagai <span className="font-medium text-foreground">rapidapi_domainr/api_key</span>.
+            Disimpan sebagai <span className="font-medium text-foreground">domainduck/api_key</span>.
             {status.updatedAt ? <span> Terakhir update: {new Date(status.updatedAt).toLocaleString()}</span> : null}
           </div>
         </div>

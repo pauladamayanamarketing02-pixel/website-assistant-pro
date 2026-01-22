@@ -3,15 +3,6 @@ project_id = "supiwygxypfqjzoqmlaq"
 [functions.domainr-check]
 verify_jwt = false
 
-[functions.rapidapi-domainr-check]
-verify_jwt = false
-
-[functions.super-admin-rapidapi-domainr-status]
-verify_jwt = false
-
-[functions.super-admin-rapidapi-domainr-secret]
-verify_jwt = false
-
 [functions.super-admin-domainr-secret]
 verify_jwt = false
 
@@ -22,4 +13,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.domainduck-check]
+verify_jwt = false
+
+[functions.super-admin-domainduck-secret]
 verify_jwt = false
