@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,23 @@ type IntegrationSecretMeta = {
   is_master_key?: boolean;
 };
 
-async function invokeWithAuth<T>(fnName: string, body: unknown) {
+async function getAccessToken() {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
   if (sessionErr) throw sessionErr;
-  const token = sessionData.session?.access_token;
-  if (!token) throw new Error("Unauthorized: session not found");
+
+  // If session is missing/expired, attempt a refresh once.
+  if (!sessionData.session) {
+    const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+    if (refreshErr) throw refreshErr;
+    if (!refreshed.session?.access_token) throw new Error("Unauthorized: session not found");
+    return refreshed.session.access_token;
+  }
+
+  return sessionData.session.access_token;
+}
+
+async function invokeWithAuth<T>(fnName: string, body: unknown) {
+  const token = await getAccessToken();
 
   return supabase.functions.invoke<T>(fnName, {
     body,
@@ -32,6 +45,7 @@ async function invokeWithAuth<T>(fnName: string, body: unknown) {
 }
 
 export default function SuperAdminCms() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [secrets, setSecrets] = useState<IntegrationSecretMeta[]>([]);
 
@@ -57,6 +71,11 @@ export default function SuperAdminCms() {
       setSecrets(((data as any)?.items ?? []) as IntegrationSecretMeta[]);
     } catch (e: any) {
       console.error(e);
+      if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
+        toast.error("Session expired. Silakan login ulang.");
+        navigate("/super-admin/login", { replace: true });
+        return;
+      }
       toast.error(e?.message || "Gagal memuat status integrations");
     } finally {
       setLoading(false);
