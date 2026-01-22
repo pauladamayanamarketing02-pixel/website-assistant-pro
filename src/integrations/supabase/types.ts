@@ -586,6 +586,62 @@ export type Database = {
         }
         Relationships: []
       }
+      domain_pricing_settings: {
+        Row: {
+          created_at: string
+          default_package_id: string | null
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_package_id?: string | null
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_package_id?: string | null
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      domain_tld_prices: {
+        Row: {
+          created_at: string
+          id: string
+          package_id: string
+          price_usd: number
+          tld: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          package_id: string
+          price_usd?: number
+          tld: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          package_id?: string
+          price_usd?: number
+          tld?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_tld_prices_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_secrets: {
         Row: {
           ciphertext: string
