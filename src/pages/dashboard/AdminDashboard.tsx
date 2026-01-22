@@ -73,9 +73,7 @@ export default function AdminDashboard() {
       const { count, error } = await (supabase as any)
         .from("website_inquiries")
         .select("id", { count: "exact", head: true })
-        .eq("status", "new")
-        // Keep badge aligned with Support page scope (exclude internal sources)
-        .not("source", "in", '("business_support","assistant_support")');
+        .eq("status", "new");
 
       if (error) throw error;
       setSupportNewCount(Number(count ?? 0));
@@ -94,8 +92,8 @@ export default function AdminDashboard() {
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
       { title: "Messages (soon)", url: "/dashboard/admin/messages", icon: MessageSquare },
       {
-        title: "Support",
-        url: "/dashboard/admin/support",
+        title: "Support Tickets",
+        url: "/dashboard/admin/support-tickets",
         icon: MessageSquare,
         badgeCount: supportNewCount > 0 ? supportNewCount : undefined,
       },
@@ -226,7 +224,7 @@ export default function AdminDashboard() {
               <Route path="tasks/new" element={<AdminTaskCreate />} />
               <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
               <Route path="messages" element={<AdminPlaceholder title="Messages" />} />
-              <Route path="support" element={<AdminSupport />} />
+              <Route path="support-tickets" element={<AdminSupport />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
               <Route path="website/homepage" element={<AdminWebsiteHomepage />} />
               <Route path="website/blog" element={<AdminWebsiteBlog />} />
