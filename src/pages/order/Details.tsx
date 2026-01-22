@@ -51,7 +51,7 @@ export default function Details() {
   });
 
   return (
-    <OrderLayout title="Your Details" step="details" sidebar={<OrderSummaryCard />}>
+    <OrderLayout title="Your Details" step="details" sidebar={<OrderSummaryCard showEstPrice={false} />}>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Contact information</CardTitle>

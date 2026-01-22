@@ -13,7 +13,7 @@ export default function Confirmation() {
     <OrderLayout title="Thank you" step="done" sidebar={<OrderSummaryCard />}>
       <Card className="shadow-soft">
         <CardHeader>
-          <CardTitle className="text-base">Order confirmed</CardTitle>
+          <CardTitle className="text-base">Order received</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <p className="text-sm text-muted-foreground">

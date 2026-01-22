@@ -61,7 +61,7 @@ export default function ChooseDomain() {
     <OrderLayout
       title="Choose Domain"
       step="domain"
-      sidebar={<OrderSummaryCard />}
+      sidebar={<OrderSummaryCard showEstPrice={false} />}
     >
       <div className="space-y-6">
         <DomainSearchBar
@@ -111,9 +111,18 @@ export default function ChooseDomain() {
                           </div>
                         </td>
                         <td className="px-3 py-2">
-                          <span className="text-foreground font-medium">
-                            {pricing.domainPriceUsd == null ? "—" : formatUsd(pricing.domainPriceUsd)}
-                          </span>
+                          {pricing.domainPriceUsd == null ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <div className="flex flex-col items-start">
+                              <span className="text-base font-semibold text-foreground">
+                                {formatUsd(pricing.domainPriceUsd)}
+                              </span>
+                              <span className="text-xs text-muted-foreground line-through">
+                                {formatUsd(pricing.domainPriceUsd * 1.25)}
+                              </span>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     </tbody>
