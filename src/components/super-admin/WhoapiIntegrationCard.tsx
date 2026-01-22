@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { KeyRound, RefreshCcw, Save, TestTube2 } from "lucide-react";
+import { KeyRound, RefreshCcw, Save, TestTube2, Trash2 } from "lucide-react";
 
 type Status = {
   configured: boolean;
@@ -24,6 +24,7 @@ type Props = {
   onApiKeyChange: (v: string) => void;
   onSave: (e: FormEvent) => void;
   onRefresh: () => void;
+  onClear: () => void;
   testDomainValue: string;
   onTestDomainChange: (v: string) => void;
   onTest: () => void;
@@ -37,6 +38,7 @@ export function WhoapiIntegrationCard({
   onApiKeyChange,
   onSave,
   onRefresh,
+  onClear,
   testDomainValue,
   onTestDomainChange,
   onTest,
@@ -75,6 +77,9 @@ export function WhoapiIntegrationCard({
               </Button>
               <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
                 <RefreshCcw className="h-4 w-4 mr-2" /> Refresh status
+              </Button>
+              <Button type="button" variant="destructive" onClick={onClear} disabled={loading || !status.configured}>
+                <Trash2 className="h-4 w-4 mr-2" /> Reset key
               </Button>
             </div>
           </form>
