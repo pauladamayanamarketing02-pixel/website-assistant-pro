@@ -1032,6 +1032,7 @@ export type Database = {
           linkedin_url: string | null
           name: string
           onboarding_completed: boolean | null
+          payment_active: boolean
           phone: string | null
           phone_secondary: string | null
           portfolio_url: string | null
@@ -1058,6 +1059,7 @@ export type Database = {
           linkedin_url?: string | null
           name: string
           onboarding_completed?: boolean | null
+          payment_active?: boolean
           phone?: string | null
           phone_secondary?: string | null
           portfolio_url?: string | null
@@ -1084,6 +1086,7 @@ export type Database = {
           linkedin_url?: string | null
           name?: string
           onboarding_completed?: boolean | null
+          payment_active?: boolean
           phone?: string | null
           phone_secondary?: string | null
           portfolio_url?: string | null

@@ -49,6 +49,7 @@ export default function UserDashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [paymentActive, setPaymentActive] = useState<boolean | null>(null);
 
   const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
 
@@ -120,7 +121,44 @@ export default function UserDashboard() {
     }
   }, [user, role, loading, navigate]);
 
-  if (loading || checkingOnboarding) {
+  useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
+
+    const fetchPayment = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("payment_active")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!mounted) return;
+      // default true (matches DB default) if anything goes wrong
+      if (error) {
+        setPaymentActive(true);
+        return;
+      }
+      setPaymentActive(Boolean((data as any)?.payment_active ?? true));
+    };
+
+    fetchPayment();
+
+    const channel = supabase
+      .channel(`user-payment-active-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
+        () => fetchPayment()
+      )
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  if (loading || checkingOnboarding || paymentActive === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -131,10 +169,17 @@ export default function UserDashboard() {
   if (!user) return null;
 
 
+  const gatedMenuItems = useMemo(() => {
+    if (paymentActive) return loadingMenuRules ? menuItems : visibleMenuItems;
+    return menuItems.map((i) => ({ ...i, disabled: i.url !== "/dashboard/user/package" }));
+  }, [loadingMenuRules, paymentActive, visibleMenuItems]);
+
+  const userIsNonActive = paymentActive === false;
+
   return (
     <SidebarProvider>
       <div className="h-screen flex w-full overflow-hidden">
-        <UserSidebar items={loadingMenuRules ? menuItems : visibleMenuItems} onLogout={signOut} />
+        <UserSidebar items={gatedMenuItems} onLogout={signOut} />
 
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
@@ -147,19 +192,49 @@ export default function UserDashboard() {
 
           <main className="flex-1 p-6 bg-background overflow-auto">
             <Routes>
-              <Route index element={<DashboardOverview />} />
-              <Route path="business" element={<MyBusiness />} />
-              <Route path="content-planner" element={<ContentPlanner />} />
-              <Route path="tasks" element={<TasksProgress />} />
+              <Route
+                index
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <DashboardOverview />}
+              />
+              <Route
+                path="business"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <MyBusiness />}
+              />
+              <Route
+                path="content-planner"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <ContentPlanner />}
+              />
+              <Route
+                path="tasks"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <TasksProgress />}
+              />
               {/* Backward-compatible route */}
               <Route path="ai-creation" element={<Navigate to="/dashboard/user/ai-agents" replace />} />
-              <Route path="ai-agents" element={<AICreation />} />
-              <Route path="gallery" element={<MyGallery />} />
-              <Route path="messages" element={<Messages />} />
+              <Route
+                path="ai-agents"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <AICreation />}
+              />
+              <Route
+                path="gallery"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <MyGallery />}
+              />
+              <Route
+                path="messages"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <Messages />}
+              />
               <Route path="package" element={<MyPackage />} />
-              <Route path="reporting" element={<Reporting />} />
-              <Route path="log-activity" element={<LogActivity />} />
-              <Route path="settings" element={<UserSettings />} />
+              <Route
+                path="reporting"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <Reporting />}
+              />
+              <Route
+                path="log-activity"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <LogActivity />}
+              />
+              <Route
+                path="settings"
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <UserSettings />}
+              />
             </Routes>
           </main>
         </div>
