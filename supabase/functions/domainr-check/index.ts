@@ -112,7 +112,9 @@ async function domainrStatus(domains: string[], apiKey: string) {
 
   const officialTxt = await officialRes.text().catch(() => "");
   if (officialRes.status !== 401) {
-    throw new Error(`Domainr error (${officialRes.status}): ${officialTxt || officialRes.statusText}`);
+    const err = new Error(`Domainr error (${officialRes.status}): ${officialTxt || officialRes.statusText}`);
+    (err as any).status = officialRes.status;
+    throw err;
   }
 
   // Fallback: RapidAPI
@@ -127,7 +129,16 @@ async function domainrStatus(domains: string[], apiKey: string) {
 
   if (!rapidRes.ok) {
     const txt = await rapidRes.text().catch(() => "");
-    throw new Error(`Domainr error (${rapidRes.status}): ${txt || rapidRes.statusText}`);
+    // RapidAPI-specific common failure:
+    // - 403: not subscribed to this API
+    const pretty =
+      rapidRes.status === 403 && (txt || "").toLowerCase().includes("not subscribed")
+        ? "RapidAPI: Anda belum subscribe ke API Domainr. Buka RapidAPI dashboard → Domainr API → Subscribe, lalu coba lagi."
+        : null;
+
+    const err = new Error(pretty ? `${pretty} (detail: ${txt || rapidRes.statusText})` : `Domainr error (${rapidRes.status}): ${txt || rapidRes.statusText}`);
+    (err as any).status = rapidRes.status;
+    throw err;
   }
 
   const json = (await rapidRes.json()) as { status?: DomainrStatusRow[] };
