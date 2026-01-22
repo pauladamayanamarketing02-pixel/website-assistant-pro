@@ -151,8 +151,8 @@ export default function SuperAdminUsersAssists() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Users & Assists</h1>
-          <p className="text-muted-foreground">View all user and assist accounts.</p>
+          <h1 className="text-3xl font-bold text-foreground">Users & Assistants</h1>
+          <p className="text-muted-foreground">View all user and assistant accounts.</p>
         </div>
 
         <Button variant="outline" onClick={fetchAccounts} disabled={loading}>
@@ -173,7 +173,7 @@ export default function SuperAdminUsersAssists() {
                 <SelectContent className="z-50 bg-popover">
                   <SelectItem value="all">All roles</SelectItem>
                   <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="assistant">Assist</SelectItem>
+                  <SelectItem value="assistant">Assistant</SelectItem>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -220,7 +220,7 @@ export default function SuperAdminUsersAssists() {
                       <TableCell className="text-right">
                         {canLoginAs(r.role) ? (
                           <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>
-                            Login
+                            Login as
                           </Button>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
