@@ -102,6 +102,7 @@ export default function SuperAdminCms() {
     try {
       const v = whoapiKey.trim();
       if (!v) throw new Error("WhoAPI API key wajib diisi");
+      if (/\s/.test(v) || v.length < 10) throw new Error("WhoAPI API key tidak valid");
 
       const { error } = await invokeWithAuth<any>("super-admin-whoapi-secret", { action: "set", api_key: v });
       if (error) throw error;
@@ -117,6 +118,21 @@ export default function SuperAdminCms() {
     }
   };
 
+  const onClearWhoapiKey = async () => {
+    setLoading(true);
+    try {
+      const { error } = await invokeWithAuth<any>("super-admin-whoapi-secret", { action: "clear" });
+      if (error) throw error;
+      toast.success("WhoAPI key di-reset");
+      await fetchWhoapiStatus();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal reset WhoAPI key");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onTestWhoapi = async () => {
     setLoading(true);
     setWhoapiTestResult(null);
@@ -125,7 +141,14 @@ export default function SuperAdminCms() {
       if (!d) throw new Error("Domain test wajib diisi");
 
       const { data, error } = await supabase.functions.invoke<any>("whoapi-check", { body: { domain: d } });
-      if (error) throw error;
+      if (error) {
+        const resp = (error as any)?.context?.response;
+        if (resp) {
+          const payload = await resp.json().catch(() => null);
+          throw new Error(payload?.error || error.message);
+        }
+        throw error;
+      }
 
       const result: WhoapiTestResult = {
         domain: String((data as any)?.domain ?? d),
@@ -167,6 +190,7 @@ export default function SuperAdminCms() {
           onApiKeyChange={setWhoapiKey}
           onSave={onSaveWhoapiKey}
           onRefresh={fetchWhoapiStatus}
+          onClear={onClearWhoapiKey}
           testDomainValue={whoapiTestDomain}
           onTestDomainChange={setWhoapiTestDomain}
           onTest={onTestWhoapi}

@@ -11,6 +11,7 @@ const corsHeaders: Record<string, string> = {
 
 type Payload =
   | { action: "get" }
+  | { action: "clear" }
   | {
       action: "set";
       api_key: string;
@@ -104,6 +105,14 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Basic safety: WhoAPI keys should not contain whitespace.
+      if (/\s/.test(apiKey)) {
+        return new Response(JSON.stringify({ error: "Invalid api_key format" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { error } = await admin.from("integration_secrets").upsert(
         {
           provider: "whoapi",
@@ -113,6 +122,19 @@ Deno.serve(async (req) => {
         },
         { onConflict: "provider,name" },
       );
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (body.action === "clear") {
+      const { error } = await admin
+        .from("integration_secrets")
+        .delete()
+        .eq("provider", "whoapi")
+        .eq("name", "api_key");
       if (error) throw error;
 
       return new Response(JSON.stringify({ ok: true }), {
