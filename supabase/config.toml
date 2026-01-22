@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.whoapi-check]
 verify_jwt = false
+
+[functions.domainduck-check]
+verify_jwt = false
