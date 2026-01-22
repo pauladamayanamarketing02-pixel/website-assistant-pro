@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
 
 type TemplateRow = {
@@ -74,6 +77,9 @@ export default function WebsiteDomainTools() {
   const [templateCategoryFilter, setTemplateCategoryFilter] = useState<string>("all");
   const [templatePage, setTemplatePage] = useState(1);
   const TEMPLATE_PAGE_SIZE = 20;
+
+  const [categoryQuery, setCategoryQuery] = useState("");
+  const [previewDialog, setPreviewDialog] = useState<{ open: boolean; src?: string; title?: string }>({ open: false });
 
   const [pricingLoading, setPricingLoading] = useState(true);
   const [pricingSaving, setPricingSaving] = useState(false);
@@ -233,6 +239,12 @@ export default function WebsiteDomainTools() {
       .map(([name, count]) => ({ name, count }));
     return [...fromDb, ...extras].sort((a, b) => a.name.localeCompare(b.name));
   }, [templates, templateCategories]);
+
+  const filteredCategories = useMemo(() => {
+    const q = categoryQuery.trim().toLowerCase();
+    if (!q) return categories;
+    return categories.filter((c) => c.name.toLowerCase().includes(q));
+  }, [categories, categoryQuery]);
 
   const filteredTemplates = useMemo(() => {
     const q = templateQuery.trim().toLowerCase();
@@ -498,221 +510,28 @@ export default function WebsiteDomainTools() {
 
         <TabsContent value="templates">
           <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle>Order Templates</CardTitle>
-              <CardDescription>Daftar template yang tampil di /order/choose-design.</CardDescription>
-            </div>
-            <Badge variant="outline">Total: {templateCountLabel}</Badge>
-          </div>
-
-          <div className="grid gap-2 md:grid-cols-6">
-            <div className="md:col-span-4">
-              <Label className="text-xs">Search template</Label>
-              <Input value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)} placeholder="Cari nama template..." />
-            </div>
-            <div className="md:col-span-2">
-              <Label className="text-xs">Filter category</Label>
-              <Select value={templateCategoryFilter} onValueChange={setTemplateCategoryFilter}>
-                <SelectTrigger disabled={saving}>
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {(categories.length ? categories : [{ name: "business", count: 0 }]).map((c) => (
-                    <SelectItem key={c.name} value={c.name}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs text-muted-foreground">
-              Menampilkan {filteredTemplates.length} template • Page {templatePage} / {totalTemplatePages}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setTemplatePage((p) => Math.max(1, p - 1))}
-                disabled={templatePage <= 1}
-              >
-                Prev
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setTemplatePage((p) => Math.min(totalTemplatePages, p + 1))}
-                disabled={templatePage >= totalTemplatePages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {loading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
-
-          <div className="space-y-3">
-
-          <div className="rounded-md border bg-muted/20 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">Template Categories</p>
-                <p className="text-xs text-muted-foreground">Tambah/edit/hapus category yang dipakai oleh template.</p>
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Order Templates</CardTitle>
+                  <CardDescription>Daftar template yang tampil di /order/choose-design.</CardDescription>
+                </div>
+                <Badge variant="outline">Total: {templateCountLabel}</Badge>
               </div>
-              <Badge variant="outline">Total: {categories.length}</Badge>
-            </div>
 
-            <div className="mt-3 flex flex-col gap-2">
               <div className="grid gap-2 md:grid-cols-6">
                 <div className="md:col-span-4">
-                  <Label className="text-xs">New category</Label>
-                  <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="contoh: ecommerce" disabled={saving} />
+                  <Label className="text-xs">Search template</Label>
+                  <Input value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)} placeholder="Cari nama template..." />
                 </div>
-                <div className="md:col-span-2 flex items-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const next = newCategory.trim();
-                      if (!next) return;
-                      const exists = (templateCategories ?? []).some((c) => c === next);
-                      if (exists) {
-                        toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
-                        return;
-                      }
-                      setTemplateCategories((prev) => {
-                        const deduped = Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b));
-                        void saveCategoriesOnly(deduped);
-                        return deduped;
-                      });
-                      setNewCategory("");
-                    }}
-                    disabled={saving}
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Add Category
-                  </Button>
-                </div>
-              </div>
-
-              {categories.length ? (
-                <div className="space-y-2">
-                  {categories.map((c) => (
-                    <div key={c.name} className="grid gap-2 rounded-md border bg-background p-2 md:grid-cols-6">
-                      <div className="md:col-span-3">
-                        <Label className="text-xs">Category</Label>
-                        <Input
-                          defaultValue={c.name}
-                          onBlur={(e) => {
-                            const next = e.target.value.trim();
-                            if (!next || next === c.name) return;
-                            renameCategory(c.name, next);
-                          }}
-                          disabled={saving}
-                        />
-                      </div>
-                      <div className="md:col-span-2 flex items-end">
-                        <Badge variant="outline">Used: {c.count}</Badge>
-                      </div>
-                      <div className="flex items-end justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => deleteCategory(c.name)}
-                          disabled={saving}
-                          aria-label="Delete category"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground">Belum ada category.</div>
-              )}
-            </div>
-          </div>
-
-           {!loading && pagedTemplates.length ? (
-             pagedTemplates.map((t) => {
-               const idx = templates.findIndex((x) => x.id === t.id);
-               return (
-               <div key={t.id} className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-7">
-                 <div className="md:col-span-2">
-                  <Label className="text-xs">Name</Label>
-                  <Input
-                    value={t.name}
-                    onChange={(e) => setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))}
-                    disabled={saving}
-                  />
-                </div>
-
-                 <div className="md:col-span-2">
-                   <Label className="text-xs">Preview Image</Label>
-                   <div className="flex flex-col gap-2">
-                     {String((t as any)?.preview_url ?? "").trim() ? (
-                       <div className="relative">
-                         <img
-                           src={String((t as any)?.preview_url ?? "").trim()}
-                           alt={`Preview ${t.name}`}
-                           className="h-24 w-full rounded border object-cover"
-                         />
-                         <Button
-                           type="button"
-                           variant="destructive"
-                           size="icon"
-                           className="absolute right-1 top-1 h-6 w-6"
-                           onClick={() => handleRemoveImage(t.id, String((t as any)?.preview_url ?? ""))}
-                           disabled={saving || uploadingTemplate[t.id]}
-                         >
-                           <X className="h-3 w-3" />
-                         </Button>
-                       </div>
-                     ) : null}
-                     <label className="cursor-pointer">
-                       <input
-                         type="file"
-                         accept="image/*"
-                         className="hidden"
-                         onChange={(e) => handleUploadImage(t.id, e.target.files?.[0] ?? null)}
-                         disabled={saving || uploadingTemplate[t.id]}
-                       />
-                       <Button
-                         type="button"
-                         variant="outline"
-                         size="sm"
-                         className="w-full"
-                         disabled={saving || uploadingTemplate[t.id]}
-                         asChild
-                       >
-                         <span>
-                           <Upload className="h-4 w-4 mr-2" />
-                           {uploadingTemplate[t.id] ? "Uploading..." : "Upload"}
-                         </span>
-                       </Button>
-                     </label>
-                   </div>
-                 </div>
-
-                <div>
-                  <Label className="text-xs">Category</Label>
-                  <Select
-                    value={String(t.category ?? "").trim() || "uncategorized"}
-                    onValueChange={(v) => setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, category: v as any } : x)))}
-                  >
+                <div className="md:col-span-2">
+                  <Label className="text-xs">Filter category</Label>
+                  <Select value={templateCategoryFilter} onValueChange={setTemplateCategoryFilter}>
                     <SelectTrigger disabled={saving}>
-                      <SelectValue />
+                      <SelectValue placeholder="All" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
                       {(categories.length ? categories : [{ name: "business", count: 0 }]).map((c) => (
                         <SelectItem key={c.name} value={c.name}>
                           {c.name}
@@ -721,68 +540,327 @@ export default function WebsiteDomainTools() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label className="text-xs">Sort</Label>
-                  <Input
-                    value={String(t.sort_order ?? 0)}
-                    onChange={(e) =>
-                      setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, sort_order: Number(e.target.value) } : x)))
-                    }
-                    inputMode="numeric"
-                    disabled={saving}
-                  />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">
+                  Menampilkan {filteredTemplates.length} template • Page {templatePage} / {totalTemplatePages}
                 </div>
-                 <div className="flex items-end justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={t.is_active === false ? "secondary" : "default"}>{t.is_active === false ? "Off" : "On"}</Badge>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, is_active: x.is_active === false } : x)))}
-                      disabled={saving}
-                    >
-                      Toggle
-                    </Button>
-                  </div>
+                <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon"
-                    onClick={() => setTemplates((prev) => prev.filter((_, i) => i !== idx))}
-                    disabled={saving}
-                    aria-label="Remove template"
+                    size="sm"
+                    onClick={() => setTemplatePage((p) => Math.max(1, p - 1))}
+                    disabled={templatePage <= 1}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    Prev
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTemplatePage((p) => Math.min(totalTemplatePages, p + 1))}
+                    disabled={templatePage >= totalTemplatePages}
+                  >
+                    Next
                   </Button>
                 </div>
               </div>
-               );
-             })
-          ) : !loading ? (
-            <div className="text-sm text-muted-foreground">Belum ada template. Klik “Add Template”.</div>
-          ) : null}
+            </CardHeader>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                setTemplates((prev) => [
-                  ...prev,
-                  { id: `t${Date.now()}`, name: "New Template", category: "business", is_active: true, sort_order: prev.length + 1 },
-                ])
-              }
-              disabled={saving}
-            >
-              <Plus className="h-4 w-4 mr-2" /> Add Template
-            </Button>
-            <Button type="button" onClick={saveTemplates} disabled={saving}>
-              <Save className="h-4 w-4 mr-2" /> Simpan Templates
-            </Button>
-            </div>
-          </div>
-        </CardContent>
+            <CardContent className="space-y-3">
+              {loading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
+
+              <div className="grid gap-3 md:grid-cols-[320px_1fr]">
+                {/* Categories panel */}
+                <div className="rounded-md border bg-muted/20 p-3 md:sticky md:top-3 self-start">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Template Categories</p>
+                      <p className="text-xs text-muted-foreground">Klik category untuk memfilter templates.</p>
+                    </div>
+                    <Badge variant="outline">{categories.length}</Badge>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    <div>
+                      <Label className="text-xs">Cari category</Label>
+                      <Input value={categoryQuery} onChange={(e) => setCategoryQuery(e.target.value)} placeholder="Cari category..." disabled={saving} />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">New category</Label>
+                      <div className="flex gap-2">
+                        <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="contoh: ecommerce" disabled={saving} />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const next = newCategory.trim();
+                            if (!next) return;
+                            const exists = (templateCategories ?? []).some((c) => c === next);
+                            if (exists) {
+                              toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
+                              return;
+                            }
+                            setTemplateCategories((prev) => {
+                              const deduped = Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b));
+                              void saveCategoriesOnly(deduped);
+                              return deduped;
+                            });
+                            setNewCategory("");
+                          }}
+                          disabled={saving}
+                          aria-label="Add Category"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <ScrollArea className="h-[420px] pr-2">
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => setTemplateCategoryFilter("all")}
+                          className="w-full rounded-md border bg-background px-2 py-2 text-left text-sm"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">All</span>
+                            <Badge variant="outline">{templates.length}</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">Tampilkan semua template</div>
+                        </button>
+
+                        {(filteredCategories.length ? filteredCategories : []).map((c) => (
+                          <div key={c.name} className="rounded-md border bg-background p-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                className="text-left"
+                                onClick={() => setTemplateCategoryFilter(c.name)}
+                                title="Klik untuk filter"
+                              >
+                                <div className="text-sm font-medium text-foreground">{c.name}</div>
+                                <div className="text-xs text-muted-foreground">Used: {c.count}</div>
+                              </button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => deleteCategory(c.name)}
+                                disabled={saving}
+                                aria-label="Delete category"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <div className="mt-2">
+                              <Label className="text-xs">Rename</Label>
+                              <Input
+                                defaultValue={c.name}
+                                onBlur={(e) => {
+                                  const next = e.target.value.trim();
+                                  if (!next || next === c.name) return;
+                                  renameCategory(c.name, next);
+                                }}
+                                disabled={saving}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </div>
+
+                {/* Templates table */}
+                <div className="space-y-3">
+                  {!loading && pagedTemplates.length ? (
+                    <div className="rounded-md border bg-muted/20">
+                      <div className="max-h-[70vh] overflow-auto">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-background">
+                            <TableRow>
+                              <TableHead className="w-[84px]">Preview</TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead className="w-[220px]">Category</TableHead>
+                              <TableHead className="w-[120px]">Sort</TableHead>
+                              <TableHead className="w-[160px]">Status</TableHead>
+                              <TableHead className="w-[210px] text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {pagedTemplates.map((t) => {
+                              const idx = templates.findIndex((x) => x.id === t.id);
+                              const previewSrc = String((t as any)?.preview_url ?? "").trim();
+
+                              return (
+                                <TableRow key={t.id}>
+                                  <TableCell>
+                                    {previewSrc ? (
+                                      <button
+                                        type="button"
+                                        className="block"
+                                        onClick={() => setPreviewDialog({ open: true, src: previewSrc, title: t.name })}
+                                        title="Klik untuk preview"
+                                      >
+                                        <img
+                                          src={previewSrc}
+                                          alt={`Preview ${t.name}`}
+                                          className="h-12 w-16 rounded border object-cover"
+                                          loading="lazy"
+                                        />
+                                      </button>
+                                    ) : (
+                                      <div className="h-12 w-16 rounded border bg-background" />
+                                    )}
+                                  </TableCell>
+
+                                  <TableCell>
+                                    <Input
+                                      value={t.name}
+                                      onChange={(e) =>
+                                        setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))
+                                      }
+                                      disabled={saving}
+                                    />
+                                  </TableCell>
+
+                                  <TableCell>
+                                    <Select
+                                      value={String(t.category ?? "").trim() || "uncategorized"}
+                                      onValueChange={(v) =>
+                                        setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, category: v as any } : x)))
+                                      }
+                                    >
+                                      <SelectTrigger disabled={saving}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {(categories.length ? categories : [{ name: "business", count: 0 }]).map((c) => (
+                                          <SelectItem key={c.name} value={c.name}>
+                                            {c.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+
+                                  <TableCell>
+                                    <Input
+                                      value={String(t.sort_order ?? 0)}
+                                      onChange={(e) =>
+                                        setTemplates((prev) =>
+                                          prev.map((x, i) => (i === idx ? { ...x, sort_order: Number(e.target.value) } : x)),
+                                        )
+                                      }
+                                      inputMode="numeric"
+                                      disabled={saving}
+                                    />
+                                  </TableCell>
+
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant={t.is_active === false ? "secondary" : "default"}>
+                                        {t.is_active === false ? "Off" : "On"}
+                                      </Badge>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          setTemplates((prev) =>
+                                            prev.map((x, i) => (i === idx ? { ...x, is_active: x.is_active === false } : x)),
+                                          )
+                                        }
+                                        disabled={saving}
+                                      >
+                                        Toggle
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <label className="cursor-pointer">
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          onChange={(e) => handleUploadImage(t.id, e.target.files?.[0] ?? null)}
+                                          disabled={saving || uploadingTemplate[t.id]}
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={saving || uploadingTemplate[t.id]}
+                                          asChild
+                                        >
+                                          <span>
+                                            <Upload className="h-4 w-4 mr-2" />
+                                            {uploadingTemplate[t.id] ? "Uploading..." : "Upload"}
+                                          </span>
+                                        </Button>
+                                      </label>
+
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleRemoveImage(t.id, previewSrc)}
+                                        disabled={saving || uploadingTemplate[t.id] || !previewSrc}
+                                      >
+                                        <X className="h-4 w-4 mr-2" /> Remove
+                                      </Button>
+
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setTemplates((prev) => prev.filter((_, i) => i !== idx))}
+                                        disabled={saving}
+                                        aria-label="Remove template"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  ) : !loading ? (
+                    <div className="text-sm text-muted-foreground">Belum ada template. Klik “Add Template”.</div>
+                  ) : null}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setTemplates((prev) => [
+                          ...prev,
+                          { id: `t${Date.now()}`, name: "New Template", category: "business", is_active: true, sort_order: prev.length + 1 },
+                        ])
+                      }
+                      disabled={saving}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Add Template
+                    </Button>
+                    <Button type="button" onClick={saveTemplates} disabled={saving}>
+                      <Save className="h-4 w-4 mr-2" /> Simpan Templates
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
@@ -979,6 +1057,21 @@ export default function WebsiteDomainTools() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={previewDialog.open} onOpenChange={(open) => setPreviewDialog((p) => ({ ...p, open }))}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{previewDialog.title || "Preview"}</DialogTitle>
+          </DialogHeader>
+          {previewDialog.src ? (
+            <img
+              src={previewDialog.src}
+              alt={previewDialog.title ? `Preview ${previewDialog.title}` : "Preview"}
+              className="w-full rounded-md border object-contain"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
