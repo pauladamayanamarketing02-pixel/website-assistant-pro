@@ -642,6 +642,30 @@ export type Database = {
           },
         ]
       }
+      domainduck_api_usage: {
+        Row: {
+          created_at: string
+          key_hash: string
+          updated_at: string
+          usage_limit: number
+          used_count: number
+        }
+        Insert: {
+          created_at?: string
+          key_hash: string
+          updated_at?: string
+          usage_limit?: number
+          used_count?: number
+        }
+        Update: {
+          created_at?: string
+          key_hash?: string
+          updated_at?: string
+          usage_limit?: number
+          used_count?: number
+        }
+        Relationships: []
+      }
       integration_secrets: {
         Row: {
           ciphertext: string
@@ -1518,6 +1542,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_domainduck_usage: {
+        Args: { p_key_hash: string }
+        Returns: {
+          exhausted: boolean
+          usage_limit: number
+          used_count: number
+        }[]
       }
       is_account_active: { Args: { _user_id: string }; Returns: boolean }
       is_blacklisted_email: { Args: { _email: string }; Returns: boolean }
