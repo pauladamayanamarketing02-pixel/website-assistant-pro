@@ -62,6 +62,9 @@ export function DomainDuckIntegrationCard({
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
         Simpan API key DomainDuck, lalu test domain.
+        <div className="mt-1 text-xs text-muted-foreground">
+          Sumber: <span className="font-medium text-foreground">api.domainduck.io</span> (GET https://v1.api.domainduck.io/api/get/)
+        </div>
 
         <div className="mt-4 space-y-4">
           <form onSubmit={onSave} className="space-y-3">

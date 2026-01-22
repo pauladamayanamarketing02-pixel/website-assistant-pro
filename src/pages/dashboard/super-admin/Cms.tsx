@@ -84,6 +84,12 @@ export default function SuperAdminCms() {
       setDomainduckKey("");
       toast.success("API key tersimpan");
       await fetchDomainDuckStatus();
+
+      // Ensure Test + Search Domain become immediately usable with the new key.
+      // Auto-run a quick test using the current test domain (if any).
+      if (domainduckTestDomain.trim()) {
+        await onTestDomainDuck();
+      }
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Gagal menyimpan API key");
@@ -98,6 +104,7 @@ export default function SuperAdminCms() {
       const { error } = await invokeWithAuth<any>("super-admin-domainduck-secret", { action: "clear" });
       if (error) throw error;
       toast.success("API key di-reset");
+      setDomainduckTestResult(null);
       await fetchDomainDuckStatus();
     } catch (e: any) {
       console.error(e);
@@ -181,7 +188,7 @@ export default function SuperAdminCms() {
           </CardContent>
         </Card>
 
-        {/* Domain Lookup configured above (Domainr) */}
+        {/* Domain Lookup configured above (DomainDuck) */}
 
         <Card>
           <CardHeader>
