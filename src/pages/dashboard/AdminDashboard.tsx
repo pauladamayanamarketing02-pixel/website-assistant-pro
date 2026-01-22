@@ -43,6 +43,7 @@ import AdminWebsiteFaqs from "./admin/WebsiteFaqs";
 import AdminWebsitePackages from "./admin/WebsitePackages";
 import AdminWebsiteLayout from "./admin/WebsiteLayout";
 import AdminWebsiteHomepage from "./admin/WebsiteHomepage";
+import AdminWebsiteDomainTools from "./admin/WebsiteDomainTools";
 import AdminBusinessUsers from "./admin/BusinessUsers";
 import AdminBusinessUserDetails from "./admin/BusinessUserDetails";
 import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
@@ -199,7 +200,7 @@ export default function AdminDashboard() {
               <Route path="website/support" element={<AdminSupport />} />
 
               {/* Domain Tools (Order) */}
-              <Route path="website/domain-tools" element={<AdminPlaceholder title="Domain Tools" />} />
+              <Route path="website/domain-tools" element={<AdminWebsiteDomainTools />} />
 
               {/* Analytics */}
               <Route path="analytics/traffic" element={<AdminPlaceholder title="Traffic" />} />
