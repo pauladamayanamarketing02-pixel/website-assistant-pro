@@ -40,12 +40,9 @@ export function DomainSearchBar({ initialValue = "", onSubmit, className }: Prop
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Enter your domain name"
-            className="h-12 text-base sm:h-14 sm:text-lg pr-20"
+            className="h-12 text-base sm:h-14 sm:text-lg"
             aria-label="Domain name"
           />
-          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted-foreground">
-            <span className="text-sm sm:text-base">.com</span>
-          </div>
         </div>
 
         <Button type="submit" size="lg" className="h-12 sm:h-14 sm:px-8">
