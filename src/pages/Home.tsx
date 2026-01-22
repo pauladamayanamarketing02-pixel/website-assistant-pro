@@ -88,18 +88,6 @@ export default function Home() {
                   }}
                 />
               </div>
-
-              <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: '0.25s' }}>
-                <Button size="lg" className="text-base" asChild>
-                  <Link to="/packages">
-                    View Packages
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="text-base" asChild>
-                  <Link to="/services">Explore Services</Link>
-                </Button>
-              </div>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '0.3s' }}>
               {['No contracts', 'Personal support', 'Affordable pricing'].map((item) => (
                 <div key={item} className="flex items-center gap-2">
