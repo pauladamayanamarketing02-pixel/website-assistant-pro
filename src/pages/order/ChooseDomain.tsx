@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,9 @@ import { DomainSearchBar } from "@/components/order/DomainSearchBar";
 import { OrderLayout } from "@/components/order/OrderLayout";
 import { OrderSummaryCard } from "@/components/order/OrderSummaryCard";
 import { useOrder } from "@/contexts/OrderContext";
+import { useDomainDuckCheck, type DomainDuckAvailability } from "@/hooks/useDomainDuckCheck";
 
-type DomainStatus = "unknown";
+type DomainStatus = "available" | "unavailable" | "premium" | "blocked" | "unknown";
 
 function badgeVariant(_status: DomainStatus) {
   return "secondary" as const;
@@ -21,9 +22,29 @@ export default function ChooseDomain() {
   const { state, setDomain, setDomainStatus } = useOrder();
   const [lastChecked, setLastChecked] = useState<string>(state.domain || initial);
 
-  // Domain lookup integration removed from this page.
-  // We only collect the domain text and continue.
-  const status: DomainStatus | null = lastChecked ? "unknown" : null;
+  const { loading, error, availability } = useDomainDuckCheck(lastChecked, { enabled: Boolean(lastChecked) });
+
+  const status: DomainStatus | null = useMemo(() => {
+    if (!lastChecked) return null;
+    const a = availability as DomainDuckAvailability | null;
+    if (!a) return loading ? "unknown" : "unknown";
+    if (a === "true") return "available";
+    if (a === "false") return "unavailable";
+    if (a === "premium") return "premium";
+    if (a === "blocked") return "blocked";
+    return "unknown";
+  }, [availability, lastChecked, loading]);
+
+  useEffect(() => {
+    // Persist to order context when we have a definitive status
+    if (!status || status === "unknown") return;
+    if (status === "available" || status === "unavailable" || status === "premium") {
+      setDomainStatus(status);
+    } else {
+      setDomainStatus(null);
+    }
+  }, [setDomainStatus, status]);
+
   const canContinue = Boolean(lastChecked);
 
   return (
@@ -45,21 +66,50 @@ export default function ChooseDomain() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Domain result</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0">
-              <p className="text-sm text-muted-foreground">Domain</p>
-              <p className="text-base font-semibold text-foreground truncate">{lastChecked || "—"}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {!lastChecked ? (
-                <span className="text-sm text-muted-foreground">Search to check availability</span>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Badge variant={badgeVariant(status ?? "unknown")}>{status ?? "unknown"}</Badge>
-                  <span className="text-sm text-muted-foreground">—</span>
+          <CardContent className="space-y-3">
+            {!lastChecked ? (
+              <p className="text-sm text-muted-foreground">Search to check availability</p>
+            ) : (
+              <>
+                <div className="overflow-hidden rounded-lg border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium text-foreground">Domain</th>
+                        <th className="px-3 py-2 text-left font-medium text-foreground">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-t">
+                        <td className="px-3 py-2 font-medium text-foreground">{lastChecked}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={badgeVariant(status ?? "unknown")}>{
+                              status === "available"
+                                ? "Available"
+                                : status === "unavailable"
+                                  ? "Unavailable"
+                                  : status === "premium"
+                                    ? "Premium Domain"
+                                    : status === "blocked"
+                                      ? "Not Available"
+                                      : loading
+                                        ? "Checking…"
+                                        : "Unknown"
+                            }</Badge>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </div>
+
+                {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                <p className="text-xs text-muted-foreground">
+                  Powered by DomainDuck API. (WHOIS & RDAP tidak ditampilkan di Find Domain)
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -71,7 +121,6 @@ export default function ChooseDomain() {
             onClick={() => {
               if (lastChecked) {
                 setDomain(lastChecked);
-                setDomainStatus(null);
               }
               navigate("/order/choose-design");
             }}
