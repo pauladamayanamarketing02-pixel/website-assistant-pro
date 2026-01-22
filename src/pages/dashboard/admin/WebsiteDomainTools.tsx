@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronDown, ChevronUp, ExternalLink, Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
+import { ExternalLink, Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
 
 type TemplateRow = {
   id: string;
@@ -90,7 +90,6 @@ export default function WebsiteDomainTools() {
 
   const [categoryQuery, setCategoryQuery] = useState("");
   const [previewDialog, setPreviewDialog] = useState<{ open: boolean; src?: string; title?: string }>({ open: false });
-  const [categoriesCollapsed, setCategoriesCollapsed] = useState(false);
 
   const [pricingLoading, setPricingLoading] = useState(true);
   const [pricingSaving, setPricingSaving] = useState(false);
@@ -597,141 +596,108 @@ export default function WebsiteDomainTools() {
             <CardContent className="space-y-3">
               {loading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
 
-              <div className="space-y-3">
-                {/* Categories panel (top, minimizable) */}
-                <div className="rounded-md border bg-muted/20 p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="grid gap-3 md:grid-cols-[320px_1fr]">
+                {/* Categories panel */}
+                <div className="rounded-md border bg-muted/20 p-3 md:sticky md:top-3 self-start">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-foreground">Template Categories</p>
                       <p className="text-xs text-muted-foreground">Klik category untuk memfilter templates.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{categories.length}</Badge>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCategoriesCollapsed((v) => !v)}
-                        aria-label={categoriesCollapsed ? "Expand categories" : "Minimize categories"}
-                      >
-                        {categoriesCollapsed ? (
-                          <>
-                            <ChevronDown className="h-4 w-4 mr-2" /> Show
-                          </>
-                        ) : (
-                          <>
-                            <ChevronUp className="h-4 w-4 mr-2" /> Hide
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    <Badge variant="outline">{categories.length}</Badge>
                   </div>
 
-                  {!categoriesCollapsed ? (
-                    <div className="mt-3 grid gap-3 md:grid-cols-3">
-                      <div className="md:col-span-1">
-                        <Label className="text-xs">Cari category</Label>
-                        <Input
-                          value={categoryQuery}
-                          onChange={(e) => setCategoryQuery(e.target.value)}
-                          placeholder="Cari category..."
+                  <div className="mt-3 space-y-2">
+                    <div>
+                      <Label className="text-xs">Cari category</Label>
+                      <Input value={categoryQuery} onChange={(e) => setCategoryQuery(e.target.value)} placeholder="Cari category..." disabled={saving} />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">New category</Label>
+                      <div className="flex gap-2">
+                        <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="contoh: ecommerce" disabled={saving} />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const next = newCategory.trim();
+                            if (!next) return;
+                            const exists = (templateCategories ?? []).some((c) => c === next);
+                            if (exists) {
+                              toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
+                              return;
+                            }
+                            setTemplateCategories((prev) => {
+                              const deduped = Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b));
+                              void saveCategoriesOnly(deduped);
+                              return deduped;
+                            });
+                            setNewCategory("");
+                          }}
                           disabled={saving}
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <Label className="text-xs">New category</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={newCategory}
-                            onChange={(e) => setNewCategory(e.target.value)}
-                            placeholder="contoh: ecommerce"
-                            disabled={saving}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              const next = newCategory.trim();
-                              if (!next) return;
-                              const exists = (templateCategories ?? []).some((c) => c === next);
-                              if (exists) {
-                                toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
-                                return;
-                              }
-                              setTemplateCategories((prev) => {
-                                const deduped = Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b));
-                                void saveCategoriesOnly(deduped);
-                                return deduped;
-                              });
-                              setNewCategory("");
-                            }}
-                            disabled={saving}
-                            aria-label="Add Category"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="md:col-span-3">
-                        <ScrollArea className="h-[260px] pr-2">
-                          <div className="space-y-2">
-                            <button
-                              type="button"
-                              onClick={() => setTemplateCategoryFilter("all")}
-                              className="w-full rounded-md border bg-background px-2 py-2 text-left text-sm"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-medium">All</span>
-                                <Badge variant="outline">{templates.length}</Badge>
-                              </div>
-                              <div className="text-xs text-muted-foreground">Tampilkan semua template</div>
-                            </button>
-
-                            {(filteredCategories.length ? filteredCategories : []).map((c) => (
-                              <div key={c.name} className="rounded-md border bg-background p-2">
-                                <div className="flex items-center justify-between gap-2">
-                                  <button
-                                    type="button"
-                                    className="text-left"
-                                    onClick={() => setTemplateCategoryFilter(c.name)}
-                                    title="Klik untuk filter"
-                                  >
-                                    <div className="text-sm font-medium text-foreground">{c.name}</div>
-                                    <div className="text-xs text-muted-foreground">Used: {c.count}</div>
-                                  </button>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => deleteCategory(c.name)}
-                                    disabled={saving}
-                                    aria-label="Delete category"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-
-                                <div className="mt-2">
-                                  <Label className="text-xs">Rename</Label>
-                                  <Input
-                                    defaultValue={c.name}
-                                    onBlur={(e) => {
-                                      const next = e.target.value.trim();
-                                      if (!next || next === c.name) return;
-                                      renameCategory(c.name, next);
-                                    }}
-                                    disabled={saving}
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
+                          aria-label="Add Category"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                  ) : null}
+
+                    <ScrollArea className="h-[420px] pr-2">
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => setTemplateCategoryFilter("all")}
+                          className="w-full rounded-md border bg-background px-2 py-2 text-left text-sm"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">All</span>
+                            <Badge variant="outline">{templates.length}</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">Tampilkan semua template</div>
+                        </button>
+
+                        {(filteredCategories.length ? filteredCategories : []).map((c) => (
+                          <div key={c.name} className="rounded-md border bg-background p-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                className="text-left"
+                                onClick={() => setTemplateCategoryFilter(c.name)}
+                                title="Klik untuk filter"
+                              >
+                                <div className="text-sm font-medium text-foreground">{c.name}</div>
+                                <div className="text-xs text-muted-foreground">Used: {c.count}</div>
+                              </button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => deleteCategory(c.name)}
+                                disabled={saving}
+                                aria-label="Delete category"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <div className="mt-2">
+                              <Label className="text-xs">Rename</Label>
+                              <Input
+                                defaultValue={c.name}
+                                onBlur={(e) => {
+                                  const next = e.target.value.trim();
+                                  if (!next || next === c.name) return;
+                                  renameCategory(c.name, next);
+                                }}
+                                disabled={saving}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
                 </div>
 
                 {/* Templates table */}
@@ -743,12 +709,12 @@ export default function WebsiteDomainTools() {
                           <TableHeader className="sticky top-0 bg-background">
                             <TableRow>
                               <TableHead className="w-[84px]">Preview</TableHead>
-                              <TableHead className="min-w-[260px]">Name</TableHead>
+                              <TableHead>Name</TableHead>
                               <TableHead className="w-[260px]">Url Preview</TableHead>
                               <TableHead className="w-[220px]">Category</TableHead>
                               <TableHead className="w-[120px]">Sort</TableHead>
-                              <TableHead className="w-[120px]">Status</TableHead>
-                              <TableHead className="w-[160px] text-right">Actions</TableHead>
+                              <TableHead className="w-[160px]">Status</TableHead>
+                              <TableHead className="w-[210px] text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -781,7 +747,6 @@ export default function WebsiteDomainTools() {
 
                                   <TableCell>
                                     <Input
-                                      className="min-w-[240px]"
                                       value={t.name}
                                       onChange={(e) =>
                                         setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))
@@ -851,19 +816,24 @@ export default function WebsiteDomainTools() {
                                   </TableCell>
 
                                   <TableCell>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant={t.is_active === false ? "outline" : "default"}
-                                      onClick={() =>
-                                        setTemplates((prev) =>
-                                          prev.map((x, i) => (i === idx ? { ...x, is_active: x.is_active === false } : x)),
-                                        )
-                                      }
-                                      disabled={saving}
-                                    >
-                                      {t.is_active === false ? "Off" : "On"}
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant={t.is_active === false ? "secondary" : "default"}>
+                                        {t.is_active === false ? "Off" : "On"}
+                                      </Badge>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          setTemplates((prev) =>
+                                            prev.map((x, i) => (i === idx ? { ...x, is_active: x.is_active === false } : x)),
+                                          )
+                                        }
+                                        disabled={saving}
+                                      >
+                                        Toggle
+                                      </Button>
+                                    </div>
                                   </TableCell>
 
                                   <TableCell className="text-right">
@@ -879,13 +849,13 @@ export default function WebsiteDomainTools() {
                                         <Button
                                           type="button"
                                           variant="outline"
-                                          size="icon"
+                                          size="sm"
                                           disabled={saving || uploadingTemplate[t.id]}
                                           asChild
-                                          aria-label={uploadingTemplate[t.id] ? "Uploading" : "Upload image"}
                                         >
                                           <span>
-                                            <Upload className="h-4 w-4" />
+                                            <Upload className="h-4 w-4 mr-2" />
+                                            {uploadingTemplate[t.id] ? "Uploading..." : "Upload"}
                                           </span>
                                         </Button>
                                       </label>
@@ -893,12 +863,11 @@ export default function WebsiteDomainTools() {
                                       <Button
                                         type="button"
                                         variant="outline"
-                                        size="icon"
+                                        size="sm"
                                         onClick={() => handleRemoveImage(t.id, previewSrc)}
                                         disabled={saving || uploadingTemplate[t.id] || !previewSrc}
-                                        aria-label="Remove image"
                                       >
-                                        <X className="h-4 w-4" />
+                                        <X className="h-4 w-4 mr-2" /> Remove
                                       </Button>
 
                                       <Button

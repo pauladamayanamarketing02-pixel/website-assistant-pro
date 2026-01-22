@@ -58,27 +58,33 @@ export default function ChooseDesign() {
                 <SelectTrigger>
                   <SelectValue placeholder="Sort" />
                 </SelectTrigger>
-                <SelectContent className="z-50 bg-popover">
+                <SelectContent>
                   <SelectItem value="sort_order">Sort order</SelectItem>
                   <SelectItem value="name_asc">Name A–Z</SelectItem>
                   <SelectItem value="name_desc">Name Z–A</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:w-[220px]">
-              <Select value={String(category)} onValueChange={(v) => setCategory(v as any)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-popover">
-                  <SelectItem value="all">All categories</SelectItem>
-                  {categories.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={category === "all" ? "default" : "outline"}
+                onClick={() => setCategory("all")}
+              >
+                All
+              </Button>
+              {categories.map((c) => (
+                <Button
+                  key={c}
+                  type="button"
+                  size="sm"
+                  variant={category === c ? "default" : "outline"}
+                  onClick={() => setCategory(c)}
+                >
+                  {c}
+                </Button>
+              ))}
             </div>
           </CardContent>
         </Card>
