@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { usePackageMenuRules } from "@/hooks/usePackageMenuRules";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import ScheduledContentEditDialog, {
@@ -174,6 +175,10 @@ export default function ContentPlanner() {
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { isEnabled } = usePackageMenuRules(user?.id);
+  const canSendToTasks = useMemo(() => isEnabled("content_planner_send_to_tasks"), [isEnabled]);
+  const canEditScheduled = useMemo(() => isEnabled("content_planner_edit_scheduled"), [isEnabled]);
 
   const [month, setMonth] = useState<Date>(new Date());
   const [filter, setFilter] = useState<ContentFilter>("all");
@@ -517,12 +522,14 @@ export default function ContentPlanner() {
   }
 
   const handlePost = (rec: Recommendation) => {
+    if (!canSendToTasks) return;
     setPostTarget(rec);
     setPostAssignee("none");
     setPostOpen(true);
   };
 
   const handleSubmitPost = async () => {
+    if (!canSendToTasks) return;
     if (!user || !postTarget) return;
 
     const selectedAssignee = postAssignee && postAssignee !== "none" ? postAssignee : null;
@@ -674,6 +681,7 @@ export default function ContentPlanner() {
   }, [editItemId, editOpen, toast]);
 
   const handleSaveEdit = async (values: ScheduledContentEditValues) => {
+    if (!canEditScheduled) return;
     if (!editItemId) return;
 
     const categoryId = categories.find((c) => c.name === values.categoryName)?.id;
@@ -913,7 +921,9 @@ export default function ContentPlanner() {
                             type="button"
                             variant="secondary"
                             size="sm"
-                            disabled={rec.kind === "scheduled" && postedScheduledIds.has(rec.id)}
+                            disabled={
+                              !canSendToTasks || (rec.kind === "scheduled" && postedScheduledIds.has(rec.id))
+                            }
                             onClick={() => handlePost(rec)}
                           >
                             <Send className="h-4 w-4" />
@@ -957,7 +967,7 @@ export default function ContentPlanner() {
             <div className="space-y-2">
               <Label htmlFor="post-assignee">Assignee</Label>
               <Select value={postAssignee} onValueChange={setPostAssignee}>
-                <SelectTrigger id="post-assignee">
+                <SelectTrigger id="post-assignee" disabled={!canSendToTasks}>
                   <SelectValue placeholder="Select assignee" />
                 </SelectTrigger>
                 <SelectContent>
@@ -981,7 +991,11 @@ export default function ContentPlanner() {
             >
               Cancel
             </Button>
-            <Button type="button" onClick={handleSubmitPost} disabled={posting || !postTarget}>
+            <Button
+              type="button"
+              onClick={handleSubmitPost}
+              disabled={!canSendToTasks || posting || !postTarget}
+            >
               {posting ? "Submitting…" : "Submit"}
             </Button>
           </DialogFooter>
@@ -1006,6 +1020,7 @@ export default function ContentPlanner() {
           saving={savingEdit}
           onSave={handleSaveEdit}
           mediaPicker={editBusinessId ? { userId: user.id, businessId: editBusinessId } : null}
+          readOnly={!canEditScheduled}
         />
       ) : null}
 

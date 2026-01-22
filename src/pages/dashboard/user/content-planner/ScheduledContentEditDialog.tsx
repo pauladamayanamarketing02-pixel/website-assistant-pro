@@ -40,6 +40,7 @@ type Props = {
   saving?: boolean;
   onSave: (values: ScheduledContentEditValues) => void;
   mediaPicker?: { userId: string; businessId: string } | null;
+  readOnly?: boolean;
 };
 
 export default function ScheduledContentEditDialog({
@@ -51,6 +52,7 @@ export default function ScheduledContentEditDialog({
   saving,
   onSave,
   mediaPicker = null,
+  readOnly = false,
 }: Props) {
   const [values, setValues] = React.useState<ScheduledContentEditValues>(initialValues);
   const [images, setImages] = React.useState<{
@@ -85,8 +87,12 @@ export default function ScheduledContentEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-6xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Scheduled Content</DialogTitle>
-          <DialogDescription>Update your scheduled content details and images.</DialogDescription>
+          <DialogTitle>{readOnly ? "View Scheduled Content" : "Edit Scheduled Content"}</DialogTitle>
+          <DialogDescription>
+            {readOnly
+              ? "Editing is disabled for your current package."
+              : "Update your scheduled content details and images."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
@@ -101,6 +107,7 @@ export default function ScheduledContentEditDialog({
                 originalValue={images.primary.originalUrl}
                 onChange={(next) => setImages((p) => ({ ...p, primary: next }))}
                 mediaPicker={mediaPicker}
+                disabled={readOnly}
               />
               <ImageFieldCard
                 variant="compact"
@@ -109,6 +116,7 @@ export default function ScheduledContentEditDialog({
                 originalValue={images.secondary.originalUrl}
                 onChange={(next) => setImages((p) => ({ ...p, secondary: next }))}
                 mediaPicker={mediaPicker}
+                disabled={readOnly}
               />
               <ImageFieldCard
                 variant="compact"
@@ -117,6 +125,7 @@ export default function ScheduledContentEditDialog({
                 originalValue={images.third.originalUrl}
                 onChange={(next) => setImages((p) => ({ ...p, third: next }))}
                 mediaPicker={mediaPicker}
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -125,7 +134,11 @@ export default function ScheduledContentEditDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label>Title</Label>
-                <Input value={values.title} onChange={(e) => setValues((p) => ({ ...p, title: e.target.value }))} />
+                <Input
+                  value={values.title}
+                  disabled={readOnly}
+                  onChange={(e) => setValues((p) => ({ ...p, title: e.target.value }))}
+                />
               </div>
 
               <div className="space-y-2">
@@ -134,7 +147,7 @@ export default function ScheduledContentEditDialog({
                   value={values.categoryName || undefined}
                   onValueChange={(v) => setValues((p) => ({ ...p, categoryName: v }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger disabled={readOnly}>
                     <SelectValue placeholder="Choose Category" />
                   </SelectTrigger>
                   <SelectContent className="z-50">
@@ -159,7 +172,7 @@ export default function ScheduledContentEditDialog({
                     }))
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger disabled={readOnly}>
                     <SelectValue placeholder="Choose Type Content" />
                   </SelectTrigger>
                   <SelectContent className="z-50">
@@ -177,6 +190,7 @@ export default function ScheduledContentEditDialog({
                   contentType={values.contentTypeName}
                   value={values.platform}
                   onChange={(v) => setValues((p) => ({ ...p, platform: v }))}
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -187,7 +201,7 @@ export default function ScheduledContentEditDialog({
                 value={values.description}
                 onChange={(v) => setValues((p) => ({ ...p, description: v }))}
                 onSave={() => {}}
-                isEditing
+                isEditing={!readOnly}
                 saving={false}
                 title="Description"
                 description="Write the content description."
@@ -205,7 +219,7 @@ export default function ScheduledContentEditDialog({
               </Button>
               <Button
                 type="button"
-                disabled={Boolean(saving)}
+                disabled={readOnly || Boolean(saving)}
                 onClick={() =>
                   onSave({
                     ...values,
@@ -215,7 +229,7 @@ export default function ScheduledContentEditDialog({
                   })
                 }
               >
-                {saving ? "Saving..." : "Save"}
+                {readOnly ? "Editing disabled" : saving ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
