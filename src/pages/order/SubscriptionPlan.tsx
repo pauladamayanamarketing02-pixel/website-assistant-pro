@@ -34,7 +34,12 @@ export default function SubscriptionPlan() {
       subscriptionPlans.map((p) => ({
         years: p.years,
         label: p.label,
-        totalUsd: baseAnnualUsd > 0 ? baseAnnualUsd * p.years : null,
+        totalUsd:
+          typeof (p as any)?.price_usd === "number" && Number.isFinite((p as any).price_usd)
+            ? Number((p as any).price_usd)
+            : baseAnnualUsd > 0
+              ? baseAnnualUsd * p.years
+              : null,
       })),
     [baseAnnualUsd, subscriptionPlans],
   );
@@ -62,9 +67,9 @@ export default function SubscriptionPlan() {
                     type="button"
                     onClick={() => setSubscriptionYears(opt.years)}
                     className={cn(
-                      "w-full rounded-xl border bg-card p-4 text-left shadow-soft transition",
+                      "w-full rounded-xl border bg-card p-4 text-left shadow-soft transition will-change-transform",
                       isSelected
-                        ? "ring-2 ring-ring bg-primary/5 shadow-md"
+                        ? "ring-2 ring-ring bg-accent/30 shadow-lg scale-[1.01]"
                         : "hover:bg-muted/30 hover:shadow",
                     )}
                   >

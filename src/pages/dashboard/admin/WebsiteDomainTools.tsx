@@ -34,6 +34,7 @@ type TldPriceRow = {
 type PlanRow = {
   years: number;
   label: string;
+  price_usd: number;
   is_active: boolean;
   sort_order: number;
 };
@@ -73,6 +74,11 @@ export default function WebsiteDomainTools() {
   const [plansLoading, setPlansLoading] = useState(true);
   const [plansSaving, setPlansSaving] = useState(false);
   const [plans, setPlans] = useState<PlanRow[]>([]);
+
+  const defaultTldRows: TldPriceRow[] = useMemo(
+    () => ["com", "net", "org", "id"].map((tld) => ({ tld, price_usd: 0 })),
+    [],
+  );
 
   const fetchTemplates = async () => {
     setLoading(true);
@@ -121,11 +127,12 @@ export default function WebsiteDomainTools() {
         setPricingPackageId(pkgOptions[0].id);
       }
 
-      setTldPrices(
-        priceRows
-          .map((r) => ({ tld: normalizeTld(r?.tld), price_usd: safeNumber(r?.price_usd) }))
-          .filter((r) => r.tld),
-      );
+      const normalized = priceRows
+        .map((r) => ({ tld: normalizeTld(r?.tld), price_usd: safeNumber(r?.price_usd) }))
+        .filter((r) => r.tld);
+
+      // If backend has no rows yet, always show default rows so admin can input prices
+      setTldPrices(normalized.length ? normalized : defaultTldRows);
     } catch (e: any) {
       console.error(e);
       const msg = e?.message || "Gagal memuat Domain Pricing";
@@ -154,6 +161,7 @@ export default function WebsiteDomainTools() {
             .map((r) => ({
               years: asNumber(r?.years),
               label: String(r?.label ?? "").trim(),
+              price_usd: asNumber(r?.price_usd, 0),
               is_active: typeof r?.is_active === "boolean" ? r.is_active : true,
               sort_order: asNumber(r?.sort_order),
             }))
@@ -168,9 +176,9 @@ export default function WebsiteDomainTools() {
               sort_order: p.sort_order || p.years,
             }))
           : [
-              { years: 1, label: "1 Tahun", is_active: true, sort_order: 1 },
-              { years: 2, label: "2 Tahun", is_active: true, sort_order: 2 },
-              { years: 3, label: "3 Tahun", is_active: true, sort_order: 3 },
+              { years: 1, label: "1 Tahun", price_usd: 0, is_active: true, sort_order: 1 },
+              { years: 2, label: "2 Tahun", price_usd: 0, is_active: true, sort_order: 2 },
+              { years: 3, label: "3 Tahun", price_usd: 0, is_active: true, sort_order: 3 },
             ],
       );
     } catch (e: any) {
@@ -257,6 +265,7 @@ export default function WebsiteDomainTools() {
         .map((p) => ({
           years: asNumber(p.years),
           label: String(p.label ?? "").trim() || `${asNumber(p.years)} Tahun`,
+          price_usd: asNumber(p.price_usd, 0),
           is_active: p.is_active !== false,
           sort_order: asNumber(p.sort_order, asNumber(p.years)),
         }))
@@ -442,14 +451,9 @@ export default function WebsiteDomainTools() {
               <div key={`${r.tld}-${idx}`} className="grid gap-2 rounded-md border bg-muted/20 p-3 md:grid-cols-5">
                 <div className="md:col-span-2">
                   <Label className="text-xs">TLD</Label>
-                  <Input
-                    value={r.tld}
-                    onChange={(e) =>
-                      setTldPrices((prev) => prev.map((x, i) => (i === idx ? { ...x, tld: e.target.value } : x)))
-                    }
-                    placeholder="com"
-                    disabled={pricingSaving}
-                  />
+                  <div className="mt-2 flex h-10 items-center rounded-md border bg-background px-3 text-sm text-foreground">
+                    .{r.tld}
+                  </div>
                 </div>
                 <div className="md:col-span-2">
                   <Label className="text-xs">Price (USD)</Label>
@@ -468,7 +472,7 @@ export default function WebsiteDomainTools() {
                     variant="outline"
                     size="icon"
                     onClick={() => setTldPrices((prev) => prev.filter((_, i) => i !== idx))}
-                    disabled={pricingSaving}
+                    disabled={pricingSaving || tldPrices.length <= 1}
                     aria-label="Remove tld"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -477,18 +481,10 @@ export default function WebsiteDomainTools() {
               </div>
             ))
           ) : !pricingLoading ? (
-            <div className="text-sm text-muted-foreground">Belum ada pricing. Klik “Add TLD”.</div>
+            <div className="text-sm text-muted-foreground">Belum ada pricing.</div>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setTldPrices((prev) => [...prev, { tld: "", price_usd: 0 }])}
-              disabled={pricingSaving}
-            >
-              <Plus className="h-4 w-4 mr-2" /> Add TLD
-            </Button>
             <Button type="button" onClick={saveDomainPricing} disabled={pricingSaving}>
               <Save className="h-4 w-4 mr-2" /> Simpan Pricing
             </Button>
@@ -509,9 +505,9 @@ export default function WebsiteDomainTools() {
          <CardContent className="space-y-3">
            {plansLoading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
 
-           {!plansLoading && plans.length ? (
-             plans.map((p, idx) => (
-               <div key={`${p.years}-${idx}`} className="grid gap-2 rounded-md border bg-muted/20 p-3 md:grid-cols-5">
+            {!plansLoading && plans.length ? (
+              plans.map((p, idx) => (
+                <div key={`${p.years}-${idx}`} className="grid gap-2 rounded-md border bg-muted/20 p-3 md:grid-cols-6">
                  <div>
                    <Label className="text-xs">Years</Label>
                    <Input
@@ -532,16 +528,29 @@ export default function WebsiteDomainTools() {
                    />
                  </div>
 
-                 <div>
-                   <Label className="text-xs">Sort</Label>
-                   <Input
-                     value={String(p.sort_order)}
-                     onChange={(e) =>
-                        setPlans((prev) => prev.map((x, i) => (i === idx ? { ...x, sort_order: asNumber(e.target.value) } : x)))}
-                     inputMode="numeric"
-                     disabled={plansSaving}
-                   />
-                 </div>
+                  <div>
+                    <Label className="text-xs">Price (USD)</Label>
+                    <Input
+                      value={String(p.price_usd ?? 0)}
+                      onChange={(e) =>
+                        setPlans((prev) => prev.map((x, i) => (i === idx ? { ...x, price_usd: asNumber(e.target.value, 0) } : x)))
+                      }
+                      inputMode="decimal"
+                      disabled={plansSaving}
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Sort</Label>
+                    <Input
+                      value={String(p.sort_order)}
+                      onChange={(e) =>
+                        setPlans((prev) => prev.map((x, i) => (i === idx ? { ...x, sort_order: asNumber(e.target.value) } : x)))
+                      }
+                      inputMode="numeric"
+                      disabled={plansSaving}
+                    />
+                  </div>
 
                  <div className="flex items-end justify-between gap-2">
                    <div className="flex items-center gap-2">
@@ -583,6 +592,7 @@ export default function WebsiteDomainTools() {
                    {
                      years: 1,
                      label: "1 Tahun",
+                      price_usd: 0,
                      is_active: true,
                      sort_order: prev.length ? Math.max(...prev.map((x) => x.sort_order)) + 1 : 1,
                    },
