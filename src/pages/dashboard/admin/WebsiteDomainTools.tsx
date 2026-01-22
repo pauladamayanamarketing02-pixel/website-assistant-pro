@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { ChevronDown, Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
 
 type TemplateRow = {
   id: string;
@@ -68,6 +69,8 @@ export default function WebsiteDomainTools() {
   const [templateCategories, setTemplateCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [uploadingTemplate, setUploadingTemplate] = useState<Record<string, boolean>>({});
+
+  const [templatesOpen, setTemplatesOpen] = useState(true);
 
   const [pricingLoading, setPricingLoading] = useState(true);
   const [pricingSaving, setPricingSaving] = useState(false);
@@ -228,13 +231,39 @@ export default function WebsiteDomainTools() {
     return [...fromDb, ...extras].sort((a, b) => a.name.localeCompare(b.name));
   }, [templates, templateCategories]);
 
+  const saveCategoriesOnly = async (nextCategories: string[]) => {
+    try {
+      const categoriesPayload = Array.from(
+        new Set(
+          (nextCategories ?? [])
+            .map((c) => String(c ?? "").trim())
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b));
+
+      const { error } = await (supabase as any)
+        .from("website_settings")
+        .upsert({ key: SETTINGS_TEMPLATE_CATEGORIES_KEY, value: categoriesPayload }, { onConflict: "key" });
+      if (error) throw error;
+    } catch (e: any) {
+      console.error(e);
+      toast({
+        variant: "destructive",
+        title: "Gagal simpan category",
+        description: e?.message ?? "Unknown error",
+      });
+    }
+  };
+
   const renameCategory = (from: string, to: string) => {
     const next = String(to ?? "").trim();
     if (!next) return;
     setTemplates((prev) => prev.map((t) => (String(t.category ?? "").trim() === from ? { ...t, category: next } : t)));
     setTemplateCategories((prev) => {
       const updated = prev.map((c) => (c === from ? next : c));
-      return Array.from(new Set(updated.map((c) => String(c).trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      const deduped = Array.from(new Set(updated.map((c) => String(c).trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      void saveCategoriesOnly(deduped);
+      return deduped;
     });
   };
 
@@ -248,7 +277,11 @@ export default function WebsiteDomainTools() {
       });
       return;
     }
-    setTemplateCategories((prev) => prev.filter((c) => c !== name));
+    setTemplateCategories((prev) => {
+      const next = prev.filter((c) => c !== name);
+      void saveCategoriesOnly(next);
+      return next;
+    });
     toast({ title: "Deleted", description: "Category dihapus." });
   };
 
@@ -438,11 +471,21 @@ export default function WebsiteDomainTools() {
               <CardTitle>Order Templates</CardTitle>
               <CardDescription>Daftar template yang tampil di /order/choose-design.</CardDescription>
             </div>
-            <Badge variant="outline">Total: {templateCountLabel}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">Total: {templateCountLabel}</Badge>
+              <Button type="button" variant="outline" size="sm" onClick={() => setTemplatesOpen((v) => !v)}>
+                <ChevronDown className={templatesOpen ? "h-4 w-4 mr-2" : "h-4 w-4 mr-2 -rotate-90"} />
+                {templatesOpen ? "Minimize" : "Expand"}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
+
+          <Collapsible open={templatesOpen} onOpenChange={setTemplatesOpen}>
+            {/* Trigger ada di header; content di-collapse di sini */}
+            <CollapsibleContent className="space-y-3">
 
           <div className="rounded-md border bg-muted/20 p-3">
             <div className="flex items-start justify-between gap-3">
@@ -471,7 +514,11 @@ export default function WebsiteDomainTools() {
                         toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
                         return;
                       }
-                      setTemplateCategories((prev) => Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b)));
+                      setTemplateCategories((prev) => {
+                        const deduped = Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b));
+                        void saveCategoriesOnly(deduped);
+                        return deduped;
+                      });
                       setNewCategory("");
                     }}
                     disabled={saving}
@@ -657,6 +704,8 @@ export default function WebsiteDomainTools() {
               <Save className="h-4 w-4 mr-2" /> Simpan Templates
             </Button>
           </div>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 

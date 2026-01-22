@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { OrderLayout } from "@/components/order/OrderLayout";
 import { useOrder } from "@/contexts/OrderContext";
 import { useOrderPublicSettings, type OrderTemplate } from "@/hooks/useOrderPublicSettings";
@@ -22,7 +23,7 @@ export default function ChooseDesign() {
       const byQuery = !q ? true : t.name.toLowerCase().includes(q);
       return byCategory && byQuery;
     });
-  }, [category, query]);
+  }, [category, query, templates]);
 
   const selected = state.selectedTemplateId;
 
@@ -59,9 +60,30 @@ export default function ChooseDesign() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => {
             const isSelected = selected === t.id;
+            const previewUrl = String(t.preview_url ?? "").trim();
             return (
               <Card key={t.id} className={isSelected ? "ring-2 ring-ring" : ""}>
                 <CardContent className="p-5">
+                  <div className="mb-4 overflow-hidden rounded-md border bg-muted">
+                    <AspectRatio ratio={16 / 9}>
+                      {previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt={`Preview ${t.name}`}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <img
+                          src="/placeholder.svg"
+                          alt="Template preview placeholder"
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      )}
+                    </AspectRatio>
+                  </div>
+
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-base font-semibold text-foreground">{t.name}</p>
@@ -75,11 +97,11 @@ export default function ChooseDesign() {
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        const url = String((t as any)?.preview_url ?? "").trim();
+                        const url = String(t.preview_url ?? "").trim();
                         if (!url) return;
                         window.open(url, "_blank", "noopener,noreferrer");
                       }}
-                      disabled={!String((t as any)?.preview_url ?? "").trim()}
+                      disabled={!previewUrl}
                     >
                       Preview
                     </Button>

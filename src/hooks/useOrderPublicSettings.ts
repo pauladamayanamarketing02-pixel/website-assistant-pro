@@ -8,6 +8,8 @@ export type OrderTemplate = {
   category: "business" | "portfolio" | "service" | "agency";
   is_active?: boolean;
   sort_order?: number;
+  // URL gambar preview template (atau URL apa pun yang akan ditampilkan sebagai <img>)
+  preview_url?: string;
 };
 
 export type OrderContactSettings = {
@@ -64,9 +66,10 @@ function parseTemplates(value: unknown): OrderTemplate[] {
       const category = safeString(obj?.category) as OrderTemplate["category"];
       const is_active = typeof obj?.is_active === "boolean" ? obj.is_active : true;
       const sort_order = safeNumber(obj?.sort_order);
+      const preview_url = safeString(obj?.preview_url).trim();
       if (!id || !name) return null;
       if (!(["business", "portfolio", "service", "agency"] as const).includes(category)) return null;
-      return { id, name, category, is_active, sort_order } satisfies OrderTemplate;
+      return { id, name, category, is_active, sort_order, preview_url: preview_url || undefined } satisfies OrderTemplate;
     })
     .filter(Boolean) as OrderTemplate[];
 
