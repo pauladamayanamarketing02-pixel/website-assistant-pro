@@ -14,6 +14,11 @@ export type DomainDuckTestResult = {
 type Status = {
   configured: boolean;
   updatedAt: string | null;
+  usage?: {
+    used: number;
+    limit: number;
+    exhausted: boolean;
+  } | null;
 };
 
 type Props = {
@@ -50,6 +55,10 @@ export function DomainDuckIntegrationCard({
   onTest,
   testResult,
 }: Props) {
+  const used = status.usage?.used ?? 0;
+  const limit = status.usage?.limit ?? 250;
+  const exhausted = Boolean(status.usage?.exhausted);
+
   return (
     <Card>
       <CardHeader>
@@ -67,6 +76,18 @@ export function DomainDuckIntegrationCard({
         </div>
 
         <div className="mt-4 space-y-4">
+          <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <span>Penggunaan API</span>
+              <span className="font-medium text-foreground">
+                {status.configured ? `${used}/${limit}` : "—"}
+              </span>
+            </div>
+            {status.configured && exhausted ? (
+              <div className="mt-1 text-destructive">Total habis ({used}/{limit}). Masukkan API key baru untuk reset ke 0/{limit}.</div>
+            ) : null}
+          </div>
+
           <form onSubmit={onSave} className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="domainduck_key">API key</Label>
