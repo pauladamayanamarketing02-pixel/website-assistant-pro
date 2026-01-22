@@ -73,27 +73,12 @@ const DEFAULT_PRICES_USD: Record<string, number> = {
   ".org": 12.99,
 };
 
-async function getIntegrationSecretPlain(admin: any, provider: string, name: string) {
-  // Fetch master key (stored plaintext in system/INTEGRATIONS_MASTER_KEY).
-  const { data: mkRow, error: mkErr } = await admin
-    .from("integration_secrets")
-    .select("ciphertext")
-    .eq("provider", "system")
-    .eq("name", "INTEGRATIONS_MASTER_KEY")
-    .maybeSingle();
-  if (mkErr) throw mkErr;
-  const masterKey = String((mkRow as any)?.ciphertext ?? "");
-  if (!masterKey) {
-    const err = new Error("Integrations master key belum diset");
-    (err as any).status = 400;
-    throw err;
-  }
-
+async function getDomainrApiKey(admin: any) {
   const { data: row, error } = await admin
     .from("integration_secrets")
     .select("ciphertext,iv")
-    .eq("provider", provider)
-    .eq("name", name)
+    .eq("provider", "domainr")
+    .eq("name", "api_key")
     .maybeSingle();
   if (error) throw error;
   if (!row) return null;
@@ -101,27 +86,12 @@ async function getIntegrationSecretPlain(admin: any, provider: string, name: str
   const ciphertext = String((row as any).ciphertext ?? "");
   const iv = String((row as any).iv ?? "");
   if (!ciphertext || !iv) return null;
-  if (iv === "plain") return ciphertext;
-
-  const textEncoder = new TextEncoder();
-  const textDecoder = new TextDecoder();
-  const b64 = {
-    decode(str: string) {
-      const bin = atob(str);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      return bytes;
-    },
-  };
-
-  const digest = await crypto.subtle.digest("SHA-256", textEncoder.encode(masterKey));
-  const aesKey = await crypto.subtle.importKey("raw", digest, { name: "AES-GCM" }, false, ["decrypt"]);
-  const plainBuf = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: b64.decode(iv) },
-    aesKey,
-    b64.decode(ciphertext),
-  );
-  return textDecoder.decode(new Uint8Array(plainBuf));
+  if (iv !== "plain") {
+    const err = new Error("Domainr API key harus disimpan plaintext (iv='plain')");
+    (err as any).status = 400;
+    throw err;
+  }
+  return ciphertext;
 }
 
 async function domainrStatus(domains: string[], apiKey: string) {
@@ -162,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-    const apiKey = await getIntegrationSecretPlain(admin, "domainr", "api_key");
+    const apiKey = await getDomainrApiKey(admin);
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "Domainr API key belum diset (domainr/api_key)" }), {
         status: 400,
