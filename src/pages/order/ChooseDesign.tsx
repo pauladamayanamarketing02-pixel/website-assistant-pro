@@ -71,7 +71,16 @@ export default function ChooseDesign() {
                   </div>
 
                   <div className="mt-4 flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const url = String((t as any)?.preview_url ?? "").trim();
+                        if (!url) return;
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      }}
+                      disabled={!String((t as any)?.preview_url ?? "").trim()}
+                    >
                       Preview
                     </Button>
                     <Button

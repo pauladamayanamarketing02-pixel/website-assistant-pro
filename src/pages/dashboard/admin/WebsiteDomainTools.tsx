@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, RefreshCcw, Save, Trash2 } from "lucide-react";
+import { Plus, RefreshCcw, Save, Trash2, Upload, X } from "lucide-react";
 
 type TemplateRow = {
   id: string;
   name: string;
-  category: "business" | "portfolio" | "service" | "agency";
+  category: string;
   is_active?: boolean;
   sort_order?: number;
   preview_url?: string;
@@ -40,6 +40,7 @@ type PlanRow = {
 };
 
 const SETTINGS_TEMPLATES_KEY = "order_templates";
+const SETTINGS_TEMPLATE_CATEGORIES_KEY = "order_template_categories";
 const SETTINGS_SUBSCRIPTION_PLANS_KEY = "order_subscription_plans";
 
 function normalizeTld(input: unknown): string {
@@ -64,6 +65,10 @@ export default function WebsiteDomainTools() {
   const [saving, setSaving] = useState(false);
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
 
+  const [templateCategories, setTemplateCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [uploadingTemplate, setUploadingTemplate] = useState<Record<string, boolean>>({});
+
   const [pricingLoading, setPricingLoading] = useState(true);
   const [pricingSaving, setPricingSaving] = useState(false);
   const [packages, setPackages] = useState<PackageOption[]>([]);
@@ -83,13 +88,19 @@ export default function WebsiteDomainTools() {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const { data: tplRow } = await (supabase as any)
-        .from("website_settings")
-        .select("value")
-        .eq("key", SETTINGS_TEMPLATES_KEY)
-        .maybeSingle();
+      const [{ data: tplRow }, { data: catsRow }] = await Promise.all([
+        (supabase as any).from("website_settings").select("value").eq("key", SETTINGS_TEMPLATES_KEY).maybeSingle(),
+        (supabase as any)
+          .from("website_settings")
+          .select("value")
+          .eq("key", SETTINGS_TEMPLATE_CATEGORIES_KEY)
+          .maybeSingle(),
+      ]);
 
-      setTemplates(Array.isArray(tplRow?.value) ? (tplRow.value as any) : []);
+      const nextTemplates = Array.isArray(tplRow?.value) ? (tplRow.value as any) : [];
+      setTemplates(nextTemplates);
+      const nextCategories = Array.isArray(catsRow?.value) ? (catsRow.value as any[]).map((v) => String(v ?? "").trim()).filter(Boolean) : [];
+      setTemplateCategories(Array.from(new Set(nextCategories)).sort((a, b) => a.localeCompare(b)));
     } catch (e: any) {
       console.error(e);
       const msg = e?.message || "Gagal memuat Domain Tools";
@@ -201,6 +212,99 @@ export default function WebsiteDomainTools() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of templates) {
+      const c = String(t.category ?? "").trim();
+      if (!c) continue;
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+
+    const fromDb = (templateCategories ?? []).map((name) => ({ name, count: counts.get(name) ?? 0 }));
+    // include any categories used by templates but missing in DB
+    const extras = Array.from(counts.entries())
+      .filter(([name]) => !fromDb.some((c) => c.name === name))
+      .map(([name, count]) => ({ name, count }));
+    return [...fromDb, ...extras].sort((a, b) => a.name.localeCompare(b.name));
+  }, [templates, templateCategories]);
+
+  const renameCategory = (from: string, to: string) => {
+    const next = String(to ?? "").trim();
+    if (!next) return;
+    setTemplates((prev) => prev.map((t) => (String(t.category ?? "").trim() === from ? { ...t, category: next } : t)));
+    setTemplateCategories((prev) => {
+      const updated = prev.map((c) => (c === from ? next : c));
+      return Array.from(new Set(updated.map((c) => String(c).trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    });
+  };
+
+  const deleteCategory = (name: string) => {
+    const used = templates.some((t) => String(t.category ?? "").trim() === name);
+    if (used) {
+      toast({
+        variant: "destructive",
+        title: "Tidak bisa hapus category",
+        description: "Category ini masih dipakai oleh template. Pindahkan category template dulu, lalu coba lagi.",
+      });
+      return;
+    }
+    setTemplateCategories((prev) => prev.filter((c) => c !== name));
+    toast({ title: "Deleted", description: "Category dihapus." });
+  };
+
+  const handleUploadImage = async (templateId: string, file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ variant: "destructive", title: "Error", description: "File harus berupa gambar." });
+      return;
+    }
+
+    setUploadingTemplate((prev) => ({ ...prev, [templateId]: true }));
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const filename = `${templateId}-${Date.now()}.${ext}`;
+      const { data, error } = await (supabase as any).storage.from("template-previews").upload(filename, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (error) throw error;
+
+      const { data: urlData } = (supabase as any).storage.from("template-previews").getPublicUrl(data.path);
+      const publicUrl = urlData?.publicUrl ?? "";
+
+      setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, preview_url: publicUrl } : t)));
+      toast({ title: "Uploaded", description: "Gambar berhasil diupload." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Upload failed", description: e?.message ?? "Unknown error" });
+    } finally {
+      setUploadingTemplate((prev) => ({ ...prev, [templateId]: false }));
+    }
+  };
+
+  const handleRemoveImage = async (templateId: string, currentUrl: string) => {
+    const url = String(currentUrl ?? "").trim();
+    if (!url) return;
+
+    setUploadingTemplate((prev) => ({ ...prev, [templateId]: true }));
+    try {
+      // Extract file path from public URL
+      const match = url.match(/template-previews\/(.+)/);
+      if (match?.[1]) {
+        const { error } = await (supabase as any).storage.from("template-previews").remove([match[1]]);
+        if (error) console.warn("Failed to delete file from storage:", error);
+      }
+
+      setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, preview_url: "" } : t)));
+      toast({ title: "Removed", description: "Gambar dihapus." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Remove failed", description: e?.message ?? "Unknown error" });
+    } finally {
+      setUploadingTemplate((prev) => ({ ...prev, [templateId]: false }));
+    }
+  };
+
   const saveTemplates = async () => {
     setSaving(true);
     try {
@@ -219,6 +323,19 @@ export default function WebsiteDomainTools() {
         .from("website_settings")
         .upsert({ key: SETTINGS_TEMPLATES_KEY, value: payload }, { onConflict: "key" });
       if (error) throw error;
+
+      const categoriesPayload = Array.from(
+        new Set(
+          (templateCategories ?? [])
+            .map((c) => String(c ?? "").trim())
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b));
+      const { error: catErr } = await (supabase as any)
+        .from("website_settings")
+        .upsert({ key: SETTINGS_TEMPLATE_CATEGORIES_KEY, value: categoriesPayload }, { onConflict: "key" });
+      if (catErr) throw catErr;
+
       toast({ title: "Saved", description: "Templates updated." });
     } catch (e: any) {
       console.error(e);
@@ -327,9 +444,86 @@ export default function WebsiteDomainTools() {
         <CardContent className="space-y-3">
           {loading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
 
+          <div className="rounded-md border bg-muted/20 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Template Categories</p>
+                <p className="text-xs text-muted-foreground">Tambah/edit/hapus category yang dipakai oleh template.</p>
+              </div>
+              <Badge variant="outline">Total: {categories.length}</Badge>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="grid gap-2 md:grid-cols-6">
+                <div className="md:col-span-4">
+                  <Label className="text-xs">New category</Label>
+                  <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="contoh: ecommerce" disabled={saving} />
+                </div>
+                <div className="md:col-span-2 flex items-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const next = newCategory.trim();
+                      if (!next) return;
+                      const exists = (templateCategories ?? []).some((c) => c === next);
+                      if (exists) {
+                        toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
+                        return;
+                      }
+                      setTemplateCategories((prev) => Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b)));
+                      setNewCategory("");
+                    }}
+                    disabled={saving}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Add Category
+                  </Button>
+                </div>
+              </div>
+
+              {categories.length ? (
+                <div className="space-y-2">
+                  {categories.map((c) => (
+                    <div key={c.name} className="grid gap-2 rounded-md border bg-background p-2 md:grid-cols-6">
+                      <div className="md:col-span-3">
+                        <Label className="text-xs">Category</Label>
+                        <Input
+                          defaultValue={c.name}
+                          onBlur={(e) => {
+                            const next = e.target.value.trim();
+                            if (!next || next === c.name) return;
+                            renameCategory(c.name, next);
+                          }}
+                          disabled={saving}
+                        />
+                      </div>
+                      <div className="md:col-span-2 flex items-end">
+                        <Badge variant="outline">Used: {c.count}</Badge>
+                      </div>
+                      <div className="flex items-end justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => deleteCategory(c.name)}
+                          disabled={saving}
+                          aria-label="Delete category"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground">Belum ada category.</div>
+              )}
+            </div>
+          </div>
+
            {!loading && templates.length ? (
              templates.map((t, idx) => (
-               <div key={t.id} className="grid gap-2 rounded-md border bg-muted/20 p-3 md:grid-cols-6">
+               <div key={t.id} className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-7">
                  <div className="md:col-span-2">
                   <Label className="text-xs">Name</Label>
                   <Input
@@ -340,46 +534,67 @@ export default function WebsiteDomainTools() {
                 </div>
 
                  <div className="md:col-span-2">
-                   <Label className="text-xs">Preview URL</Label>
-                   <div className="flex gap-2">
-                     <Input
-                       value={String((t as any)?.preview_url ?? "")}
-                       onChange={(e) =>
-                         setTemplates((prev) =>
-                           prev.map((x, i) => (i === idx ? { ...x, preview_url: e.target.value } : x)),
-                         )
-                       }
-                       placeholder="https://..."
-                       disabled={saving}
-                     />
-                     <Button
-                       type="button"
-                       variant="outline"
-                       onClick={() => {
-                         const url = String((t as any)?.preview_url ?? "").trim();
-                         if (!url) return;
-                         window.open(url, "_blank", "noopener,noreferrer");
-                       }}
-                       disabled={saving || !String((t as any)?.preview_url ?? "").trim()}
-                     >
-                       Preview
-                     </Button>
+                   <Label className="text-xs">Preview Image</Label>
+                   <div className="flex flex-col gap-2">
+                     {String((t as any)?.preview_url ?? "").trim() ? (
+                       <div className="relative">
+                         <img
+                           src={String((t as any)?.preview_url ?? "").trim()}
+                           alt={`Preview ${t.name}`}
+                           className="h-24 w-full rounded border object-cover"
+                         />
+                         <Button
+                           type="button"
+                           variant="destructive"
+                           size="icon"
+                           className="absolute right-1 top-1 h-6 w-6"
+                           onClick={() => handleRemoveImage(t.id, String((t as any)?.preview_url ?? ""))}
+                           disabled={saving || uploadingTemplate[t.id]}
+                         >
+                           <X className="h-3 w-3" />
+                         </Button>
+                       </div>
+                     ) : null}
+                     <label className="cursor-pointer">
+                       <input
+                         type="file"
+                         accept="image/*"
+                         className="hidden"
+                         onChange={(e) => handleUploadImage(t.id, e.target.files?.[0] ?? null)}
+                         disabled={saving || uploadingTemplate[t.id]}
+                       />
+                       <Button
+                         type="button"
+                         variant="outline"
+                         size="sm"
+                         className="w-full"
+                         disabled={saving || uploadingTemplate[t.id]}
+                         asChild
+                       >
+                         <span>
+                           <Upload className="h-4 w-4 mr-2" />
+                           {uploadingTemplate[t.id] ? "Uploading..." : "Upload"}
+                         </span>
+                       </Button>
+                     </label>
                    </div>
                  </div>
+
                 <div>
                   <Label className="text-xs">Category</Label>
                   <Select
-                    value={t.category}
+                    value={String(t.category ?? "").trim() || "uncategorized"}
                     onValueChange={(v) => setTemplates((prev) => prev.map((x, i) => (i === idx ? { ...x, category: v as any } : x)))}
                   >
                     <SelectTrigger disabled={saving}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="business">business</SelectItem>
-                      <SelectItem value="service">service</SelectItem>
-                      <SelectItem value="portfolio">portfolio</SelectItem>
-                      <SelectItem value="agency">agency</SelectItem>
+                      {(categories.length ? categories : [{ name: "business", count: 0 }]).map((c) => (
+                        <SelectItem key={c.name} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
