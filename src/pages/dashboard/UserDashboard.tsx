@@ -158,6 +158,18 @@ export default function UserDashboard() {
     };
   }, [user?.id]);
 
+  const gatedMenuItems = useMemo(() => {
+    // Keep hooks order stable (must run on every render)
+    if (paymentActive === false) {
+      return menuItems.map((i) => ({ ...i, disabled: i.url !== "/dashboard/user/package" }));
+    }
+
+    // paymentActive === true OR still loading payment -> show normal menu set
+    return loadingMenuRules ? menuItems : visibleMenuItems;
+  }, [loadingMenuRules, paymentActive, visibleMenuItems]);
+
+  const userIsNonActive = paymentActive === false;
+
   if (loading || checkingOnboarding || paymentActive === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -168,13 +180,6 @@ export default function UserDashboard() {
 
   if (!user) return null;
 
-
-  const gatedMenuItems = useMemo(() => {
-    if (paymentActive) return loadingMenuRules ? menuItems : visibleMenuItems;
-    return menuItems.map((i) => ({ ...i, disabled: i.url !== "/dashboard/user/package" }));
-  }, [loadingMenuRules, paymentActive, visibleMenuItems]);
-
-  const userIsNonActive = paymentActive === false;
 
   return (
     <SidebarProvider>
