@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarChart3, CreditCard, Mail, KeyRound, Webhook } from "lucide-react";
-import { RapidapiDomainrIntegrationCard, type RapidapiDomainrTestResult } from "@/components/super-admin/RapidapiDomainrIntegrationCard";
+import { DomainDuckIntegrationCard, type DomainDuckTestResult } from "@/components/super-admin/DomainDuckIntegrationCard";
 
 async function getAccessToken() {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
@@ -40,19 +40,19 @@ export default function SuperAdminCms() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const [rapidapiKey, setRapidapiKey] = useState("");
-  const [rapidapiConfigured, setRapidapiConfigured] = useState(false);
-  const [rapidapiUpdatedAt, setRapidapiUpdatedAt] = useState<string | null>(null);
-  const [rapidapiTestDomain, setRapidapiTestDomain] = useState("example.com");
-  const [rapidapiTestResult, setRapidapiTestResult] = useState<RapidapiDomainrTestResult | null>(null);
+  const [domainduckKey, setDomainduckKey] = useState("");
+  const [domainduckConfigured, setDomainduckConfigured] = useState(false);
+  const [domainduckUpdatedAt, setDomainduckUpdatedAt] = useState<string | null>(null);
+  const [domainduckTestDomain, setDomainduckTestDomain] = useState("example.com");
+  const [domainduckTestResult, setDomainduckTestResult] = useState<DomainDuckTestResult | null>(null);
 
-  const fetchRapidapiStatus = async () => {
+  const fetchDomainDuckStatus = async () => {
     setLoading(true);
     try {
-      const { data, error } = await invokeWithAuth<any>("super-admin-rapidapi-domainr-secret", { action: "get" });
+      const { data, error } = await invokeWithAuth<any>("super-admin-domainduck-secret", { action: "get" });
       if (error) throw error;
-      setRapidapiConfigured(Boolean((data as any)?.configured));
-      setRapidapiUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
+      setDomainduckConfigured(Boolean((data as any)?.configured));
+      setDomainduckUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
     } catch (e: any) {
       console.error(e);
       if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
@@ -60,61 +60,61 @@ export default function SuperAdminCms() {
         navigate("/super-admin/login", { replace: true });
         return;
       }
-      toast.error(e?.message || "Gagal memuat status RapidAPI");
+      toast.error(e?.message || "Gagal memuat status DomainDuck");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRapidapiStatus();
+    fetchDomainDuckStatus();
   }, []);
 
-  const onSaveRapidapiKey = async (e: FormEvent) => {
+  const onSaveDomainDuckKey = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const v = rapidapiKey.trim();
-      if (!v) throw new Error("RapidAPI key wajib diisi");
-      if (/\s/.test(v) || v.length < 10) throw new Error("RapidAPI key tidak valid");
+      const v = domainduckKey.trim();
+      if (!v) throw new Error("API key wajib diisi");
+      if (/\s/.test(v) || v.length < 8) throw new Error("API key tidak valid");
 
-      const { error } = await invokeWithAuth<any>("super-admin-rapidapi-domainr-secret", { action: "set", api_key: v });
+      const { error } = await invokeWithAuth<any>("super-admin-domainduck-secret", { action: "set", api_key: v });
       if (error) throw error;
 
-      setRapidapiKey("");
-      toast.success("RapidAPI key tersimpan");
-      await fetchRapidapiStatus();
+      setDomainduckKey("");
+      toast.success("API key tersimpan");
+      await fetchDomainDuckStatus();
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal menyimpan RapidAPI key");
+      toast.error(e?.message || "Gagal menyimpan API key");
     } finally {
       setLoading(false);
     }
   };
 
-  const onClearRapidapiKey = async () => {
+  const onClearDomainDuckKey = async () => {
     setLoading(true);
     try {
-      const { error } = await invokeWithAuth<any>("super-admin-rapidapi-domainr-secret", { action: "clear" });
+      const { error } = await invokeWithAuth<any>("super-admin-domainduck-secret", { action: "clear" });
       if (error) throw error;
-      toast.success("RapidAPI key di-reset");
-      await fetchRapidapiStatus();
+      toast.success("API key di-reset");
+      await fetchDomainDuckStatus();
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal reset RapidAPI key");
+      toast.error(e?.message || "Gagal reset API key");
     } finally {
       setLoading(false);
     }
   };
 
-  const onTestRapidapiDomainr = async () => {
+  const onTestDomainDuck = async () => {
     setLoading(true);
-    setRapidapiTestResult(null);
+    setDomainduckTestResult(null);
     try {
-      const d = rapidapiTestDomain.trim();
+      const d = domainduckTestDomain.trim();
       if (!d) throw new Error("Domain test wajib diisi");
 
-      const { data, error } = await supabase.functions.invoke<any>("rapidapi-domainr-check", { body: { query: d } });
+      const { data, error } = await supabase.functions.invoke<any>("domainduck-check", { body: { domain: d } });
       if (error) {
         const resp = (error as any)?.context?.response;
         if (resp) {
@@ -124,22 +124,17 @@ export default function SuperAdminCms() {
         throw error;
       }
 
-      const items = ((data as any)?.items ?? []) as Array<{ domain: string; status: string }>;
-      const exact = items.find((it) => String(it.domain).toLowerCase() === d.toLowerCase()) ?? null;
+      const availability = String((data as any)?.availability ?? "blocked") as any;
+      const result: DomainDuckTestResult = { domain: d, availability };
+      setDomainduckTestResult(result);
 
-      const result: RapidapiDomainrTestResult = {
-        domain: exact?.domain ?? d,
-        status: (exact?.status as any) ?? "unknown",
-      };
-      setRapidapiTestResult(result);
-
-      if (result.status === "available") toast.success("Available");
-      else if (result.status === "unavailable") toast.error("Unavailable");
-      else if (result.status === "premium") toast.message("Premium");
-      else toast.message("Unknown");
+      if (availability === "true") toast.success("Available");
+      else if (availability === "false") toast.error("Unavailable");
+      else if (availability === "premium") toast.message("Premium Domain");
+      else toast.message("Not Available");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal test RapidAPI");
+      toast.error(e?.message || "Gagal test DomainDuck");
     } finally {
       setLoading(false);
     }
@@ -153,18 +148,18 @@ export default function SuperAdminCms() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <RapidapiDomainrIntegrationCard
+        <DomainDuckIntegrationCard
           loading={loading}
-          status={{ configured: rapidapiConfigured, updatedAt: rapidapiUpdatedAt }}
-          apiKeyValue={rapidapiKey}
-          onApiKeyChange={setRapidapiKey}
-          onSave={onSaveRapidapiKey}
-          onRefresh={fetchRapidapiStatus}
-          onClear={onClearRapidapiKey}
-          testDomainValue={rapidapiTestDomain}
-          onTestDomainChange={setRapidapiTestDomain}
-          onTest={onTestRapidapiDomainr}
-          testResult={rapidapiTestResult}
+          status={{ configured: domainduckConfigured, updatedAt: domainduckUpdatedAt }}
+          apiKeyValue={domainduckKey}
+          onApiKeyChange={setDomainduckKey}
+          onSave={onSaveDomainDuckKey}
+          onRefresh={fetchDomainDuckStatus}
+          onClear={onClearDomainDuckKey}
+          testDomainValue={domainduckTestDomain}
+          onTestDomainChange={setDomainduckTestDomain}
+          onTest={onTestDomainDuck}
+          testResult={domainduckTestResult}
         />
 
         <Card>

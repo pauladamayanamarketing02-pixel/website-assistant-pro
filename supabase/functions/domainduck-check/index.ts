@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -21,6 +23,27 @@ function coerceAvailability(input: unknown): DomainDuckAvailability {
   return "blocked";
 }
 
+async function getDomainDuckKey(admin: any): Promise<string | null> {
+  const { data: row, error } = await admin
+    .from("integration_secrets")
+    .select("ciphertext,iv")
+    .eq("provider", "domainduck")
+    .eq("name", "api_key")
+    .maybeSingle();
+  if (error) throw error;
+  if (!row) return null;
+
+  const ciphertext = String((row as any).ciphertext ?? "");
+  const iv = String((row as any).iv ?? "");
+  if (!ciphertext || !iv) return null;
+  if (iv !== "plain") {
+    const err = new Error("DomainDuck key harus disimpan plaintext (iv='plain')");
+    (err as any).status = 400;
+    throw err;
+  }
+  return ciphertext;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,9 +57,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("DOMAINDUCK_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Missing DOMAINDUCK_API_KEY" }), {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRoleKey) {
+      return new Response(JSON.stringify({ error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -46,6 +70,15 @@ Deno.serve(async (req) => {
     const domain = normalizeDomain(body?.domain ?? "");
     if (!domain) {
       return new Response(JSON.stringify({ error: "domain is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const apiKey = await getDomainDuckKey(admin);
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "DomainDuck key belum diset (domainduck/api_key)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -82,8 +115,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: "Unexpected error", details: String(e) }), {
-      status: 500,
+    const message = e instanceof Error ? e.message : String(e);
+    const status = (e as any)?.status && Number.isFinite((e as any).status) ? Number((e as any).status) : 500;
+    return new Response(JSON.stringify({ error: message }), {
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
