@@ -84,13 +84,13 @@ Deno.serve(async (req) => {
         .select("default_package_id")
         .eq("id", true)
         .maybeSingle();
-      if (settingsErr) throw settingsErr;
+      if (settingsErr) throw new Error(settingsErr.message);
 
       const defaultPackageId = (settingsRow as any)?.default_package_id ?? null;
       const { data: prices, error: pricesErr } = defaultPackageId
         ? await admin.from("domain_tld_prices").select("tld,price_usd").eq("package_id", defaultPackageId)
         : { data: [], error: null };
-      if (pricesErr) throw pricesErr;
+      if (pricesErr) throw new Error(pricesErr.message);
 
       return new Response(
         JSON.stringify({
@@ -121,17 +121,17 @@ Deno.serve(async (req) => {
       const { error: upsertSettingsErr } = await admin
         .from("domain_pricing_settings")
         .upsert({ id: true, default_package_id: pkgId }, { onConflict: "id" });
-      if (upsertSettingsErr) throw upsertSettingsErr;
+      if (upsertSettingsErr) throw new Error(upsertSettingsErr.message);
 
       // Replace TLD prices for this package
       const { error: delErr } = await admin.from("domain_tld_prices").delete().eq("package_id", pkgId);
-      if (delErr) throw delErr;
+      if (delErr) throw new Error(delErr.message);
 
       if (cleaned.length) {
         const { error: insErr } = await admin
           .from("domain_tld_prices")
           .insert(cleaned.map((r) => ({ package_id: pkgId, tld: r.tld, price_usd: r.price_usd })));
-        if (insErr) throw insErr;
+        if (insErr) throw new Error(insErr.message);
       }
 
       return new Response(JSON.stringify({ ok: true }), {
@@ -144,7 +144,13 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
+    const message =
+      e instanceof Error
+        ? e.message
+        : typeof e === "object" && e
+          ? JSON.stringify(e)
+          : String(e);
+    console.error("admin-order-domain-pricing error:", e);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
