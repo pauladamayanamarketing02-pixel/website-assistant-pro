@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrderLayout } from "@/components/order/OrderLayout";
 import { useOrder } from "@/contexts/OrderContext";
 import { useOrderPublicSettings, type OrderTemplate } from "@/hooks/useOrderPublicSettings";
@@ -15,6 +16,7 @@ export default function ChooseDesign() {
   const { templates } = useOrderPublicSettings();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<OrderTemplate["category"] | "all">("all");
+  const [sort, setSort] = useState<"sort_order" | "name_asc" | "name_desc">("sort_order");
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -27,12 +29,18 @@ export default function ChooseDesign() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return templates.filter((t) => {
+    const list = templates.filter((t) => {
       const byCategory = category === "all" ? true : t.category === category;
       const byQuery = !q ? true : t.name.toLowerCase().includes(q);
       return byCategory && byQuery;
     });
-  }, [category, query, templates]);
+    const sorted = [...list].sort((a, b) => {
+      if (sort === "name_asc") return a.name.localeCompare(b.name);
+      if (sort === "name_desc") return b.name.localeCompare(a.name);
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    });
+    return sorted;
+  }, [category, query, sort, templates]);
 
   const selected = state.selectedTemplateId;
 
@@ -45,6 +53,18 @@ export default function ChooseDesign() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3 md:flex-row md:items-center">
             <Input className="md:flex-1" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search templates" />
+            <div className="md:w-[220px]">
+              <Select value={sort} onValueChange={(v) => setSort(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sort_order">Sort order</SelectItem>
+                  <SelectItem value="name_asc">Name A–Z</SelectItem>
+                  <SelectItem value="name_desc">Name Z–A</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
