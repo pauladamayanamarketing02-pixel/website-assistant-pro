@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.super-admin-domainr-secret]
 verify_jwt = false
+
+[functions.super-admin-whoapi-secret]
+verify_jwt = false
+
+[functions.whoapi-check]
+verify_jwt = false

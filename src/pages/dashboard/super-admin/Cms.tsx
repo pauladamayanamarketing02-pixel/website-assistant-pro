@@ -1,3 +1,4 @@
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarChart3, CreditCard, Mail, KeyRound, Webhook } from "lucide-react";
 import { DomainrIntegrationCard } from "@/components/super-admin/DomainrIntegrationCard";
+import { WhoapiIntegrationCard, type WhoapiTestResult } from "@/components/super-admin/WhoapiIntegrationCard";
 
 async function getAccessToken() {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
@@ -42,6 +44,12 @@ export default function SuperAdminCms() {
   const [domainrConfigured, setDomainrConfigured] = useState(false);
   const [domainrUpdatedAt, setDomainrUpdatedAt] = useState<string | null>(null);
 
+  const [whoapiKey, setWhoapiKey] = useState("");
+  const [whoapiConfigured, setWhoapiConfigured] = useState(false);
+  const [whoapiUpdatedAt, setWhoapiUpdatedAt] = useState<string | null>(null);
+  const [whoapiTestDomain, setWhoapiTestDomain] = useState("example.com");
+  const [whoapiTestResult, setWhoapiTestResult] = useState<WhoapiTestResult | null>(null);
+
   const fetchDomainrStatus = async () => {
     setLoading(true);
     try {
@@ -63,9 +71,79 @@ export default function SuperAdminCms() {
     }
   };
 
+  const fetchWhoapiStatus = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await invokeWithAuth<any>("super-admin-whoapi-secret", { action: "get" });
+      if (error) throw error;
+      setWhoapiConfigured(Boolean((data as any)?.configured));
+      setWhoapiUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
+    } catch (e: any) {
+      console.error(e);
+      if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
+        toast.error("Session expired. Silakan login ulang.");
+        navigate("/super-admin/login", { replace: true });
+        return;
+      }
+      toast.error(e?.message || "Gagal memuat status WhoAPI");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchDomainrStatus();
+    fetchWhoapiStatus();
   }, []);
+
+  const onSaveWhoapiKey = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const v = whoapiKey.trim();
+      if (!v) throw new Error("WhoAPI API key wajib diisi");
+
+      const { error } = await invokeWithAuth<any>("super-admin-whoapi-secret", { action: "set", api_key: v });
+      if (error) throw error;
+
+      setWhoapiKey("");
+      toast.success("WhoAPI API key tersimpan");
+      await fetchWhoapiStatus();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal menyimpan WhoAPI API key");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onTestWhoapi = async () => {
+    setLoading(true);
+    setWhoapiTestResult(null);
+    try {
+      const d = whoapiTestDomain.trim();
+      if (!d) throw new Error("Domain test wajib diisi");
+
+      const { data, error } = await supabase.functions.invoke<any>("whoapi-check", { body: { domain: d } });
+      if (error) throw error;
+
+      const result: WhoapiTestResult = {
+        domain: String((data as any)?.domain ?? d),
+        status: (data as any)?.status ?? "unknown",
+        registered: (data as any)?.registered ?? null,
+      };
+      setWhoapiTestResult(result);
+
+      if (result.status === "available") toast.success("Available");
+      else if (result.status === "unavailable") toast.error("Unavailable");
+      else toast.message("Unknown");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal test WhoAPI");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -80,6 +158,19 @@ export default function SuperAdminCms() {
           configured={domainrConfigured}
           updatedAt={domainrUpdatedAt}
           onRefresh={fetchDomainrStatus}
+        />
+
+        <WhoapiIntegrationCard
+          loading={loading}
+          status={{ configured: whoapiConfigured, updatedAt: whoapiUpdatedAt }}
+          apiKeyValue={whoapiKey}
+          onApiKeyChange={setWhoapiKey}
+          onSave={onSaveWhoapiKey}
+          onRefresh={fetchWhoapiStatus}
+          testDomainValue={whoapiTestDomain}
+          onTestDomainChange={setWhoapiTestDomain}
+          onTest={onTestWhoapi}
+          testResult={whoapiTestResult}
         />
 
         <Card>
