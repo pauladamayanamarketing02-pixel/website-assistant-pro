@@ -101,6 +101,7 @@ export default function AICreation() {
   // Tool detail view (match /dashboard/assist/ai-generator)
   if (viewMode === 'tool-detail' && selectedTool) {
     const ToolIcon = iconMap[selectedTool.icon] ?? Sparkles;
+    const toolReadonly = !isToolEnabled(selectedTool.id);
 
     return (
       <div className="space-y-6">
@@ -161,7 +162,11 @@ export default function AICreation() {
           <Card className="min-w-0 flex flex-col">
             <CardHeader className="shrink-0">
               <CardTitle>Preview</CardTitle>
-              <CardDescription>Rendered from the saved Code Snippet</CardDescription>
+              <CardDescription>
+                {toolReadonly
+                  ? 'Tool ini dinonaktifkan untuk package kamu (preview readonly).'
+                  : 'Rendered from the saved Code Snippet'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0 flex-1 min-h-0">
               <div className="h-full min-h-0 overflow-hidden rounded-lg border border-border">
@@ -171,6 +176,7 @@ export default function AICreation() {
                   srcDoc={buildToolPreviewSrcDoc({
                     codeLanguage: selectedTool.codeLanguage,
                     codeContent: selectedTool.codeContent,
+                    readonly: toolReadonly,
                   })}
                   sandbox="allow-scripts allow-forms allow-modals"
                   className="block w-full h-full min-h-[60vh] lg:min-h-[70vh] bg-background"
@@ -220,13 +226,16 @@ export default function AICreation() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {tools.map((tool) => {
                   const ToolIcon = iconMap[tool.icon] ?? Sparkles;
-                  const toolClickable = canUseTools && isToolEnabled(tool.id);
+                  const toolClickable = canUseTools;
+                  const toolEnabled = isToolEnabled(tool.id);
                   return (
                     <Card
                       key={tool.id}
                       className={
                         toolClickable
-                          ? 'min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50'
+                          ? toolEnabled
+                            ? 'min-w-0 overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] border-2 hover:border-primary/50'
+                            : 'min-w-0 overflow-hidden cursor-pointer opacity-80 border-2'
                           : 'min-w-0 overflow-hidden cursor-not-allowed opacity-60 border-2'
                       }
                       aria-disabled={!toolClickable}
@@ -234,8 +243,8 @@ export default function AICreation() {
                         if (!toolClickable) {
                           toast({
                             variant: 'destructive',
-                            title: 'Tool tidak tersedia',
-                            description: 'Tool ini dinonaktifkan untuk package kamu.',
+                            title: 'AI Agents dinonaktifkan',
+                            description: 'Fitur AI Agents dinonaktifkan untuk package kamu.',
                           });
                           return;
                         }
