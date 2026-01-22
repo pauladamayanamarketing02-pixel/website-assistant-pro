@@ -6,7 +6,7 @@ import { useOrderPublicSettings } from "@/hooks/useOrderPublicSettings";
 
 export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boolean }) {
   const { state } = useOrder();
-  const { pricing, contact } = useOrderPublicSettings(state.domain);
+  const { pricing, contact, subscriptionPlans } = useOrderPublicSettings(state.domain);
 
   const formatUsd = (value: number) => {
     try {
@@ -33,8 +33,19 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
   const estTotalLabel = (() => {
     if (!showEstPrice) return null;
     if (!state.subscriptionYears) return "—";
-    if (pricing.domainPriceUsd == null || pricing.packagePriceUsd == null) return "—";
-    const total = (pricing.domainPriceUsd + pricing.packagePriceUsd) * state.subscriptionYears;
+
+    const selectedPlan = subscriptionPlans.find((p) => p.years === state.subscriptionYears);
+    const planOverrideUsd = typeof selectedPlan?.price_usd === "number" && Number.isFinite(selectedPlan.price_usd)
+      ? selectedPlan.price_usd
+      : null;
+
+    if (planOverrideUsd != null) return formatUsd(planOverrideUsd);
+
+    const domainUsd = pricing.domainPriceUsd ?? null;
+    const pkgUsd = pricing.packagePriceUsd ?? null;
+    if (domainUsd == null || pkgUsd == null) return "—";
+
+    const total = (domainUsd + pkgUsd) * state.subscriptionYears;
     return formatUsd(total);
   })();
 
