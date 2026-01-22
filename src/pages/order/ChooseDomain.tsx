@@ -61,7 +61,7 @@ export default function ChooseDomain() {
     <OrderLayout
       title="Choose Domain"
       step="domain"
-      sidebar={<OrderSummaryCard showEstPrice={false} showLineItems={false} />}
+      sidebar={<OrderSummaryCard showEstPrice={false} />}
     >
       <div className="space-y-6">
         <DomainSearchBar
