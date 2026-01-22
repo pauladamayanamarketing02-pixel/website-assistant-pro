@@ -18,6 +18,7 @@ import {
   Newspaper,
   Phone,
   Package,
+  PanelsTopLeft,
   ShieldCheck,
   SlidersHorizontal,
   TrendingUp,
@@ -129,6 +130,7 @@ export default function AdminDashboard() {
           { title: "Conversion (read-only)", url: "/dashboard/admin/analytics/conversion", icon: BarChart3 },
         ],
       },
+      { title: "Dashboard Banners (soon)", url: "/dashboard/admin/dashboard-banners", icon: PanelsTopLeft },
       { title: "Announcements (soon)", url: "/dashboard/admin/announcements", icon: Bell },
       { title: "Activity Logs (soon)", url: "/dashboard/admin/logs", icon: AlertCircle },
       { title: "My Account", url: "/dashboard/admin/account", icon: User },
@@ -247,6 +249,8 @@ export default function AdminDashboard() {
               <Route path="analytics/blog-performance" element={<AdminPlaceholder title="Blog Performance" />} />
               <Route path="analytics/campaign" element={<AdminPlaceholder title="Campaign (UTM)" />} />
               <Route path="analytics/conversion" element={<AdminPlaceholder title="Conversion (read-only)" />} />
+
+              <Route path="dashboard-banners" element={<AdminPlaceholder title="Dashboard Banners" />} />
 
               <Route path="announcements" element={<AdminPlaceholder title="Announcements" />} />
               <Route path="logs" element={<AdminPlaceholder title="Activity Logs" />} />
