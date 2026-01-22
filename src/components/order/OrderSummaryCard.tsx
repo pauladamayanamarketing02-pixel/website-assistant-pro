@@ -8,6 +8,14 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
   const { state } = useOrder();
   const { pricing, contact } = useOrderPublicSettings(state.domain);
 
+  const formatUsd = (value: number) => {
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+    } catch {
+      return `$${value.toFixed(2)}`;
+    }
+  };
+
   const whatsappHref = (() => {
     const phone = (contact.whatsapp_phone ?? "").replace(/\D/g, "");
     if (!phone) return null;
@@ -21,7 +29,16 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
     return `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}`;
   })();
 
-  const domainPriceLabel = pricing.domainPriceUsd == null ? "—" : `$${pricing.domainPriceUsd.toFixed(2)}`;
+  const yearsLabel = state.subscriptionYears ? `${state.subscriptionYears} tahun` : "—";
+  const domainPriceLabel = pricing.domainPriceUsd == null ? "—" : formatUsd(pricing.domainPriceUsd);
+  const packagePriceLabel = pricing.packagePriceUsd == null ? "—" : formatUsd(pricing.packagePriceUsd);
+  const estTotalLabel = (() => {
+    if (!showEstPrice) return null;
+    if (!state.subscriptionYears) return "—";
+    if (pricing.domainPriceUsd == null || pricing.packagePriceUsd == null) return "—";
+    const total = (pricing.domainPriceUsd + pricing.packagePriceUsd) * state.subscriptionYears;
+    return formatUsd(total);
+  })();
 
   return (
     <Card className="shadow-soft">
@@ -36,10 +53,26 @@ export function OrderSummaryCard({ showEstPrice = true }: { showEstPrice?: boole
               {state.domain || "—"}
             </span>
           </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">Domain price</span>
+            <span className="text-sm font-medium text-foreground">{domainPriceLabel}</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">Hosting + template</span>
+            <span className="text-sm font-medium text-foreground">{packagePriceLabel}</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">Plan</span>
+            <span className="text-sm font-medium text-foreground">{yearsLabel}</span>
+          </div>
+
           {showEstPrice ? (
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-muted-foreground">Est. Price</span>
-              <span className="text-sm font-medium text-foreground">{domainPriceLabel}</span>
+              <span className="text-sm text-muted-foreground">Est. price</span>
+              <span className="text-sm font-medium text-foreground">{estTotalLabel}</span>
             </div>
           ) : null}
           <div className="flex items-center justify-between gap-3">

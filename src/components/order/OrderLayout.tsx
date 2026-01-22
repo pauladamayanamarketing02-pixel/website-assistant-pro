@@ -14,7 +14,7 @@ const steps: Step[] = [
   { key: "details", label: "Your Details" },
   { key: "plan", label: "Subscription Plan" },
   { key: "payment", label: "Payment" },
-  { key: "done", label: "Confirmation" },
+  { key: "done", label: "Done" },
 ];
 
 function stepIndex(activeKey: Step["key"]) {
