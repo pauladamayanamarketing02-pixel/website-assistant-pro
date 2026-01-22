@@ -15,7 +15,7 @@ export type OrderState = {
   domainStatus: DomainStatus | null;
   selectedTemplateId: string | null;
   selectedTemplateName: string | null;
-  subscriptionYears: 1 | 2 | 3 | null;
+  subscriptionYears: number | null;
   details: OrderDetails;
   promoCode: string;
 };
@@ -25,7 +25,7 @@ type OrderContextValue = {
   setDomain: (domain: string) => void;
   setDomainStatus: (status: DomainStatus | null) => void;
   setTemplate: (template: { id: string; name: string } | null) => void;
-  setSubscriptionYears: (years: 1 | 2 | 3 | null) => void;
+  setSubscriptionYears: (years: number | null) => void;
   setDetails: (patch: Partial<OrderDetails>) => void;
   setPromoCode: (code: string) => void;
   reset: () => void;

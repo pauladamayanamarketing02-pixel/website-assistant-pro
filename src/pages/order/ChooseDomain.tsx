@@ -55,7 +55,7 @@ export default function ChooseDomain() {
     }
   }, [setDomainStatus, status]);
 
-  const canContinue = Boolean(lastChecked);
+  const canContinue = Boolean(lastChecked) && status !== "unavailable";
 
   return (
     <OrderLayout
