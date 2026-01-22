@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OrderProvider } from "@/contexts/OrderContext";
 import { OnboardingGate, OrientationGate } from "@/components/auth/OnboardingGates";
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -36,6 +37,13 @@ import OrientationProfile from "./pages/orientation/Profile";
 import OrientationSkills from "./pages/orientation/Skills";
 import OrientationPortfolio from "./pages/orientation/Portfolio";
 
+// Order flow
+import ChooseDomain from "./pages/order/ChooseDomain";
+import ChooseDesign from "./pages/order/ChooseDesign";
+import Details from "./pages/order/Details";
+import Payment from "./pages/order/Payment";
+import Confirmation from "./pages/order/Confirmation";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -45,8 +53,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Home />} />
+          <OrderProvider>
+            <Routes>
+              <Route path="/" element={<Home />} />
             <Route path="/services" element={<Services />} />
             <Route path="/packages" element={<Packages />} />
             <Route path="/blog" element={<Blog />} />
@@ -170,11 +179,19 @@ const App = () => (
             />
             <Route path="/dashboard/user/*" element={<UserDashboard />} />
             <Route path="/dashboard/assist/*" element={<AssistDashboard />} />
+
+            {/* Order flow */}
+            <Route path="/order/choose-domain" element={<ChooseDomain />} />
+            <Route path="/order/choose-design" element={<ChooseDesign />} />
+            <Route path="/order/details" element={<Details />} />
+            <Route path="/order/payment" element={<Payment />} />
+            <Route path="/order/confirmation" element={<Confirmation />} />
             
             {/* Explicit 404 route (dipakai untuk redirect akses tanpa login) */}
             <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
+            </Routes>
+          </OrderProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
