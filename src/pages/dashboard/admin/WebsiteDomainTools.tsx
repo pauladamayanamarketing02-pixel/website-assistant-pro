@@ -321,6 +321,7 @@ export default function WebsiteDomainTools() {
         <Tabs defaultValue="templates" className="w-full">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="category">Category</TabsTrigger>
           </TabsList>
 
         <TabsContent value="templates">
@@ -387,112 +388,8 @@ export default function WebsiteDomainTools() {
             <CardContent className="space-y-3">
               {loading ? <div className="text-sm text-muted-foreground">Loading...</div> : null}
 
-              <div className="grid gap-3 md:grid-cols-[320px_1fr]">
-                {/* Categories panel */}
-                <div className="rounded-md border bg-muted/20 p-3 md:sticky md:top-3 self-start">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Template Categories</p>
-                      <p className="text-xs text-muted-foreground">Klik category untuk memfilter templates.</p>
-                    </div>
-                    <Badge variant="outline">{categories.length}</Badge>
-                  </div>
-
-                  <div className="mt-3 space-y-2">
-                    <div>
-                      <Label className="text-xs">Cari category</Label>
-                      <Input value={categoryQuery} onChange={(e) => setCategoryQuery(e.target.value)} placeholder="Cari category..." disabled={saving} />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs">New category</Label>
-                      <div className="flex gap-2">
-                        <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="contoh: ecommerce" disabled={saving} />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            const next = newCategory.trim();
-                            if (!next) return;
-                            const exists = (templateCategories ?? []).some((c) => c === next);
-                            if (exists) {
-                              toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
-                              return;
-                            }
-                            setTemplateCategories((prev) => {
-                              const deduped = Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b));
-                              void saveCategoriesOnly(deduped);
-                              return deduped;
-                            });
-                            setNewCategory("");
-                          }}
-                          disabled={saving}
-                          aria-label="Add Category"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <ScrollArea className="h-[420px] pr-2">
-                      <div className="space-y-2">
-                        <button
-                          type="button"
-                          onClick={() => setTemplateCategoryFilter("all")}
-                          className="w-full rounded-md border bg-background px-2 py-2 text-left text-sm"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium">All</span>
-                            <Badge variant="outline">{templates.length}</Badge>
-                          </div>
-                          <div className="text-xs text-muted-foreground">Tampilkan semua template</div>
-                        </button>
-
-                        {(filteredCategories.length ? filteredCategories : []).map((c) => (
-                          <div key={c.name} className="rounded-md border bg-background p-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <button
-                                type="button"
-                                className="text-left"
-                                onClick={() => setTemplateCategoryFilter(c.name)}
-                                title="Klik untuk filter"
-                              >
-                                <div className="text-sm font-medium text-foreground">{c.name}</div>
-                                <div className="text-xs text-muted-foreground">Used: {c.count}</div>
-                              </button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                onClick={() => deleteCategory(c.name)}
-                                disabled={saving}
-                                aria-label="Delete category"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-
-                            <div className="mt-2">
-                              <Label className="text-xs">Rename</Label>
-                              <Input
-                                defaultValue={c.name}
-                                onBlur={(e) => {
-                                  const next = e.target.value.trim();
-                                  if (!next || next === c.name) return;
-                                  renameCategory(c.name, next);
-                                }}
-                                disabled={saving}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </div>
-
-                {/* Templates table */}
-                <div className="space-y-3">
+              {/* Templates table */}
+              <div className="space-y-3">
                   {!loading && pagedTemplates.length ? (
                     <div className="rounded-md border bg-muted/20">
                       <div className="max-h-[70vh] overflow-auto">
@@ -702,6 +599,110 @@ export default function WebsiteDomainTools() {
                       <Save className="h-4 w-4 mr-2" /> Simpan Templates
                     </Button>
                   </div>
+                </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="category">
+          <Card>
+            <CardHeader>
+              <CardTitle>Template Categories</CardTitle>
+              <CardDescription>Kelola daftar category untuk Templates (Order).</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border bg-muted/20 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Template Categories</p>
+                    <p className="text-xs text-muted-foreground">Tambah, rename, dan hapus category.</p>
+                  </div>
+                  <Badge variant="outline">{categories.length}</Badge>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  <div>
+                    <Label className="text-xs">Cari category</Label>
+                    <Input
+                      value={categoryQuery}
+                      onChange={(e) => setCategoryQuery(e.target.value)}
+                      placeholder="Cari category..."
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">New category</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        placeholder="contoh: ecommerce"
+                        disabled={saving}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const next = newCategory.trim();
+                          if (!next) return;
+                          const exists = (templateCategories ?? []).some((c) => c === next);
+                          if (exists) {
+                            toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
+                            return;
+                          }
+                          setTemplateCategories((prev) => {
+                            const deduped = Array.from(new Set([...prev, next])).sort((a, b) => a.localeCompare(b));
+                            void saveCategoriesOnly(deduped);
+                            return deduped;
+                          });
+                          setNewCategory("");
+                        }}
+                        disabled={saving}
+                        aria-label="Add Category"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="h-[520px] pr-2">
+                    <div className="space-y-2">
+                      {(filteredCategories.length ? filteredCategories : []).map((c) => (
+                        <div key={c.name} className="rounded-md border bg-background p-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-foreground truncate">{c.name}</div>
+                              <div className="text-xs text-muted-foreground">Used: {c.count}</div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => deleteCategory(c.name)}
+                              disabled={saving}
+                              aria-label="Delete category"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="mt-2">
+                            <Label className="text-xs">Rename</Label>
+                            <Input
+                              defaultValue={c.name}
+                              onBlur={(e) => {
+                                const next = e.target.value.trim();
+                                if (!next || next === c.name) return;
+                                renameCategory(c.name, next);
+                              }}
+                              disabled={saving}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
               </div>
             </CardContent>
