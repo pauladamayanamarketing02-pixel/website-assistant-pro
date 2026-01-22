@@ -33,9 +33,9 @@ type TemplateRow = {
   category: string;
   is_active?: boolean;
   sort_order?: number;
-  // URL gambar thumbnail
+  // Thumbnail image URL
   preview_image_url?: string;
-  // URL demo (dibuka di tab baru)
+  // Demo URL (opens in a new tab)
   preview_url?: string;
 };
 
@@ -96,8 +96,8 @@ export default function WebsiteDomainTools() {
       ]);
 
       const rawTemplates = Array.isArray(tplRow?.value) ? (tplRow.value as any[]) : [];
-      // Backward-compat: dulu `preview_url` dipakai untuk gambar.
-      // Sekarang gambar -> `preview_image_url`, demo URL -> `preview_url`.
+      // Backward-compat: `preview_url` used to store image URL.
+      // Now: image -> `preview_image_url`, demo URL -> `preview_url`.
       const nextTemplates: TemplateRow[] = rawTemplates.map((t: any) => {
         const legacyPreview = String(t?.preview_url ?? "").trim();
         const explicitImg = String(t?.preview_image_url ?? "").trim();
@@ -114,7 +114,7 @@ export default function WebsiteDomainTools() {
       setTemplateCategories(Array.from(new Set(nextCategories)).sort((a, b) => a.localeCompare(b)));
     } catch (e: any) {
       console.error(e);
-      const msg = e?.message || "Gagal memuat Templates";
+      const msg = e?.message || "Failed to load templates";
       if (String(msg).toLowerCase().includes("unauthorized")) {
         navigate("/admin/login", { replace: true });
         return;
@@ -153,7 +153,7 @@ export default function WebsiteDomainTools() {
   }, [categories, categoryQuery]);
 
   useEffect(() => {
-    // Default: semua category terbuka (tapi tetap bisa di-minimize)
+    // Default: all categories expanded (but can be collapsed)
     setExpandedCategoryKeys((prev) => {
       if (prev.length) return prev;
       return (categories ?? []).map((c) => c.name);
@@ -205,7 +205,7 @@ export default function WebsiteDomainTools() {
       console.error(e);
       toast({
         variant: "destructive",
-        title: "Gagal simpan category",
+        title: "Failed to save category",
         description: e?.message ?? "Unknown error",
       });
     }
@@ -228,8 +228,8 @@ export default function WebsiteDomainTools() {
     if (used) {
       toast({
         variant: "destructive",
-        title: "Tidak bisa hapus category",
-        description: "Category ini masih dipakai oleh template. Pindahkan category template dulu, lalu coba lagi.",
+        title: "Cannot delete category",
+        description: "This category is still used by a template. Move templates to another category first, then try again.",
       });
       return;
     }
@@ -238,13 +238,13 @@ export default function WebsiteDomainTools() {
       void saveCategoriesOnly(next);
       return next;
     });
-    toast({ title: "Deleted", description: "Category dihapus." });
+    toast({ title: "Deleted", description: "Category deleted." });
   };
 
   const handleUploadImage = async (templateId: string, file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast({ variant: "destructive", title: "Error", description: "File harus berupa gambar." });
+      toast({ variant: "destructive", title: "Error", description: "File must be an image." });
       return;
     }
 
@@ -262,7 +262,7 @@ export default function WebsiteDomainTools() {
       const publicUrl = urlData?.publicUrl ?? "";
 
       setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, preview_image_url: publicUrl } : t)));
-      toast({ title: "Uploaded", description: "Gambar berhasil diupload." });
+      toast({ title: "Uploaded", description: "Image uploaded." });
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Upload failed", description: e?.message ?? "Unknown error" });
@@ -285,7 +285,7 @@ export default function WebsiteDomainTools() {
       }
 
       setTemplates((prev) => prev.map((t) => (t.id === templateId ? { ...t, preview_image_url: "" } : t)));
-      toast({ title: "Removed", description: "Gambar dihapus." });
+      toast({ title: "Removed", description: "Image removed." });
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Remove failed", description: e?.message ?? "Unknown error" });
@@ -342,7 +342,7 @@ export default function WebsiteDomainTools() {
       <div className="flex items-start justify-between gap-4">
         <div>
            <h1 className="text-3xl font-bold text-foreground">Templates (Order)</h1>
-          <p className="text-muted-foreground">Kelola templates yang tampil di halaman /order/choose-design.</p>
+          <p className="text-muted-foreground">Manage templates shown on /order/choose-design.</p>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={fetchTemplates} disabled={loading || saving}>
@@ -363,7 +363,7 @@ export default function WebsiteDomainTools() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle>Order Templates</CardTitle>
-                  <CardDescription>Daftar template yang tampil di /order/choose-design.</CardDescription>
+                  <CardDescription>Templates shown on /order/choose-design.</CardDescription>
                 </div>
                 <Badge variant="outline">Total: {templateCountLabel}</Badge>
               </div>
@@ -371,7 +371,7 @@ export default function WebsiteDomainTools() {
               <div className="grid gap-2 md:grid-cols-6">
                 <div className="md:col-span-4">
                   <Label className="text-xs">Search template</Label>
-                  <Input value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)} placeholder="Cari nama template..." />
+                  <Input value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)} placeholder="Search template name..." />
                 </div>
                 <div className="md:col-span-2">
                   <Label className="text-xs">Filter category</Label>
@@ -393,7 +393,7 @@ export default function WebsiteDomainTools() {
 
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-xs text-muted-foreground">
-                  Menampilkan {filteredTemplates.length} template • Page {templatePage} / {totalTemplatePages}
+                  Showing {filteredTemplates.length} templates • Page {templatePage} / {totalTemplatePages}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -451,7 +451,7 @@ export default function WebsiteDomainTools() {
                                         type="button"
                                         className="block"
                                         onClick={() => setPreviewDialog({ open: true, src: previewSrc, title: t.name })}
-                                        title="Klik untuk preview"
+                                        title="Click to preview"
                                       >
                                         <img
                                           src={previewSrc}
@@ -533,7 +533,7 @@ export default function WebsiteDomainTools() {
                       </div>
                     </div>
                   ) : !loading ? (
-                    <div className="text-sm text-muted-foreground">Belum ada template. Klik “Add Template”.</div>
+                    <div className="text-sm text-muted-foreground">No templates yet. Click “Add Template”.</div>
                   ) : null}
 
                   <div className="flex flex-wrap gap-2">
@@ -553,7 +553,7 @@ export default function WebsiteDomainTools() {
                       <Plus className="h-4 w-4 mr-2" /> Add Template
                     </Button>
                     <Button type="button" onClick={saveTemplates} disabled={saving}>
-                      <Save className="h-4 w-4 mr-2" /> Simpan Templates
+                      <Save className="h-4 w-4 mr-2" /> Save Templates
                     </Button>
                   </div>
                 </div>
@@ -565,25 +565,25 @@ export default function WebsiteDomainTools() {
           <Card>
             <CardHeader>
               <CardTitle>Template Categories</CardTitle>
-              <CardDescription>Kelola daftar category untuk Templates (Order).</CardDescription>
+              <CardDescription>Manage category list for Templates (Order).</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border bg-muted/20 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-foreground">Template Categories</p>
-                    <p className="text-xs text-muted-foreground">Tambah, rename, dan hapus category.</p>
+                    <p className="text-xs text-muted-foreground">Add, rename, and delete categories.</p>
                   </div>
                   <Badge variant="outline">{categories.length}</Badge>
                 </div>
 
                 <div className="mt-3 space-y-2">
                   <div>
-                    <Label className="text-xs">Cari category</Label>
+                    <Label className="text-xs">Search categories</Label>
                     <Input
                       value={categoryQuery}
                       onChange={(e) => setCategoryQuery(e.target.value)}
-                      placeholder="Cari category..."
+                      placeholder="Search categories..."
                       disabled={saving}
                     />
                   </div>
@@ -594,7 +594,7 @@ export default function WebsiteDomainTools() {
                       <Input
                         value={newCategory}
                         onChange={(e) => setNewCategory(e.target.value)}
-                        placeholder="contoh: ecommerce"
+                        placeholder="e.g. ecommerce"
                         disabled={saving}
                       />
                       <Button
@@ -605,7 +605,7 @@ export default function WebsiteDomainTools() {
                           if (!next) return;
                           const exists = (templateCategories ?? []).some((c) => c === next);
                           if (exists) {
-                            toast({ variant: "destructive", title: "Category sudah ada", description: "Gunakan nama lain." });
+                            toast({ variant: "destructive", title: "Category already exists", description: "Please use a different name." });
                             return;
                           }
                           setTemplateCategories((prev) => {

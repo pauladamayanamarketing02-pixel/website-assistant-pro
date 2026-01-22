@@ -96,7 +96,7 @@ export default function SuperAdminSubscriptions() {
       setTldPrices(normalized.length ? normalized : defaultTldRows);
     } catch (e: any) {
       console.error(e);
-      const msg = e?.message || "Gagal memuat Domain Pricing";
+      const msg = e?.message || "Failed to load Domain Pricing";
       if (String(msg).toLowerCase().includes("unauthorized")) {
         navigate("/super-admin/login", { replace: true });
         return;
@@ -133,18 +133,18 @@ export default function SuperAdminSubscriptions() {
         parsed.length
           ? parsed.map((p) => ({
               ...p,
-              label: p.label || `${p.years} Tahun`,
+              label: p.label || `${p.years} Year${p.years > 1 ? "s" : ""}`,
               sort_order: p.sort_order || p.years,
             }))
           : [
-              { years: 1, label: "1 Tahun", price_usd: 0, is_active: true, sort_order: 1 },
-              { years: 2, label: "2 Tahun", price_usd: 0, is_active: true, sort_order: 2 },
-              { years: 3, label: "3 Tahun", price_usd: 0, is_active: true, sort_order: 3 },
+              { years: 1, label: "1 Year", price_usd: 0, is_active: true, sort_order: 1 },
+              { years: 2, label: "2 Years", price_usd: 0, is_active: true, sort_order: 2 },
+              { years: 3, label: "3 Years", price_usd: 0, is_active: true, sort_order: 3 },
             ],
       );
     } catch (e: any) {
       console.error(e);
-      const msg = e?.message || "Gagal memuat Subscription Plans";
+      const msg = e?.message || "Failed to load Subscription Plans";
       if (String(msg).toLowerCase().includes("unauthorized")) {
         navigate("/super-admin/login", { replace: true });
         return;
@@ -168,8 +168,8 @@ export default function SuperAdminSubscriptions() {
       if (!pkgId) {
         toast({
           variant: "destructive",
-          title: "Gagal menyimpan",
-          description: "Tidak ada Package tersedia untuk konteks pricing. Buat/aktifkan package dulu.",
+          title: "Save failed",
+          description: "No Package available for pricing context. Create/enable a package first.",
         });
         return;
       }
@@ -209,7 +209,7 @@ export default function SuperAdminSubscriptions() {
       const payload = plans
         .map((p) => ({
           years: asNumber(p.years),
-          label: String(p.label ?? "").trim() || `${asNumber(p.years)} Tahun`,
+          label: String(p.label ?? "").trim() || `${asNumber(p.years)} Year${asNumber(p.years) > 1 ? "s" : ""}`,
           price_usd: asNumber(p.price_usd, 0),
           is_active: p.is_active !== false,
           sort_order: asNumber(p.sort_order, asNumber(p.years)),
@@ -249,7 +249,7 @@ export default function SuperAdminSubscriptions() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <CardTitle>Subscription Plans (Website)</CardTitle>
-                  <CardDescription>Kelola opsi “Choose plan duration” di halaman /order/subscription.</CardDescription>
+                  <CardDescription>Manage “Choose plan duration” options on /order/subscription.</CardDescription>
                 </div>
                 <Badge variant="outline">Total: {plansCountLabel}</Badge>
               </div>
@@ -354,7 +354,7 @@ export default function SuperAdminSubscriptions() {
                   </div>
                 ))
               ) : !plansLoading ? (
-                <div className="text-sm text-muted-foreground">Belum ada plan. Klik “Add Plan”.</div>
+                <div className="text-sm text-muted-foreground">No plans yet. Click “Add Plan”.</div>
               ) : null}
 
               <div className="flex flex-wrap gap-2">
@@ -366,7 +366,7 @@ export default function SuperAdminSubscriptions() {
                       ...prev,
                       {
                         years: 1,
-                        label: "1 Tahun",
+                        label: "1 Year",
                         price_usd: 0,
                         is_active: true,
                         sort_order: prev.length ? Math.max(...prev.map((x) => x.sort_order)) + 1 : 1,
@@ -379,7 +379,7 @@ export default function SuperAdminSubscriptions() {
                 </Button>
 
                 <Button type="button" onClick={savePlans} disabled={plansSaving || !isEditingPlans}>
-                  <Save className="h-4 w-4 mr-2" /> Simpan
+                  <Save className="h-4 w-4 mr-2" /> Save
                 </Button>
               </div>
             </CardContent>
@@ -392,7 +392,7 @@ export default function SuperAdminSubscriptions() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <CardTitle>Domain Pricing (TLD)</CardTitle>
-                  <CardDescription>Atur harga domain per-TLD untuk halaman /order/choose-domain.</CardDescription>
+                  <CardDescription>Set per-TLD domain prices for /order/choose-domain.</CardDescription>
                 </div>
                 <Badge variant="outline">Rows: {tldPrices.length}</Badge>
               </div>
@@ -454,7 +454,7 @@ export default function SuperAdminSubscriptions() {
                   </div>
                 ))
               ) : !pricingLoading ? (
-                <div className="text-sm text-muted-foreground">Belum ada pricing.</div>
+                <div className="text-sm text-muted-foreground">No pricing rows yet.</div>
               ) : null}
 
               <div className="flex flex-wrap gap-2">
@@ -467,7 +467,7 @@ export default function SuperAdminSubscriptions() {
                   <Plus className="h-4 w-4 mr-2" /> Add TLD
                 </Button>
                 <Button type="button" onClick={saveDomainPricing} disabled={pricingSaving || !isEditingPricing}>
-                  <Save className="h-4 w-4 mr-2" /> Simpan Pricing
+                  <Save className="h-4 w-4 mr-2" /> Save Pricing
                 </Button>
               </div>
             </CardContent>
