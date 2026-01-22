@@ -14,23 +14,18 @@ type Payload =
   | { action: "get" }
   | { action: "set"; api_key: string };
 
-async function requireSuperAdmin(admin: any, token: string) {
-  const { data: requester, error: requesterErr } = await admin.auth.getUser(token);
-  if (requesterErr || !requester?.user) {
-    return { ok: false as const, status: 401, error: "Unauthorized" };
-  }
-
+async function requireSuperAdmin(admin: any, userId: string) {
   const { data: roleRow, error: roleErr } = await admin
     .from("user_roles")
     .select("role")
-    .eq("user_id", requester.user.id)
+    .eq("user_id", userId)
     .maybeSingle();
   if (roleErr) return { ok: false as const, status: 500, error: roleErr.message };
   if ((roleRow as any)?.role !== "super_admin") {
     return { ok: false as const, status: 403, error: "Forbidden" };
   }
 
-  return { ok: true as const, userId: requester.user.id };
+  return { ok: true as const, userId };
 }
 
 Deno.serve(async (req) => {
@@ -38,9 +33,10 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) {
-      return new Response(JSON.stringify({ error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" }), {
+    if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+      return new Response(JSON.stringify({ error: "Missing SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -55,8 +51,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Verify JWT using signing keys (verify_jwt=false in config.toml)
+    const authed = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: claimsData, error: claimsErr } = await authed.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-    const authz = await requireSuperAdmin(admin, token);
+    const authz = await requireSuperAdmin(admin, String(claimsData.claims.sub));
     if (!authz.ok) {
       return new Response(JSON.stringify({ error: authz.error }), {
         status: authz.status,
