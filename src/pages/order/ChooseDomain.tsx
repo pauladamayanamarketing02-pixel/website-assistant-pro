@@ -7,15 +7,26 @@ import { DomainSearchBar } from "@/components/order/DomainSearchBar";
 import { OrderLayout } from "@/components/order/OrderLayout";
 import { OrderSummaryCard } from "@/components/order/OrderSummaryCard";
 import { useOrder } from "@/contexts/OrderContext";
+import { useDomainrCheck, type DomainrItem, type DomainrUiStatus } from "@/hooks/useDomainrCheck";
 
-type DomainStatus = "available" | "unavailable" | "premium";
+type DomainStatus = "available" | "unavailable" | "premium" | "unknown";
+type OrderDomainStatus = Exclude<DomainrUiStatus, "unknown">;
 
-function evaluateDomain(domain: string): DomainStatus {
-  // Placeholder logic (UI-first). Replace with real domain API later.
-  const d = domain.toLowerCase();
-  if (d.includes("premium") || d.endsWith(".io") || d.endsWith(".ai")) return "premium";
-  if (d.length % 3 === 0) return "unavailable";
-  return "available";
+function formatPrice(item: DomainrItem) {
+  if (!item.price_usd || !item.currency) return "—";
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: item.currency }).format(item.price_usd);
+}
+
+function badgeVariant(status: DomainStatus) {
+  if (status === "available") return "secondary";
+  if (status === "premium") return "default";
+  if (status === "unavailable") return "outline";
+  return "secondary";
+}
+
+function toOrderStatus(status: DomainrUiStatus): OrderDomainStatus | null {
+  if (status === "unknown") return null;
+  return status;
 }
 
 export default function ChooseDomain() {
@@ -25,29 +36,20 @@ export default function ChooseDomain() {
   const { state, setDomain, setDomainStatus } = useOrder();
   const [lastChecked, setLastChecked] = useState<string>(state.domain || initial);
 
-  const status = useMemo(() => {
+  const { items, loading, error } = useDomainrCheck(lastChecked, { enabled: Boolean(lastChecked) });
+
+  const selectedResult = useMemo(() => {
     if (!lastChecked) return null;
-    return evaluateDomain(lastChecked);
-  }, [lastChecked]);
+    return items.find((i) => i.domain.toLowerCase() === lastChecked.toLowerCase()) ?? null;
+  }, [items, lastChecked]);
+
+  const status: DomainStatus | null = selectedResult?.status ?? (lastChecked ? "unknown" : null);
+  const canContinue = status === "available" || status === "premium";
 
   const alternatives = useMemo(() => {
-    if (!lastChecked) return [];
-    const base = lastChecked.replace(/^https?:\/\//, "").replace(/\/$/, "");
-    const name = base.split(".")[0];
-    const tlds = [".com", ".net", ".co", ".io"];
-    const variants = [name, `${name}hq`, `get${name}`, `${name}app`];
-    const out: string[] = [];
-    for (const v of variants) {
-      for (const t of tlds) {
-        const d = `${v}${t}`;
-        if (d !== lastChecked) out.push(d);
-        if (out.length >= 8) return out;
-      }
-    }
-    return out;
-  }, [lastChecked]);
-
-  const canContinue = status === "available" || status === "premium";
+    // Use server results for “real-time” alternatives.
+    return items.filter((i) => i.domain.toLowerCase() !== lastChecked.toLowerCase()).slice(0, 8);
+  }, [items, lastChecked]);
 
   return (
     <OrderLayout
@@ -60,8 +62,6 @@ export default function ChooseDomain() {
           initialValue={initial}
           onSubmit={(domain) => {
             setDomain(domain);
-            const s = evaluateDomain(domain);
-            setDomainStatus(s);
             setLastChecked(domain);
           }}
         />
@@ -76,12 +76,17 @@ export default function ChooseDomain() {
               <p className="text-base font-semibold text-foreground truncate">{lastChecked || "—"}</p>
             </div>
             <div className="flex items-center gap-2">
-              {status ? (
-                <Badge variant={status === "available" ? "secondary" : status === "premium" ? "default" : "outline"}>
-                  {status}
-                </Badge>
-              ) : (
+              {!lastChecked ? (
                 <span className="text-sm text-muted-foreground">Search to check availability</span>
+              ) : loading ? (
+                <span className="text-sm text-muted-foreground">Checking…</span>
+              ) : error ? (
+                <span className="text-sm text-destructive">{error}</span>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Badge variant={badgeVariant(status ?? "unknown")}>{status ?? "unknown"}</Badge>
+                  <span className="text-sm text-muted-foreground">{selectedResult ? formatPrice(selectedResult) : "—"}</span>
+                </div>
               )}
             </div>
           </CardContent>
@@ -91,24 +96,28 @@ export default function ChooseDomain() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Smart alternatives</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
+          <CardContent className="space-y-2">
             {alternatives.length ? (
-              alternatives.map((d) => (
-                <Button
-                  key={d}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setDomain(d);
-                    const s = evaluateDomain(d);
-                    setDomainStatus(s);
-                    setLastChecked(d);
-                  }}
-                >
-                  {d}
-                </Button>
-              ))
+              <div className="grid gap-2">
+                {alternatives.map((it) => (
+                  <button
+                    key={it.domain}
+                    type="button"
+                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-left hover:bg-muted/40"
+                    onClick={() => {
+                      setDomain(it.domain);
+                      setDomainStatus(toOrderStatus(it.status));
+                      setLastChecked(it.domain);
+                    }}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-foreground truncate">{it.domain}</div>
+                      <div className="text-xs text-muted-foreground">{formatPrice(it)}</div>
+                    </div>
+                    <Badge variant={badgeVariant(it.status)}>{it.status}</Badge>
+                  </button>
+                ))}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">Search a domain to see suggestions.</p>
             )}
@@ -120,7 +129,13 @@ export default function ChooseDomain() {
             type="button"
             size="lg"
             disabled={!canContinue}
-            onClick={() => navigate("/order/choose-design")}
+            onClick={() => {
+              if (lastChecked) {
+                setDomain(lastChecked);
+                if (selectedResult) setDomainStatus(toOrderStatus(selectedResult.status));
+              }
+              navigate("/order/choose-design");
+            }}
           >
             Continue to Design
           </Button>

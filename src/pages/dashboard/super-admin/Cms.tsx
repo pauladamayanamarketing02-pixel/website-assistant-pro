@@ -29,6 +29,8 @@ export default function SuperAdminCms() {
   const [name, setName] = useState("SECRET_KEY");
   const [value, setValue] = useState("");
 
+  const [domainrKey, setDomainrKey] = useState("");
+
   const masterKeyConfigured = useMemo(() => {
     return secrets.some((s) => s.provider === "system" && s.name === "INTEGRATIONS_MASTER_KEY");
   }, [secrets]);
@@ -126,6 +128,29 @@ export default function SuperAdminCms() {
     }
   };
 
+  const onSaveDomainrKey = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const v = domainrKey.trim();
+      if (!v) throw new Error("Domainr API key wajib diisi");
+
+      const { error } = await supabase.functions.invoke("super-admin-integration-secrets", {
+        body: { action: "upsert_secret", provider: "domainr", name: "api_key", value: v },
+      });
+      if (error) throw error;
+
+      setDomainrKey("");
+      toast.success("Domainr API key tersimpan");
+      await fetchSecrets();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal menyimpan Domainr API key");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -199,6 +224,45 @@ export default function SuperAdminCms() {
                 <Button type="button" variant="outline" onClick={fetchSecrets} disabled={loading}>
                   <RefreshCcw className="h-4 w-4 mr-2" /> Refresh status
                 </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3">
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-4 w-4" /> Domain Lookup (Domainr)
+              </CardTitle>
+              <Badge variant={masterKeyConfigured ? "default" : "secondary"}>
+                {masterKeyConfigured ? "Ready" : "Need master key"}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Simpan Domainr key untuk real-time domain checking di flow Order.
+            <div className="mt-4">
+              <form onSubmit={onSaveDomainrKey} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="domainr_key">Domainr API key</Label>
+                  <Input
+                    id="domainr_key"
+                    type="password"
+                    value={domainrKey}
+                    onChange={(e) => setDomainrKey(e.target.value)}
+                    placeholder="Tempel Domainr key di sini..."
+                    autoComplete="new-password"
+                    disabled={!masterKeyConfigured}
+                  />
+                </div>
+                <Button type="submit" disabled={loading || !masterKeyConfigured}>
+                  <Save className="h-4 w-4 mr-2" /> Simpan
+                </Button>
+              </form>
+
+              <div className="mt-4 text-xs text-muted-foreground">
+                Disimpan sebagai <span className="font-medium text-foreground">domainr/api_key</span> (terenkripsi).
               </div>
             </div>
           </CardContent>
@@ -294,24 +358,7 @@ export default function SuperAdminCms() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-4 w-4" /> Domain Lookup
-              </CardTitle>
-              <Badge variant="secondary">Planned</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Connect a domain registrar API to power domain search & availability.
-            <div className="mt-4">
-              <Button variant="outline" disabled>
-                <KeyRound className="h-4 w-4 mr-2" /> Configure
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Domain Lookup configured above (Domainr) */}
 
         <Card>
           <CardHeader>
