@@ -43,6 +43,8 @@ export default function SuperAdminCms() {
   const [domainduckKey, setDomainduckKey] = useState("");
   const [domainduckConfigured, setDomainduckConfigured] = useState(false);
   const [domainduckUpdatedAt, setDomainduckUpdatedAt] = useState<string | null>(null);
+  const [domainduckApiKeyMasked, setDomainduckApiKeyMasked] = useState<string | null>(null);
+  const [domainduckRevealedApiKey, setDomainduckRevealedApiKey] = useState<string | null>(null);
   const [domainduckUsage, setDomainduckUsage] = useState<{ used: number; limit: number; exhausted: boolean } | null>(null);
   const [domainduckTestDomain, setDomainduckTestDomain] = useState("example.com");
   const [domainduckTestResult, setDomainduckTestResult] = useState<DomainDuckTestResult | null>(null);
@@ -55,6 +57,8 @@ export default function SuperAdminCms() {
       setDomainduckConfigured(Boolean((data as any)?.configured));
       setDomainduckUpdatedAt(((data as any)?.updated_at ?? null) as string | null);
       setDomainduckUsage(((data as any)?.usage ?? null) as any);
+      setDomainduckApiKeyMasked(((data as any)?.api_key_masked ?? null) as any);
+      setDomainduckRevealedApiKey(null);
     } catch (e: any) {
       console.error(e);
       if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
@@ -108,6 +112,8 @@ export default function SuperAdminCms() {
       toast.success("API key di-reset");
       setDomainduckTestResult(null);
       setDomainduckUsage(null);
+      setDomainduckApiKeyMasked(null);
+      setDomainduckRevealedApiKey(null);
       await fetchDomainDuckStatus();
     } catch (e: any) {
       console.error(e);
@@ -115,6 +121,25 @@ export default function SuperAdminCms() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onRevealDomainDuckKey = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await invokeWithAuth<any>("super-admin-domainduck-secret", { action: "reveal" });
+      if (error) throw error;
+      setDomainduckRevealedApiKey(String((data as any)?.api_key ?? "") || null);
+      setDomainduckApiKeyMasked(String((data as any)?.api_key_masked ?? "") || null);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal menampilkan API key");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onHideDomainDuckKey = () => {
+    setDomainduckRevealedApiKey(null);
   };
 
   const onTestDomainDuck = async () => {
@@ -167,7 +192,10 @@ export default function SuperAdminCms() {
       <div className="grid gap-4 md:grid-cols-2">
         <DomainDuckIntegrationCard
           loading={loading}
-          status={{ configured: domainduckConfigured, updatedAt: domainduckUpdatedAt, usage: domainduckUsage }}
+          status={{ configured: domainduckConfigured, updatedAt: domainduckUpdatedAt, usage: domainduckUsage, apiKeyMasked: domainduckApiKeyMasked }}
+          revealedApiKey={domainduckRevealedApiKey}
+          onRevealApiKey={onRevealDomainDuckKey}
+          onHideApiKey={onHideDomainDuckKey}
           apiKeyValue={domainduckKey}
           onApiKeyChange={setDomainduckKey}
           onSave={onSaveDomainDuckKey}

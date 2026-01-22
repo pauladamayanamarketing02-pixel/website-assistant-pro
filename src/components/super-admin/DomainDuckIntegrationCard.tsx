@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { FormEvent } from "react";
-import { Globe, RefreshCcw, Save, TestTube2, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Globe, RefreshCcw, Save, TestTube2, Trash2 } from "lucide-react";
 
 export type DomainDuckTestResult = {
   domain: string;
@@ -14,6 +14,7 @@ export type DomainDuckTestResult = {
 type Status = {
   configured: boolean;
   updatedAt: string | null;
+  apiKeyMasked?: string | null;
   usage?: {
     used: number;
     limit: number;
@@ -24,6 +25,9 @@ type Status = {
 type Props = {
   loading: boolean;
   status: Status;
+  revealedApiKey: string | null;
+  onRevealApiKey: () => void;
+  onHideApiKey: () => void;
   apiKeyValue: string;
   onApiKeyChange: (v: string) => void;
   onSave: (e: FormEvent) => void;
@@ -45,6 +49,9 @@ function mapAvailability(a: DomainDuckTestResult["availability"]) {
 export function DomainDuckIntegrationCard({
   loading,
   status,
+  revealedApiKey,
+  onRevealApiKey,
+  onHideApiKey,
   apiKeyValue,
   onApiKeyChange,
   onSave,
@@ -58,6 +65,8 @@ export function DomainDuckIntegrationCard({
   const used = status.usage?.used ?? 0;
   const limit = status.usage?.limit ?? 250;
   const exhausted = Boolean(status.usage?.exhausted);
+  const showKey = Boolean(revealedApiKey);
+  const displayedKey = showKey ? revealedApiKey : status.apiKeyMasked;
 
   return (
     <Card>
@@ -76,6 +85,29 @@ export function DomainDuckIntegrationCard({
         </div>
 
         <div className="mt-4 space-y-4">
+          <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <span>API key aktif</span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-foreground">{status.configured ? displayedKey ?? "—" : "—"}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={showKey ? onHideApiKey : onRevealApiKey}
+                  disabled={loading || !status.configured}
+                  aria-label={showKey ? "Sembunyikan API key" : "Lihat API key"}
+                  title={showKey ? "Sembunyikan" : "Lihat"}
+                >
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="mt-1">
+              Klik ikon mata untuk menampilkan key (aksi ini dicatat di audit log).
+            </div>
+          </div>
+
           <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
             <div className="flex items-center justify-between gap-2">
               <span>Penggunaan API</span>

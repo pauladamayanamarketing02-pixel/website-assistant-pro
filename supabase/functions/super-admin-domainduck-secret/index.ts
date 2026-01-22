@@ -11,6 +11,7 @@ const corsHeaders: Record<string, string> = {
 
 type Payload =
   | { action: "get" }
+  | { action: "reveal" }
   | { action: "clear" }
   | {
       action: "set";
@@ -29,6 +30,22 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function maskKey(key: string): string {
+  const v = String(key ?? "").trim();
+  if (!v) return "";
+  const tail = v.slice(-4);
+  return `${"*".repeat(Math.max(0, v.length - 4))}${tail}`;
+}
+
+async function writeAuditLog(admin: any, params: { actorUserId: string; action: string; provider: string; metadata?: Record<string, unknown> }) {
+  await admin.from("super_admin_audit_logs").insert({
+    actor_user_id: params.actorUserId,
+    action: params.action,
+    provider: params.provider,
+    metadata: params.metadata ?? {},
+  });
 }
 
 async function getUsage(admin: any, keyHash: string): Promise<Usage> {
@@ -122,11 +139,53 @@ Deno.serve(async (req) => {
         }
       }
 
+      const apiKeyMasked =
+        data && String((data as any)?.iv ?? "") === "plain" ? maskKey(String((data as any)?.ciphertext ?? "")) : null;
+
       return new Response(
         JSON.stringify({
           configured: Boolean(data),
           updated_at: data ? String((data as any).updated_at) : null,
           usage,
+          api_key_masked: apiKeyMasked,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (body.action === "reveal") {
+      const { data, error } = await admin
+        .from("integration_secrets")
+        .select("updated_at,ciphertext,iv")
+        .eq("provider", "domainduck")
+        .eq("name", "api_key")
+        .maybeSingle();
+      if (error) throw error;
+
+      const iv = String((data as any)?.iv ?? "");
+      const key = iv === "plain" ? String((data as any)?.ciphertext ?? "") : "";
+      if (!key) {
+        return new Response(JSON.stringify({ error: "API key belum diset" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      await writeAuditLog(admin, {
+        actorUserId: String(claimsData.claims.sub),
+        action: "reveal_secret",
+        provider: "domainduck",
+        metadata: {
+          name: "api_key",
+          user_agent: req.headers.get("user-agent"),
+        },
+      });
+
+      return new Response(
+        JSON.stringify({
+          api_key: key,
+          api_key_masked: maskKey(key),
+          updated_at: data ? String((data as any).updated_at) : null,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
