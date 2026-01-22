@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -179,6 +181,14 @@ export default function AdminBusinessUsers() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Business List</h1>
           <p className="text-sm text-muted-foreground">Read-only view of business accounts.</p>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button type="button" onClick={() => navigate("/dashboard/admin/business-users/new")}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Business
+          </Button>
         </div>
       </header>
 
