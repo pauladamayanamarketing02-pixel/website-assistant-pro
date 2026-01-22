@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AiToolsAccessCard } from "./access-control/AiToolsAccessCard";
 
 type PackageRow = {
   id: string;
@@ -13,10 +14,11 @@ type PackageRow = {
   is_active: boolean;
 };
 
-type MenuKey = "ai_agents" | "messages" | "content_planner" | "reporting";
+type MenuKey = "ai_agents" | "messages" | "content_planner" | "reporting" | "tasks_progress";
 
 const MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
   { key: "content_planner", label: "Content Planner", description: "Show/hide Content Planner in User Dashboard." },
+  { key: "tasks_progress", label: "Tasks & Progress", description: "Show/hide Tasks & Progress in User Dashboard." },
   { key: "ai_agents", label: "AI Agents", description: "Show/hide AI Agents in User Dashboard." },
   { key: "messages", label: "Messages", description: "Show/hide Messages in User Dashboard." },
   { key: "reporting", label: "Reporting & Visibility", description: "Show/hide Reporting & Visibility in User Dashboard." },
@@ -36,6 +38,7 @@ export default function SuperAdminAccessControl() {
     messages: true,
     content_planner: true,
     reporting: true,
+    tasks_progress: true,
   });
 
   const selectedPackage = useMemo(
@@ -106,6 +109,7 @@ export default function SuperAdminAccessControl() {
           messages: true,
           content_planner: true,
           reporting: true,
+          tasks_progress: true,
         };
 
         (data as RuleRow[] | null)?.forEach((r) => {
@@ -201,6 +205,8 @@ export default function SuperAdminAccessControl() {
           )}
         </CardContent>
       </Card>
+
+      {selectedPackageId ? <AiToolsAccessCard packageId={selectedPackageId} /> : null}
     </div>
   );
 }

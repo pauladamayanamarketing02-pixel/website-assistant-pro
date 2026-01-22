@@ -940,6 +940,45 @@ export type Database = {
           },
         ]
       }
+      package_ai_tool_rules: {
+        Row: {
+          created_at: string
+          is_enabled: boolean
+          package_id: string
+          tool_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_enabled?: boolean
+          package_id: string
+          tool_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_enabled?: boolean
+          package_id?: string
+          tool_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_ai_tool_rules_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_ai_tool_rules_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "assist_ai_tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_menu_rules: {
         Row: {
           created_at: string
