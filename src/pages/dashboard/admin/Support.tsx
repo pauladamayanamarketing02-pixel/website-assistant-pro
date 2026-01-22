@@ -102,7 +102,7 @@ function InquiryTable({ rows, emptyLabel, onOpen, selected, onMarkResolved }: In
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" onClick={() => onOpen(r)}>
                       <Eye className="h-4 w-4" />
-                      View
+                      Read
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">

@@ -154,11 +154,8 @@ export default function WebsiteDomainTools() {
   }, [categories, categoryQuery]);
 
   useEffect(() => {
-    // Default: all categories expanded (but can be collapsed)
-    setExpandedCategoryKeys((prev) => {
-      if (prev.length) return prev;
-      return (categories ?? []).map((c) => c.name);
-    });
+    // Default: all categories collapsed
+    setExpandedCategoryKeys([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories.length]);
 
