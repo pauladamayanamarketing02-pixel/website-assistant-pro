@@ -21,6 +21,7 @@ export type UserNavItem = {
   title: string;
   url: string;
   icon: LucideIcon;
+  disabled?: boolean;
 };
 
 export function UserSidebar({
@@ -135,30 +136,42 @@ export function UserSidebar({
             <SidebarMenu>
               {items.map((item) => {
                 const isMessages = item.url === "/dashboard/user/messages";
+                const isDisabled = Boolean(item.disabled);
 
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/dashboard/user"}
-                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
-                        activeClassName="bg-sidebar-accent text-sidebar-primary"
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {open && <span className="truncate flex-1">{item.title}</span>}
+                      {isDisabled ? (
+                        <div
+                          className="flex items-center gap-3 px-3 py-2 rounded-md opacity-60 cursor-not-allowed"
+                          aria-disabled="true"
+                          title="Disabled"
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {open && <span className="truncate flex-1">{item.title}</span>}
+                        </div>
+                      ) : (
+                        <NavLink
+                          to={item.url}
+                          end={item.url === "/dashboard/user"}
+                          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
+                          activeClassName="bg-sidebar-accent text-sidebar-primary"
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {open && <span className="truncate flex-1">{item.title}</span>}
 
-                        {/* Unread messages badge */}
-                        {isMessages && showMessagesBadge && (
-                          open ? (
-                            <span className="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs tabular-nums">
-                              {unreadCount > 99 ? "99+" : unreadCount}
-                            </span>
-                          ) : (
-                            <span className="ml-auto h-2 w-2 rounded-full bg-destructive" />
-                          )
-                        )}
-                      </NavLink>
+                          {/* Unread messages badge */}
+                          {isMessages && showMessagesBadge && (
+                            open ? (
+                              <span className="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs tabular-nums">
+                                {unreadCount > 99 ? "99+" : unreadCount}
+                              </span>
+                            ) : (
+                              <span className="ml-auto h-2 w-2 rounded-full bg-destructive" />
+                            )
+                          )}
+                        </NavLink>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CheckCircle2, Eye, KeyRound, Mail, Trash2, UserX } from "lucide-react";
+import { CreditCard, Eye, KeyRound, Mail, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,11 +28,13 @@ import { supabase } from "@/integrations/supabase/client";
 type Props = {
   userId: string;
   email: string;
+  paymentActive: boolean;
   onView: () => void;
   onDeleted?: () => void;
+  onUpdated?: () => void;
 };
 
-export function BusinessUserActions({ userId, email, onView, onDeleted }: Props) {
+export function BusinessUserActions({ userId, email, paymentActive, onView, onDeleted, onUpdated }: Props) {
   const { toast } = useToast();
   const [sendingReset, setSendingReset] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -45,7 +47,42 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [updatingPayment, setUpdatingPayment] = useState(false);
+
   const canTrigger = useMemo(() => Boolean(userId) && Boolean(email && email !== "—"), [email, userId]);
+
+  const nextPaymentActive = !paymentActive;
+
+  const onConfirmTogglePayment = async () => {
+    if (!userId) return;
+    setUpdatingPayment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-set-payment-active", {
+        body: { user_id: userId, payment_active: nextPaymentActive },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error(String((data as any).error));
+
+      toast({
+        title: `Payment Active: ${nextPaymentActive ? "YES" : "NO"}`,
+        description: nextPaymentActive
+          ? "User now has full access to the dashboard."
+          : "User access is now limited to My Package.",
+      });
+
+      setPaymentDialogOpen(false);
+      onUpdated?.();
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed",
+        description: e?.message ?? "Could not update payment status.",
+      });
+    } finally {
+      setUpdatingPayment(false);
+    }
+  };
 
   const openEmailDialog = async () => {
     setEmailOpen(true);
@@ -81,14 +118,14 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
       if ((data as any)?.error) throw new Error(String((data as any).error));
 
       toast({
-        title: "Reset password dikirim",
-        description: `Link reset password sudah dikirim ke ${email}.`,
+        title: "Password reset sent",
+        description: `A password reset link has been sent to ${email}.`,
       });
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal",
-        description: e?.message ?? "Gagal mengirim reset password.",
+        title: "Failed",
+        description: e?.message ?? "Could not send password reset email.",
       });
     } finally {
       setSendingReset(false);
@@ -108,16 +145,16 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
       if ((data as any)?.error) throw new Error(String((data as any).error));
 
       toast({
-        title: "Permintaan ganti email terkirim",
-        description: `Konfirmasi email dikirim ke ${next}.`,
+        title: "Email change requested",
+        description: `A confirmation email was sent to ${next}.`,
       });
       setEmailOpen(false);
       setNewEmail("");
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal",
-        description: e?.message ?? "Gagal mengirim konfirmasi email baru.",
+        title: "Failed",
+        description: e?.message ?? "Could not send email change confirmation.",
       });
     } finally {
       setSendingEmailChange(false);
@@ -137,8 +174,8 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
       if ((data as any)?.error) throw new Error(String((data as any).error));
 
       toast({
-        title: "Akun dihapus",
-        description: "User Auth dan semua data terkait sudah dihapus permanen.",
+        title: "Account deleted",
+        description: "Auth user and all related data have been deleted.",
       });
       setDeleteOpen(false);
       setDeleteConfirm("");
@@ -146,8 +183,8 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal",
-        description: e?.message ?? "Gagal menghapus akun.",
+        title: "Failed",
+        description: e?.message ?? "Could not delete account.",
       });
     } finally {
       setDeleting(false);
@@ -157,8 +194,15 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
   return (
     <>
       <div className="flex items-center justify-center gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8" title="Set Active" disabled>
-          <CheckCircle2 className="h-4 w-4 text-primary" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title={paymentActive ? "Payment Active" : "Payment Nonactive"}
+          onClick={() => setPaymentDialogOpen(true)}
+          disabled={!userId || updatingPayment}
+        >
+          <CreditCard className={"h-4 w-4 " + (paymentActive ? "text-success" : "text-destructive")} />
         </Button>
 
         <Button
@@ -183,10 +227,6 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
           <Mail className="h-4 w-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" className="h-8 w-8" title="Set Nonactive" disabled>
-          <UserX className="h-4 w-4 text-muted-foreground" />
-        </Button>
-
         <Button
           variant="ghost"
           size="icon"
@@ -206,14 +246,12 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
       <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ganti Email</DialogTitle>
-            <DialogDescription>
-              Masukkan email baru. Supabase akan mengirim email konfirmasi ke alamat baru sebelum email akun berubah.
-            </DialogDescription>
+            <DialogTitle>Change Email</DialogTitle>
+            <DialogDescription>Enter the new email. Supabase will send a confirmation email before the account email changes.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor={`new-email-${userId}`}>Email baru</Label>
+            <Label htmlFor={`new-email-${userId}`}>New email</Label>
             <Input
               id={`new-email-${userId}`}
               type="email"
@@ -223,36 +261,64 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
               disabled={sendingEmailChange}
             />
             <p className="text-xs text-muted-foreground">
-              Email sekarang: {loadingAuthEmail ? "Memuat..." : currentAuthEmail ?? email}
+              Current email: {loadingAuthEmail ? "Loading..." : currentAuthEmail ?? email}
               {pendingAuthEmail ? (
-                <span className="block">Pending email baru: {pendingAuthEmail}</span>
+                <span className="block">Pending new email: {pendingAuthEmail}</span>
               ) : null}
             </p>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailOpen(false)} disabled={sendingEmailChange}>
-              Batal
+              Cancel
             </Button>
             <Button onClick={onSubmitChangeEmail} disabled={sendingEmailChange || !newEmail.trim()}>
-              {sendingEmailChange ? "Mengirim..." : "Kirim konfirmasi"}
+              {sendingEmailChange ? "Sending..." : "Send confirmation"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Payment Active?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Set Payment Active to <span className="font-medium">{nextPaymentActive ? "YES" : "NO"}</span> for this user.
+              {" "}
+              {nextPaymentActive
+                ? "YES gives full access to all /dashboard/user menus."
+                : "NO limits access to My Package only."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updatingPayment}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void onConfirmTogglePayment();
+              }}
+              disabled={updatingPayment}
+            >
+              {updatingPayment ? "Updating..." : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus akun permanen?</AlertDialogTitle>
+            <AlertDialogTitle>Delete account permanently?</AlertDialogTitle>
             <AlertDialogDescription>
-              Ini akan menghapus user di Supabase Authentication serta semua data terkait (profiles, businesses, roles, dan data aktivitas).
-              Aksi ini tidak bisa dibatalkan.
+              This will delete the user in Supabase Authentication and all related data (profiles, businesses, roles, and activity).
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor={`delete-confirm-${userId}`}>Ketik DELETE untuk konfirmasi</Label>
+            <Label htmlFor={`delete-confirm-${userId}`}>Type DELETE to confirm</Label>
             <Input
               id={`delete-confirm-${userId}`}
               value={deleteConfirm}
@@ -264,7 +330,7 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 // Keep dialog open while we run deletion.
@@ -274,8 +340,8 @@ export function BusinessUserActions({ userId, email, onView, onDeleted }: Props)
               }}
               disabled={deleting || deleteConfirm.trim().toUpperCase() !== "DELETE"}
             >
-              <span className="sr-only">Konfirmasi hapus</span>
-              {deleting ? "Menghapus..." : "Hapus"}
+              <span className="sr-only">Confirm delete</span>
+              {deleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

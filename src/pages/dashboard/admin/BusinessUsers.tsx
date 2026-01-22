@@ -44,6 +44,7 @@ type BusinessAccountRow = {
   phone: string;
   status: BusinessStatus;
   package: BusinessPackage;
+  paymentActive: boolean;
 };
 
 const statusLabel: Record<BusinessStatus, string> = {
@@ -108,7 +109,7 @@ export default function AdminBusinessUsers() {
       // 2) fetch profiles for email/name/phone/status
       const { data: profiles, error: profilesError } = await (supabase as any)
         .from("profiles")
-        .select("id, name, email, phone, status")
+        .select("id, name, email, phone, status, payment_active")
         .in("id", userIds);
 
       if (profilesError) throw profilesError;
@@ -155,6 +156,7 @@ export default function AdminBusinessUsers() {
           phone: p?.phone || "—",
           status: mapDbStatusToUi(p?.status),
           package: packageByUserId.get(p.id) ?? "custom",
+          paymentActive: Boolean(p?.payment_active ?? true),
         };
       });
 
@@ -276,6 +278,8 @@ export default function AdminBusinessUsers() {
                           <BusinessUserActions
                             userId={row.userId}
                             email={row.email}
+                            paymentActive={row.paymentActive}
+                            onUpdated={fetchBusinessUsers}
                             onDeleted={fetchBusinessUsers}
                             onView={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
                           />
