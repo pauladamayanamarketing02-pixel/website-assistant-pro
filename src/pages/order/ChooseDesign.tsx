@@ -28,7 +28,7 @@ export default function ChooseDesign() {
   const selected = state.selectedTemplateId;
 
   return (
-    <OrderLayout title="Choose Design" step="design" sidebar={<OrderSummaryCard />}>
+    <OrderLayout title="Choose Design" step="design" sidebar={<OrderSummaryCard showEstPrice={false} />}>
       <div className="space-y-6">
         <Card>
           <CardHeader className="pb-3">

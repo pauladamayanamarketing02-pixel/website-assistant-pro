@@ -89,6 +89,7 @@ export function useOrderPublicSettings(domain?: string) {
 
   const [defaultPackageId, setDefaultPackageId] = useState<string | null>(null);
   const [tldPrices, setTldPrices] = useState<Array<{ tld: string; price_usd: number }>>([]);
+  const [packagePriceUsd, setPackagePriceUsd] = useState<number | null>(null);
 
   const tld = useMemo(() => (domain ? extractTld(domain) : null), [domain]);
 
@@ -112,6 +113,18 @@ export function useOrderPublicSettings(domain?: string) {
           .maybeSingle();
         const pkgId = (pricingRow as any)?.default_package_id ?? null;
         setDefaultPackageId(pkgId);
+
+        if (pkgId) {
+          const { data: pkgRow } = await (supabase as any)
+            .from("packages")
+            .select("price")
+            .eq("id", pkgId)
+            .maybeSingle();
+          const p = safeNumber((pkgRow as any)?.price);
+          setPackagePriceUsd(p ?? null);
+        } else {
+          setPackagePriceUsd(null);
+        }
 
         if (pkgId) {
           const { data: prices } = await (supabase as any)
@@ -156,6 +169,7 @@ export function useOrderPublicSettings(domain?: string) {
       tldPrices,
       domainPriceUsd,
       domainTld: tld,
+      packagePriceUsd,
     },
   };
 }

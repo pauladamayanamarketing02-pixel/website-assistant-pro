@@ -16,8 +16,14 @@ export default function Payment() {
   const [promo, setPromo] = useState(state.promoCode);
 
   const canComplete = useMemo(() => {
-    return Boolean(state.domain && state.selectedTemplateId && state.details.email && state.details.acceptedTerms);
-  }, [state.details.acceptedTerms, state.details.email, state.domain, state.selectedTemplateId]);
+    return Boolean(
+      state.domain &&
+        state.selectedTemplateId &&
+        state.subscriptionYears &&
+        state.details.email &&
+        state.details.acceptedTerms,
+    );
+  }, [state.details.acceptedTerms, state.details.email, state.domain, state.selectedTemplateId, state.subscriptionYears]);
 
   return (
     <OrderLayout title="Payment" step="payment" sidebar={<OrderSummaryCard />}>
@@ -66,8 +72,7 @@ export default function Payment() {
         </Card>
 
         <div className="flex items-center justify-between gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate("/order/details")}
-          >
+          <Button type="button" variant="outline" onClick={() => navigate("/order/subscription")}>
             Back
           </Button>
           <Button

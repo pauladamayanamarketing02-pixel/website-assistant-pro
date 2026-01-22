@@ -62,7 +62,7 @@ export default function Details() {
               className="space-y-5"
               onSubmit={form.handleSubmit((values) => {
                 setDetails(values);
-                navigate("/order/payment");
+                navigate("/order/subscription");
               })}
             >
               <div className="grid gap-4 md:grid-cols-2">
@@ -154,12 +154,11 @@ export default function Details() {
               />
 
               <div className="flex items-center justify-between gap-3">
-                <Button type="button" variant="outline" onClick={() => navigate("/order/choose-design")}
-                >
+                <Button type="button" variant="outline" onClick={() => navigate("/order/choose-design")}>
                   Back
                 </Button>
                 <Button type="submit" size="lg">
-                  Continue to Payment
+                  Continue to Subscription
                 </Button>
               </div>
             </form>
