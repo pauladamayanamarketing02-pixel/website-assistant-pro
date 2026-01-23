@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefreshCcw } from "lucide-react";
+import { assistStatusBadgeVariant, formatAssistStatusLabel } from "@/lib/assistStatus";
 
 type RoleRow = {
   user_id: string;
@@ -85,7 +86,13 @@ export default function SuperAdminUsersAssists() {
     return String((row as any).status ?? "pending");
   };
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status: string, role: string) => {
+    if (normalizeRole(role) === "assistant") {
+      const label = formatAssistStatusLabel(status);
+      if (label === "—") return <span className="text-muted-foreground">—</span>;
+      return <Badge variant={assistStatusBadgeVariant(status)}>{label}</Badge>;
+    }
+
     const label = formatStatusLabel(status);
     if (label === "—") return <span className="text-muted-foreground">—</span>;
     return <Badge variant="secondary">{label}</Badge>;
@@ -151,7 +158,12 @@ export default function SuperAdminUsersAssists() {
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       const getSortValue = (row: AccountRow) => {
-        if (sortKey === "account_status") return formatStatusLabel(getAccountStatus(row)).toLowerCase();
+          if (sortKey === "account_status") {
+            const status = getAccountStatus(row);
+            const label =
+              normalizeRole(row.role) === "assistant" ? formatAssistStatusLabel(status) : formatStatusLabel(status);
+            return label.toLowerCase();
+          }
         return String((row as any)[sortKey] ?? "").toLowerCase();
       };
 
@@ -272,7 +284,7 @@ export default function SuperAdminUsersAssists() {
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>{r.email}</TableCell>
                       <TableCell className="capitalize">{r.role.replace("_", " ")}</TableCell>
-                      <TableCell>{renderStatusBadge(getAccountStatus(r))}</TableCell>
+                      <TableCell>{renderStatusBadge(getAccountStatus(r), r.role)}</TableCell>
                       <TableCell className="text-right">
                         {canLoginAs(r.role) ? (
                           <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>

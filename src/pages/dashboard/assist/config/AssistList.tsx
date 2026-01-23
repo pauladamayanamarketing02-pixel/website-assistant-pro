@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
+import { assistStatusBadgeVariant, formatAssistStatusLabel } from '@/lib/assistStatus';
 
 interface Assist {
   id: string;
@@ -84,8 +85,8 @@ export default function AssistList() {
                     <TableCell className="font-medium">{assist.name}</TableCell>
                     <TableCell>{assist.email}</TableCell>
                     <TableCell>
-                      <Badge variant={assist.status === 'active' ? 'default' : 'secondary'}>
-                        {assist.status || 'active'}
+                      <Badge variant={assistStatusBadgeVariant(assist.status)}>
+                        {formatAssistStatusLabel(assist.status)}
                       </Badge>
                     </TableCell>
                   </TableRow>
