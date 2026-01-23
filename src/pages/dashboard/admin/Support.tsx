@@ -235,6 +235,23 @@ export default function AdminSupport() {
     return filtered.filter((r) => String(r.source).toLowerCase() === "assistant_support");
   }, [filtered]);
 
+  const newCounts = useMemo(() => {
+    const isNew = (r: InquiryRow) => String(r.status ?? "").toLowerCase() === "new";
+    const isBusiness = (r: InquiryRow) => String(r.source ?? "").toLowerCase() === "business_support";
+    const isAssistant = (r: InquiryRow) => String(r.source ?? "").toLowerCase() === "assistant_support";
+    const isPublic = (r: InquiryRow) => !isBusiness(r) && !isAssistant(r);
+
+    const publicCount = rows.filter((r) => isNew(r) && isPublic(r)).length;
+    const businessCount = rows.filter((r) => isNew(r) && isBusiness(r)).length;
+    const assistantCount = rows.filter((r) => isNew(r) && isAssistant(r)).length;
+
+    return {
+      public: publicCount,
+      business: businessCount,
+      assistant: assistantCount,
+    };
+  }, [rows]);
+
   const markResolved = async (id: string) => {
     try {
       const { error } = await (supabase as any).from("website_inquiries").update({ status: "resolved" }).eq("id", id);
@@ -296,9 +313,18 @@ export default function AdminSupport() {
           ) : (
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
               <TabsList>
-                <TabsTrigger value="public">Tickets Public</TabsTrigger>
-                <TabsTrigger value="business">Tickets Business</TabsTrigger>
-                <TabsTrigger value="assistant">Tickets Assistant</TabsTrigger>
+                <TabsTrigger value="public" className="gap-2">
+                  <span>Tickets Public</span>
+                  {newCounts.public > 0 ? <Badge variant="default">{newCounts.public}</Badge> : null}
+                </TabsTrigger>
+                <TabsTrigger value="business" className="gap-2">
+                  <span>Tickets Business</span>
+                  {newCounts.business > 0 ? <Badge variant="default">{newCounts.business}</Badge> : null}
+                </TabsTrigger>
+                <TabsTrigger value="assistant" className="gap-2">
+                  <span>Tickets Assistant</span>
+                  {newCounts.assistant > 0 ? <Badge variant="default">{newCounts.assistant}</Badge> : null}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="public" className="mt-4">
