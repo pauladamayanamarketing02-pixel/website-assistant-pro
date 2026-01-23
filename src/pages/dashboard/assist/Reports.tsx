@@ -296,8 +296,8 @@ export default function Reports() {
       </Card>
 
       {selectedBusinessId ? (
-        <div className="space-y-6">
-          <Card>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="h-fit">
             <CardHeader>
               <CardTitle>Report URLs</CardTitle>
             </CardHeader>
