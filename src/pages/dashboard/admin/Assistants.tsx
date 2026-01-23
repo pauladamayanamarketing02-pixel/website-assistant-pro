@@ -82,7 +82,8 @@ export default function AdminAssistants() {
   const formatStatusLabel = (status: string | null) => {
     const s = String(status ?? "").toLowerCase();
     if (s === "active") return "Active";
-    if (s === "nonactive") return "Nonactive";
+    if (s === "inactive" || s === "nonactive") return "Nonactive";
+    if (s === "pending") return "Pending";
     return "—";
   };
 
