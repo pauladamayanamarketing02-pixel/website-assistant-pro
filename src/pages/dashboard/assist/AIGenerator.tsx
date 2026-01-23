@@ -99,8 +99,8 @@ export default function AIGenerator() {
       console.error(e);
       toast({
         variant: 'destructive',
-        title: 'Gagal memuat tools',
-        description: e?.message ?? 'Terjadi kesalahan.',
+        title: 'Failed to load tools',
+        description: e?.message ?? 'Something went wrong.',
       });
     } finally {
       setLoadingTools(false);
@@ -152,7 +152,7 @@ export default function AIGenerator() {
 
   const handleSaveTool = async () => {
     if (!user?.id) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Kamu harus login.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
       return;
     }
 
@@ -179,7 +179,7 @@ export default function AIGenerator() {
           .eq('created_by', user.id);
 
         if (error) throw error;
-        toast({ title: 'Tool Updated', description: 'Tool berhasil diupdate.' });
+        toast({ title: 'Tool updated', description: 'Your changes have been saved.' });
       } else {
         const { error } = await (supabase as any)
           .from('assist_ai_tools')
@@ -196,7 +196,7 @@ export default function AIGenerator() {
           });
 
         if (error) throw error;
-        toast({ title: 'Tool Created', description: 'Tool berhasil dibuat.' });
+        toast({ title: 'Tool created', description: 'Your tool has been saved.' });
       }
 
       setViewMode('tools');
@@ -206,8 +206,8 @@ export default function AIGenerator() {
       console.error(e);
       toast({
         variant: 'destructive',
-        title: 'Gagal menyimpan tool',
-        description: e?.message ?? 'Terjadi kesalahan.',
+        title: 'Failed to save tool',
+        description: e?.message ?? 'Something went wrong.',
       });
     } finally {
       setSavingTool(false);
@@ -224,11 +224,11 @@ export default function AIGenerator() {
         .eq('created_by', user.id);
 
       if (error) throw error;
-      toast({ title: 'Tool Deleted', description: 'Tool berhasil dihapus.' });
+      toast({ title: 'Tool deleted', description: 'The tool has been removed.' });
       await loadTools();
     } catch (e: any) {
       console.error(e);
-      toast({ variant: 'destructive', title: 'Gagal menghapus', description: e?.message ?? 'Terjadi kesalahan.' });
+      toast({ variant: 'destructive', title: 'Failed to delete', description: e?.message ?? 'Something went wrong.' });
     }
   };
 
@@ -254,14 +254,14 @@ export default function AIGenerator() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-foreground">{editingTool ? 'Edit Tool' : 'Create New Tool'}</h1>
-            <p className="text-muted-foreground">Simpan tool ke database</p>
+            <p className="text-muted-foreground">Save tools to the database</p>
           </div>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Tool Details</CardTitle>
-            <CardDescription>Masukkan info tool + code snippet (HTML/React/Next.js)</CardDescription>
+            <CardDescription>Enter tool info and a code snippet (HTML/React/Next.js)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -550,7 +550,7 @@ export default function AIGenerator() {
           </CardHeader>
           <CardContent>
             {tools.length === 0 ? (
-              <div className="py-10 text-muted-foreground">Belum ada tools.</div>
+              <div className="py-10 text-muted-foreground">No tools yet.</div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {tools.map((tool) => {
@@ -574,8 +574,8 @@ export default function AIGenerator() {
                             if (!toolClickable) {
                               toast({
                                 variant: 'destructive',
-                                title: 'Tool tidak tersedia',
-                                description: 'Tool ini dinonaktifkan untuk package kamu.',
+                                title: 'Tool unavailable',
+                                description: 'This tool is disabled for your package.',
                               });
                               return;
                             }
@@ -619,13 +619,13 @@ export default function AIGenerator() {
                               </AlertDialogTrigger>
                               <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Hapus tool ini?</AlertDialogTitle>
+                                  <AlertDialogTitle>Delete this tool?</AlertDialogTitle>
                                   <AlertDialogDescription className="break-words">
-                                    Tool "{tool.title}" akan dihapus permanen dan tidak bisa dikembalikan.
+                                    "{tool.title}" will be permanently deleted and cannot be restored.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                     onClick={(e) => {
@@ -633,7 +633,7 @@ export default function AIGenerator() {
                                       void handleDeleteTool(tool.id);
                                     }}
                                   >
-                                    Ya, hapus
+                                    Yes, delete
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>

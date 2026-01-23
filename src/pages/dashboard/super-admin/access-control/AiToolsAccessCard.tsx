@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AccessRuleRow } from "./AccessRuleRow";
 
 type ToolRow = {
   id: string;
@@ -16,7 +17,12 @@ type RuleRow = {
   is_enabled: boolean;
 };
 
-export function AiToolsAccessCard({ packageId }: { packageId: string }) {
+type Props = {
+  packageId: string;
+  variant?: "card" | "submenu";
+};
+
+export function AiToolsAccessCard({ packageId, variant = "card" }: Props) {
   const [loading, setLoading] = useState(true);
   const [tools, setTools] = useState<ToolRow[]>([]);
   const [ruleByToolId, setRuleByToolId] = useState<Record<string, boolean>>({});
@@ -121,24 +127,32 @@ export function AiToolsAccessCard({ packageId }: { packageId: string }) {
     toast.success("Tool rule saved");
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>AI Agents — All Tools</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+  const content = (
+    <>
+      {variant === "card" ? (
         <p className="text-xs text-muted-foreground">
           {aiAgentsEnabled
-            ? "AI Agents aktif: tool default-nya ON (kecuali kamu matikan)."
-            : "AI Agents nonaktif: mode whitelist — hanya tool yang kamu ON-kan di sini yang tetap bisa dipakai user."}
+            ? "AI Agents enabled: tools are ON by default (unless you turn them off)."
+            : "AI Agents disabled: whitelist mode — only tools you turn ON here remain usable."}
         </p>
-        {loading ? (
-          <p className="text-muted-foreground text-sm">Loading...</p>
-        ) : visibleTools.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No active tools found.</p>
-        ) : (
-          <div className="space-y-3">
-            {visibleTools.map((tool) => (
+      ) : null}
+
+      {loading ? (
+        <p className="text-muted-foreground text-sm">Loading...</p>
+      ) : visibleTools.length === 0 ? (
+        <p className="text-muted-foreground text-sm">No active tools found.</p>
+      ) : (
+        <div className="space-y-3">
+          {visibleTools.map((tool) =>
+            variant === "submenu" ? (
+              <AccessRuleRow
+                key={tool.id}
+                label={tool.title || "(Untitled tool)"}
+                description="Enable/disable this tool in AI Agents"
+                checked={Boolean(ruleByToolId[tool.id])}
+                onCheckedChange={(v) => setRule(tool.id, Boolean(v))}
+              />
+            ) : (
               <div
                 key={tool.id}
                 className="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
@@ -148,15 +162,25 @@ export function AiToolsAccessCard({ packageId }: { packageId: string }) {
                   <div className="text-xs text-muted-foreground">Show/hide this tool in AI Agents</div>
                 </div>
 
-                <Switch
-                  checked={Boolean(ruleByToolId[tool.id])}
-                  onCheckedChange={(v: boolean) => setRule(tool.id, Boolean(v))}
-                />
+                <Switch checked={Boolean(ruleByToolId[tool.id])} onCheckedChange={(v: boolean) => setRule(tool.id, Boolean(v))} />
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+            )
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  if (variant === "submenu") {
+    return <div className="space-y-3">{content}</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>AI Agents — All Tools</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">{content}</CardContent>
     </Card>
   );
 }
