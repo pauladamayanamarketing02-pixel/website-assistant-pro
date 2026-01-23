@@ -572,6 +572,13 @@ export default function TaskManager() {
     }
   };
 
+  const handleStartNow = async () => {
+    // Requirement: when clicking "Start Now" (pending), immediately insert the auto-filled work log to DB.
+    if (!selectedTask || !user) return;
+    await handleSaveWorkLog();
+    setWorkLogLocked(false);
+  };
+
   const handleSendDeleteRequest = async (workLogId: string) => {
     if (!selectedTask || !user) return;
 
@@ -1127,7 +1134,7 @@ export default function TaskManager() {
                 {workLogLocked && !isCompleted ? (
                   <Button
                     type="button"
-                    onClick={() => setWorkLogLocked(false)}
+                    onClick={handleStartNow}
                     className="w-full"
                   >
                     Start Now

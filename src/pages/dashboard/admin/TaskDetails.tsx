@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,9 @@ export default function AdminTaskDetails() {
   const [businessName, setBusinessName] = useState<string>("—");
   const [assigneeName, setAssigneeName] = useState<string>("—");
 
+  const [workLogsLoading, setWorkLogsLoading] = useState(false);
+  const [workLogs, setWorkLogs] = useState<any[]>([]);
+
   useEffect(() => {
     const run = async () => {
       if (!taskNumber) {
@@ -87,10 +91,20 @@ export default function AdminTaskDetails() {
 
         setBusinessName(String((businesses as any)?.business_name ?? "—"));
         setAssigneeName(String((assignees as any)?.name ?? (assigneeId ? "—" : "Unassigned")));
+
+        setWorkLogsLoading(true);
+        const { data: wl, error: wlErr } = await (supabase as any)
+          .from("task_work_logs")
+          .select("id, created_at, time_spent, work_description, status, shared_url, file_url, screenshot_url")
+          .eq("task_id", t.id)
+          .order("created_at", { ascending: false });
+        if (wlErr) throw wlErr;
+        setWorkLogs((wl as any[]) ?? []);
       } catch (e: any) {
         console.error("Error loading task details:", e);
         setError(e?.message ?? "Failed to load task");
       } finally {
+        setWorkLogsLoading(false);
         setLoading(false);
       }
     };
@@ -101,14 +115,29 @@ export default function AdminTaskDetails() {
   const label = taskNumber ? `T-${String(taskNumber).padStart(4, "0")}` : String(taskNumberLabel ?? "");
   const status = toTaskStatus(task?.status);
 
+  const formatMinutes = (minutes: number | null | undefined) => {
+    const m = typeof minutes === "number" && Number.isFinite(minutes) ? minutes : 0;
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    return `${h}h ${mm}m`;
+  };
+
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex items-center gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/dashboard/admin/tasks")}
+          aria-label="Back to tasks"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Task Details</h1>
           <p className="text-sm text-muted-foreground">{label}</p>
         </div>
-        <Button variant="outline" onClick={() => navigate("/dashboard/admin/tasks")}>Back</Button>
       </header>
 
       <Card>
@@ -146,6 +175,54 @@ export default function AdminTaskDetails() {
                 <dd className="mt-1 whitespace-pre-wrap text-sm text-foreground">{task?.description ?? "—"}</dd>
               </div>
             </dl>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Work Log</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="py-8 text-sm text-muted-foreground">Loading...</div>
+          ) : error ? (
+            <div className="py-8 text-sm text-muted-foreground">—</div>
+          ) : workLogsLoading ? (
+            <div className="py-8 text-sm text-muted-foreground">Loading work logs...</div>
+          ) : workLogs.length === 0 ? (
+            <div className="py-8 text-sm text-muted-foreground">No work logs yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th className="py-2 text-left font-medium">Date</th>
+                    <th className="py-2 text-left font-medium">Time</th>
+                    <th className="py-2 text-left font-medium">Status</th>
+                    <th className="py-2 text-left font-medium">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workLogs.map((w) => (
+                    <tr key={w.id} className="border-b border-border/60">
+                      <td className="py-3 pr-4 align-top text-muted-foreground">
+                        {w.created_at ? new Date(w.created_at).toLocaleString() : "—"}
+                      </td>
+                      <td className="py-3 pr-4 align-top text-foreground">
+                        {formatMinutes(w.time_spent)}
+                      </td>
+                      <td className="py-3 pr-4 align-top">
+                        <Badge variant="outline">{String(w.status ?? "—")}</Badge>
+                      </td>
+                      <td className="py-3 align-top whitespace-pre-wrap text-foreground">
+                        {w.work_description ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
