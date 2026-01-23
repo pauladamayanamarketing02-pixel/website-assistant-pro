@@ -108,7 +108,7 @@ export default function ReportUrlPage({ kind }: { kind: ReportKind }) {
           ) : !url ? (
             <div className="text-sm text-muted-foreground text-center py-10">No report URL has been saved yet.</div>
           ) : iframeAllowed ? (
-            <div className="aspect-video w-full overflow-hidden rounded-md border border-border">
+            <div className="w-full overflow-hidden rounded-md border border-border h-[60vh] md:h-[70vh] lg:h-[75vh]">
               <iframe title={title} src={url} className="h-full w-full" />
             </div>
           ) : (
