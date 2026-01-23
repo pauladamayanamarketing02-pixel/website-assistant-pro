@@ -1,22 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Package, Check, ArrowUpRight, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -46,21 +32,17 @@ interface AvailablePackage {
 const packageUpgradeRecommendations: Record<string, string> = {
   starter: "growth",
   growth: "pro",
-  pro: "optimize", // Pro users get recommended Optimize
+  pro: "scale", // Pro users get recommended Scale
   optimize: "scale",
   scale: "dominate",
-  dominate: "__custom__", // Already at top -> Custom
+  dominate: "", // Already at top
 };
-
-const MAX_FEATURES_CURRENT = 5;
-const MAX_FEATURES_UPGRADE = 3;
 
 export default function MyPackage() {
   const { user } = useAuth();
   const [activePackage, setActivePackage] = useState<UserPackage | null>(null);
   const [availablePackages, setAvailablePackages] = useState<AvailablePackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [featuresDialog, setFeaturesDialog] = useState<null | { title: string; features: string[] }>(null);
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -147,20 +129,6 @@ export default function MyPackage() {
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
 
-  const showCustomPlanCard = useMemo(() => {
-    return Boolean(activePackage) && recommendedType === "__custom__";
-  }, [activePackage, recommendedType]);
-
-  const upgradeCards = useMemo(() => {
-    const cards: Array<
-      | { kind: "package"; pkg: AvailablePackage }
-      | { kind: "custom" }
-    > = upgradePackages.map((pkg) => ({ kind: "package", pkg }));
-
-    if (showCustomPlanCard) cards.unshift({ kind: "custom" });
-    return cards;
-  }, [showCustomPlanCard, upgradePackages]);
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -173,19 +141,19 @@ export default function MyPackage() {
   }
 
   return (
-    <div className="h-full min-h-0 flex flex-col gap-6 overflow-hidden">
-      <div className="shrink-0">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-3xl font-bold text-foreground">My Package</h1>
         <p className="text-muted-foreground">View your active package and available upgrades</p>
       </div>
 
-      <div className="flex-1 min-h-0 grid gap-6 lg:grid-cols-2 items-stretch overflow-hidden">
+      <div className="grid gap-6 lg:grid-cols-2 items-start">
         {/* LEFT: Active Package */}
-        <div className="min-h-0 flex flex-col gap-4 overflow-hidden">
-          <h2 className="text-xl font-semibold text-foreground shrink-0">Current Package</h2>
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-foreground">Current Package</h2>
 
           {activePackage ? (
-            <Card className="border-primary/30 flex-1 min-h-0 overflow-hidden">
+            <Card className="border-primary/30">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -204,15 +172,13 @@ export default function MyPackage() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 overflow-hidden">
+              <CardContent className="space-y-4">
                 <p className="text-muted-foreground">{activePackage.packages.description}</p>
 
                 <div className="space-y-2">
                   <p className="font-medium text-foreground">What’s included:</p>
                   <ul className="space-y-2">
-                    {activePackage.packages.features
-                      .slice(0, MAX_FEATURES_CURRENT)
-                      .map((feature, index) => (
+                    {activePackage.packages.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-2">
                         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                           <Check className="h-3 w-3 text-primary" />
@@ -221,24 +187,6 @@ export default function MyPackage() {
                       </li>
                     ))}
                   </ul>
-
-                  {activePackage.packages.features.length > MAX_FEATURES_CURRENT && (
-                    <div className="pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setFeaturesDialog({
-                            title: `${activePackage.packages.name} — Full features`,
-                            features: activePackage.packages.features,
-                          })
-                        }
-                      >
-                        View all features
-                      </Button>
-                    </div>
-                  )}
                 </div>
 
                 <div className="pt-2">
@@ -261,176 +209,96 @@ export default function MyPackage() {
         </div>
 
         {/* RIGHT: Upgrade Options */}
-        <div className="min-h-0 flex flex-col gap-4 overflow-hidden">
-          <h2 className="text-xl font-semibold text-foreground shrink-0">
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-foreground">
             {activePackage ? "Upgrade Options" : "Available Packages"}
           </h2>
 
-          {upgradeCards.length > 0 ? (
-            <Carousel opts={{ align: "start" }} className="min-h-0">
-              <CarouselContent className="-ml-4">
-                {upgradeCards.map((card, idx) => {
-                  if (card.kind === "custom") {
-                    return (
-                      <CarouselItem key={`custom-${idx}`} className="pl-4 md:basis-1/2">
-                        <Card className="border-primary/40 overflow-hidden h-full">
-                          <CardHeader>
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <CardTitle className="text-lg">Custom Plan</CardTitle>
-                                <CardDescription>
-                                  Need something beyond Dominate? We can tailor a plan for your market.
-                                </CardDescription>
-                              </div>
+          {upgradePackages.length > 0 ? (
+            <div className="grid gap-4">
+              {upgradePackages.map((pkg) => {
+                const isRecommended = pkg.type === recommendedType;
+
+                return (
+                  <Card
+                    key={pkg.id}
+                    className={
+                      "group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md " +
+                      (isRecommended
+                        ? "border-primary/50 ring-2 ring-primary/15 bg-gradient-to-br from-primary/10 via-background to-background"
+                        : "hover:border-primary/30 bg-gradient-to-br from-muted/30 via-background to-background")
+                    }
+                  >
+                    {/* subtle decorative glow */}
+                    <div
+                      aria-hidden="true"
+                      className={
+                        "pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full blur-3xl opacity-0 transition-opacity group-hover:opacity-100 " +
+                        (isRecommended ? "bg-primary/20" : "bg-muted")
+                      }
+                    />
+
+                    <CardHeader className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <CardTitle className="text-lg truncate">{pkg.name}</CardTitle>
+                            {isRecommended && (
                               <Badge className="bg-primary text-primary-foreground">
                                 <Star className="h-3 w-3 mr-1" />
-                                Recommended
+                                Best value
                               </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div className="rounded-lg border bg-card/50 p-3">
-                              <p className="text-sm font-medium text-foreground">What you’ll get</p>
-                              <ul className="mt-3 space-y-2">
-                                {[
-                                  "Custom scope & deliverables",
-                                  "Dedicated strategy & reporting cadence",
-                                  "Custom content & local SEO plan",
-                                ].map((item) => (
-                                  <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
-                                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
-                                      <Check className="h-3 w-3 text-primary" />
-                                    </div>
-                                    <span>{item}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-
-                            <Button asChild className="w-full">
-                              <a href="/contact">
-                                Contact sales
-                                <ArrowUpRight className="h-4 w-4 ml-2" />
-                              </a>
-                            </Button>
-
-                            <p className="text-xs text-muted-foreground">
-                              We’ll reply with options and pricing based on your goals.
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </CarouselItem>
-                    );
-                  }
-
-                  const pkg = card.pkg;
-                  const isRecommended = pkg.type === recommendedType;
-
-                  return (
-                    <CarouselItem key={pkg.id} className="pl-4 md:basis-1/2">
-                      <Card
-                        className={
-                          "group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md h-full " +
-                          (isRecommended
-                            ? "border-primary/50 ring-2 ring-primary/15 bg-gradient-to-br from-primary/10 via-background to-background"
-                            : "hover:border-primary/30 bg-gradient-to-br from-muted/30 via-background to-background")
-                        }
-                      >
-                        {/* subtle decorative glow */}
-                        <div
-                          aria-hidden="true"
-                          className={
-                            "pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full blur-3xl opacity-0 transition-opacity group-hover:opacity-100 " +
-                            (isRecommended ? "bg-primary/20" : "bg-muted")
-                          }
-                        />
-
-                        <CardHeader className="space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <CardTitle className="text-lg truncate">{pkg.name}</CardTitle>
-                                {isRecommended && (
-                                  <Badge className="bg-primary text-primary-foreground">
-                                    <Star className="h-3 w-3 mr-1" />
-                                    Best value
-                                  </Badge>
-                                )}
-                              </div>
-                              <CardDescription className="mt-1">{pkg.description}</CardDescription>
-                            </div>
-
-                            <div className="text-right shrink-0">
-                              <div className="font-bold text-foreground text-xl leading-none">${pkg.price}</div>
-                              <div className="text-xs text-muted-foreground">/month</div>
-                              {activePackage && (
-                                <Badge variant="secondary" className="mt-2 bg-primary/10 text-primary">
-                                  +${Math.max(0, pkg.price - activePackage.packages.price)}/mo
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-
-                        <CardContent className="space-y-4">
-                          <div className="rounded-lg border bg-card/50 p-3">
-                            <p className="text-sm font-medium text-foreground">What you’ll get</p>
-                            <ul className="mt-3 space-y-2">
-                              {pkg.features.slice(0, MAX_FEATURES_UPGRADE).map((feature, index) => (
-                                <li
-                                  key={index}
-                                  className="flex items-start gap-2 text-sm text-muted-foreground"
-                                >
-                                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
-                                    <Check className="h-3 w-3 text-primary" />
-                                  </div>
-                                  <span>{feature}</span>
-                                </li>
-                              ))}
-                            </ul>
-
-                            {pkg.features.length > MAX_FEATURES_UPGRADE && (
-                              <div className="pt-3">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="px-0"
-                                  onClick={() =>
-                                    setFeaturesDialog({
-                                      title: `${pkg.name} — Full features`,
-                                      features: pkg.features,
-                                    })
-                                  }
-                                >
-                                  View all features
-                                </Button>
-                              </div>
                             )}
                           </div>
+                          <CardDescription className="mt-1">{pkg.description}</CardDescription>
+                        </div>
 
-                          <Button variant={isRecommended ? "default" : "outline"} className="w-full">
-                            Upgrade to {pkg.name}
-                            <ArrowUpRight className="h-4 w-4 ml-2" />
-                          </Button>
+                        <div className="text-right shrink-0">
+                          <div className="font-bold text-foreground text-xl leading-none">${pkg.price}</div>
+                          <div className="text-xs text-muted-foreground">/month</div>
+                          {activePackage && (
+                            <Badge variant="secondary" className="mt-2 bg-primary/10 text-primary">
+                              +${Math.max(0, pkg.price - activePackage.packages.price)}/mo
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
 
-                          <p className="text-xs text-muted-foreground">
-                            Upgrade anytime. Your team will be notified once payment is enabled.
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </CarouselItem>
-                  );
-                })}
-              </CarouselContent>
+                    <CardContent className="space-y-4">
+                      <div className="rounded-lg border bg-card/50 p-3">
+                        <p className="text-sm font-medium text-foreground">What you’ll get</p>
+                        <ul className="mt-3 space-y-2">
+                          {pkg.features.map((feature, index) => (
+                            <li
+                              key={index}
+                              className="flex items-start gap-2 text-sm text-muted-foreground"
+                            >
+                              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
+                                <Check className="h-3 w-3 text-primary" />
+                              </div>
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
 
-              {upgradeCards.length > 1 && (
-                <>
-                  <CarouselPrevious className="left-2 top-8 translate-y-0" />
-                  <CarouselNext className="right-2 top-8 translate-y-0" />
-                </>
-              )}
-            </Carousel>
+                      <Button
+                        variant={isRecommended ? "default" : "outline"}
+                        className="w-full"
+                      >
+                        Upgrade to {pkg.name}
+                        <ArrowUpRight className="h-4 w-4 ml-2" />
+                      </Button>
+
+                      <p className="text-xs text-muted-foreground">
+                        Upgrade anytime. Your team will be notified once payment is enabled.
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           ) : activePackage ? (
             <Card>
               <CardContent className="py-8 text-center">
@@ -448,27 +316,6 @@ export default function MyPackage() {
           )}
         </div>
       </div>
-
-      <Dialog open={Boolean(featuresDialog)} onOpenChange={(open) => (!open ? setFeaturesDialog(null) : undefined)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{featuresDialog?.title ?? "Features"}</DialogTitle>
-            <DialogDescription>Complete list of included features.</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[70vh] overflow-auto rounded-lg border p-4">
-            <ul className="space-y-2">
-              {(featuresDialog?.features ?? []).map((feature, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
-                    <Check className="h-3 w-3 text-primary" />
-                  </div>
-                  <span className="text-foreground">{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </DialogContent>
-      </Dialog>
 
     </div>
   );
