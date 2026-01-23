@@ -57,17 +57,25 @@ export default function UserDashboard() {
   const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
 
   const visibleMenuItems = useMemo(() => {
-    const urlToKey: Record<string, any> = {
+    // Some items are hidden when disabled; others stay visible but become non-clickable.
+    const hideWhenDisabledByUrl: Record<string, any> = {
       '/dashboard/user/content-planner': 'content_planner',
-      '/dashboard/user/messages': 'messages',
       '/dashboard/user/reporting': 'reporting',
     };
 
-    return menuItems.filter((item) => {
-      const key = urlToKey[item.url];
-      if (!key) return true;
-      return isEnabled(key);
-    });
+    return menuItems
+      .filter((item) => {
+        const key = hideWhenDisabledByUrl[item.url];
+        if (!key) return true;
+        return isEnabled(key);
+      })
+      .map((item) => {
+        // Messages: keep visible, but disable click when rule is OFF.
+        if (item.url === '/dashboard/user/messages' && !isEnabled('messages')) {
+          return { ...item, disabled: true };
+        }
+        return item;
+      });
   }, [isEnabled]);
 
   const welcomeName = useMemo(() => {
