@@ -1745,7 +1745,14 @@ export type Database = {
       is_blacklisted_email: { Args: { _email: string }; Returns: boolean }
     }
     Enums: {
-      account_status: "active" | "nonactive" | "blacklisted"
+      account_status:
+        | "active"
+        | "nonactive"
+        | "blacklisted"
+        | "pending"
+        | "approved"
+        | "suspended"
+        | "expired"
       app_role: "user" | "assist" | "admin" | "super_admin"
       blog_content_type: "article" | "news" | "update"
       blog_post_status:
@@ -1898,7 +1905,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      account_status: ["active", "nonactive", "blacklisted"],
+      account_status: [
+        "active",
+        "nonactive",
+        "blacklisted",
+        "pending",
+        "approved",
+        "suspended",
+        "expired",
+      ],
       app_role: ["user", "assist", "admin", "super_admin"],
       blog_content_type: ["article", "news", "update"],
       blog_post_status: [
