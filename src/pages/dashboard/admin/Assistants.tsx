@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Ban, CheckCircle2, Eye, Plus, Trash2, UserX } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AssistantActions } from "@/pages/dashboard/admin/assistants/AssistantActions";
 
 type AssistantRow = {
   id: string;
@@ -134,54 +135,12 @@ export default function AdminAssistants() {
                       <TableCell className="text-muted-foreground">{row.country ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{row.status ?? "—"}</TableCell>
                       <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="Set Active"
-                            onClick={() => {}}
-                          >
-                            <CheckCircle2 className="h-4 w-4 text-primary" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="Set Nonactive"
-                            onClick={() => {}}
-                          >
-                            <UserX className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="Blacklist"
-                            onClick={() => {}}
-                          >
-                            <Ban className="h-4 w-4 text-destructive" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="Delete"
-                            onClick={() => {}}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="View"
-                            onClick={() => navigate(`/dashboard/admin/assistants/${row.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <AssistantActions
+                          userId={row.id}
+                          email={row.email}
+                          onDeleted={() => void fetchAssistants()}
+                          onView={() => navigate(`/dashboard/admin/assistants/${row.id}`)}
+                        />
                       </TableCell>
                     </TableRow>
                   ))
