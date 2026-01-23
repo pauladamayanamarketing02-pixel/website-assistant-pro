@@ -10,6 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 type BusinessOption = {
   id: string;
@@ -84,6 +96,8 @@ export default function Reports() {
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDescription, setUploadDescription] = useState<string>("");
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -298,6 +312,25 @@ export default function Reports() {
     }
   };
 
+  const deleteDownloadable = async (id: string) => {
+    if (!selectedBusinessId) return;
+    setDeletingId(id);
+    try {
+      const { error } = await sb
+        .from("downloadable_reports")
+        .delete()
+        .eq("id", id)
+        .eq("business_id", selectedBusinessId);
+      if (error) throw error;
+
+      setDownloadable((prev) => prev.filter((x) => x.id !== id));
+    } catch (e) {
+      console.error("Failed to delete downloadable report", e);
+    } finally {
+      setDeletingId((cur) => (cur === id ? null : cur));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -438,11 +471,45 @@ export default function Reports() {
                             <div className="text-xs text-muted-foreground line-clamp-2">{row.description || "-"}</div>
                           </TableCell>
                           <TableCell>
-                            <Button asChild variant="outline" size="sm">
-                              <a href={row.file_url} target="_blank" rel="noreferrer">
-                                Open
-                              </a>
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button asChild variant="outline" size="sm">
+                                <a href={row.file_url} target="_blank" rel="noreferrer">
+                                  Open
+                                </a>
+                              </Button>
+
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive"
+                                    disabled={Boolean(deletingId) || loadingReports}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete this report?</AlertDialogTitle>
+                                    <AlertDialogDescription className="break-words">
+                                      File "{row.file_name}" akan dihapus dari list downloadable reports.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>No</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => void deleteDownloadable(row.id)}
+                                    >
+                                      Yes
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
