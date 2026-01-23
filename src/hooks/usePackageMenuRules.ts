@@ -8,7 +8,9 @@ export type MenuKey =
   | "content_planner_send_to_tasks"
   | "content_planner_edit_scheduled"
   | "reporting"
-  | "tasks_progress";
+  | "tasks_progress"
+  | "tasks_progress_create"
+  | "tasks_progress_editing";
 
 const CONTROLLED_KEYS: MenuKey[] = [
   "ai_agents",
@@ -18,6 +20,8 @@ const CONTROLLED_KEYS: MenuKey[] = [
   "content_planner_edit_scheduled",
   "reporting",
   "tasks_progress",
+  "tasks_progress_create",
+  "tasks_progress_editing",
 ];
 
 type RuleRow = {
@@ -67,9 +71,16 @@ export function usePackageMenuRules(userId?: string) {
           content_planner_edit_scheduled: true,
           reporting: true,
           tasks_progress: true,
+          tasks_progress_create: true,
+          tasks_progress_editing: true,
         };
 
         let foundAny = false;
+        const rawRuleByKey: Record<string, boolean> = {};
+        (rules as RuleRow[] | null)?.forEach((r) => {
+          rawRuleByKey[String(r.menu_key)] = Boolean(r.is_enabled);
+        });
+
         (rules as RuleRow[] | null)?.forEach((r) => {
           const k = String(r.menu_key) as MenuKey;
           if (CONTROLLED_KEYS.includes(k)) {
@@ -77,6 +88,17 @@ export function usePackageMenuRules(userId?: string) {
             foundAny = true;
           }
         });
+
+        // Backward compatibility:
+        // Previously, `tasks_progress` controlled "create tasks".
+        // Now we expose `tasks_progress_create` and keep parent `tasks_progress` always enabled.
+        if (rawRuleByKey.tasks_progress_create === undefined && rawRuleByKey.tasks_progress !== undefined) {
+          next.tasks_progress_create = Boolean(rawRuleByKey.tasks_progress);
+          foundAny = true;
+        }
+
+        // Parent container is always considered enabled at runtime (menu stays visible).
+        next.tasks_progress = true;
 
         // If no rules exist for that package, don't gate anything.
         if (!cancelled) setEnabledByKey(foundAny ? next : null);

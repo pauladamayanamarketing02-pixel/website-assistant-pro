@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { AiToolsAccessCard } from "./access-control/AiToolsAccessCard";
 import { AccessRuleRow } from "./access-control/AccessRuleRow";
 import { ContentPlannerRulesGroup } from "./access-control/ContentPlannerRulesGroup";
+import { TasksProgressRulesGroup } from "./access-control/TasksProgressRulesGroup";
 
 type PackageRow = {
   id: string;
@@ -22,7 +23,9 @@ type MenuKey =
   | "content_planner_send_to_tasks"
   | "content_planner_edit_scheduled"
   | "reporting"
-  | "tasks_progress";
+  | "tasks_progress"
+  | "tasks_progress_create"
+  | "tasks_progress_editing";
 
 // NOTE: We keep a single source-of-truth list for seeding keys in DB.
 const ALL_MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
@@ -39,15 +42,35 @@ const ALL_MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
     description: "Enable/disable editing fields (read-only when disabled) in /dashboard/user/content-planner.",
   },
 
+  // Tasks & Progress group
+  { key: "tasks_progress", label: "Tasks & Progress", description: "Controls permissions for creating/editing tasks in User Dashboard." },
+  {
+    key: "tasks_progress_create",
+    label: "↳ Create Tasks",
+    description: "Enable/disable creating tasks (New Task / Create Task) in User Dashboard.",
+  },
+  {
+    key: "tasks_progress_editing",
+    label: "↳ Editing Tasks",
+    description: "Enable/disable editing task details in /dashboard/user/tasks.",
+  },
+
   // Other items (rendered as flat list)
-  { key: "tasks_progress", label: "Tasks & Progress", description: "Enable/disable creating tasks (New Task / Create Task) in User Dashboard." },
   { key: "ai_agents", label: "AI Agents", description: "Enable/disable clicking tools in AI Agents — All Tools." },
   { key: "messages", label: "Messages", description: "Enable/disable sending messages in User Dashboard." },
   { key: "reporting", label: "Reporting & Visibility", description: "Show/hide Reporting & Visibility in User Dashboard." },
 ];
 
 const FLAT_MENU_ITEMS = ALL_MENU_ITEMS.filter(
-  (i) => !["content_planner", "content_planner_send_to_tasks", "content_planner_edit_scheduled"].includes(i.key)
+  (i) =>
+    ![
+      "content_planner",
+      "content_planner_send_to_tasks",
+      "content_planner_edit_scheduled",
+      "tasks_progress",
+      "tasks_progress_create",
+      "tasks_progress_editing",
+    ].includes(i.key)
 );
 
 type RuleRow = {
@@ -85,6 +108,8 @@ export default function SuperAdminAccessControl() {
     content_planner_edit_scheduled: true,
     reporting: true,
     tasks_progress: true,
+    tasks_progress_create: true,
+    tasks_progress_editing: true,
   });
 
   const selectedPackage = useMemo(
@@ -161,6 +186,8 @@ export default function SuperAdminAccessControl() {
           content_planner_edit_scheduled: true,
           reporting: true,
           tasks_progress: true,
+          tasks_progress_create: true,
+          tasks_progress_editing: true,
         };
 
         (data as RuleRow[] | null)?.forEach((r) => {
@@ -240,6 +267,8 @@ export default function SuperAdminAccessControl() {
                 ruleByKey={ruleByKey as any}
                 setRule={setRule as any}
               />
+
+              <TasksProgressRulesGroup ruleByKey={ruleByKey as any} setRule={setRule as any} />
 
               {FLAT_MENU_ITEMS.map((item) => (
                 <AccessRuleRow
