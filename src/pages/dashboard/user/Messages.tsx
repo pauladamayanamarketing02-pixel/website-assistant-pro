@@ -90,14 +90,14 @@ export default function Messages() {
           return;
         }
 
-        // Fetch optional profile fields for display (email/avatar) + account_status for filtering
+        // Fetch optional profile fields for display (email/avatar)
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, email, avatar_url, account_status')
+          .select('id, email, avatar_url')
           .in('id', assistIds);
         if (profilesError) throw profilesError;
 
-        const mergedAll = (assistAccounts ?? []).map((a: any) => {
+        const merged = (assistAccounts ?? []).map((a: any) => {
           const p = (profiles ?? []).find((x: any) => x.id === a.id);
           return {
             id: a.id,
@@ -107,15 +107,8 @@ export default function Messages() {
           } as AssistContact;
         });
 
-        // Only show Assist contacts with Active status
-        const merged = mergedAll.filter((a: AssistContact) => {
-          const p = (profiles ?? []).find((x: any) => x.id === a.id);
-          return String(p?.account_status ?? '').toLowerCase() === 'active';
-        });
-
         setAssists(merged);
         if (merged.length > 0) setSelectedAssist(merged[0]);
-        else setSelectedAssist(null);
       } catch (error: any) {
         toast({
           variant: 'destructive',

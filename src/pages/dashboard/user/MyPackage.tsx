@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 interface UserPackage {
   id: string;
@@ -59,7 +58,6 @@ function sortByTier(aNameOrType: string, bNameOrType: string): number {
 
 export default function MyPackage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [activePackage, setActivePackage] = useState<UserPackage | null>(null);
   const [availablePackages, setAvailablePackages] = useState<AvailablePackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +66,7 @@ export default function MyPackage() {
     const fetchPackages = async () => {
       if (!user) return;
 
-       // Fetch user's latest package (active OR expired) so we can show Renew when expired
+      // Fetch user's active package
       const { data: userPkg } = await supabase
         .from("user_packages")
         .select(
@@ -78,8 +76,7 @@ export default function MyPackage() {
         `
         )
         .eq("user_id", user.id)
-         .order("started_at", { ascending: false })
-         .limit(1)
+        .eq("status", "active")
         .maybeSingle();
 
       if (userPkg) {
@@ -153,7 +150,6 @@ export default function MyPackage() {
   const upgradePackages = getUpgradePackages();
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
-  const isExpired = (activePackage?.status ?? "").toLowerCase() === "expired";
 
   if (loading) {
     return (
@@ -198,11 +194,8 @@ export default function MyPackage() {
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge
-                    variant="default"
-                    className={isExpired ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}
-                  >
-                    {isExpired ? "Expired" : "Active"}
+                  <Badge variant="default" className="bg-primary/10 text-primary">
+                    Active
                   </Badge>
                 </div>
               </CardHeader>
@@ -245,15 +238,6 @@ export default function MyPackage() {
                     <span className="text-sm font-normal text-muted-foreground"> /month</span>
                   </p>
                 </div>
-
-                {isExpired && (
-                  <div className="pt-2">
-                    <Button className="w-full" onClick={() => navigate("/order/subscription")}>
-                      Renew Plan
-                      <ArrowUpRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ) : (
