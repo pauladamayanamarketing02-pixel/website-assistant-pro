@@ -246,8 +246,8 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
             size="icon"
             className="h-8 w-8"
             title="View"
+            type="button"
             onClick={onView}
-            disabled={!userId}
           >
             <Eye className="h-4 w-4" />
           </Button>
@@ -302,7 +302,7 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
 
-        <Button variant="outline" size="icon" className="h-8 w-8" title="View" onClick={onView}>
+        <Button variant="outline" size="icon" className="h-8 w-8" title="View" type="button" onClick={onView}>
           <Eye className="h-4 w-4" />
         </Button>
       </div>
