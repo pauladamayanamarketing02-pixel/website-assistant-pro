@@ -122,9 +122,8 @@ export default function SuperAdminUsersAssists() {
           role,
           status: String((p as any).status ?? "pending"),
           accountStatus: String((p as any).account_status ?? "pending"),
-          // Default true here keeps existing behavior elsewhere, but for Super Admin list
-          // we want explicit Pending when payment_active=false.
-          paymentActive: Boolean((p as any).payment_active ?? true),
+          // IMPORTANT: default must be false so new users don't appear Active.
+          paymentActive: Boolean((p as any).payment_active ?? false),
         };
       });
 
