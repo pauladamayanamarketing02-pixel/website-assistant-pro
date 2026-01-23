@@ -186,7 +186,8 @@ export default function AIGenerator() {
             code_content: toolForm.codeContent,
           })
           .eq('id', editingTool.id)
-          .eq('created_by', user.id);
+          // Assist can edit any tool (not only the creator)
+          ;
 
         if (error) throw error;
         toast({ title: 'Tool updated', description: 'Your changes have been saved.' });
@@ -230,8 +231,8 @@ export default function AIGenerator() {
       const { error } = await (supabase as any)
         .from('assist_ai_tools')
         .delete()
-        .eq('id', toolId)
-        .eq('created_by', user.id);
+        // Assist can delete any tool (not only the creator)
+        .eq('id', toolId);
 
       if (error) throw error;
       toast({ title: 'Tool deleted', description: 'The tool has been removed.' });
@@ -630,7 +631,6 @@ export default function AIGenerator() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {tools.map((tool) => {
                   const toolClickable = canUseTools && isToolEnabled(tool.id);
-                  const isOwner = Boolean(user?.id) && tool.createdBy === user?.id;
                   return (
                   <Card 
                     key={tool.id}
@@ -649,8 +649,8 @@ export default function AIGenerator() {
                             if (!toolClickable) {
                               toast({
                                 variant: 'destructive',
-                                title: 'Tool unavailable',
-                                description: 'This tool is disabled for your package.',
+                              title: 'Tool unavailable',
+                              description: 'This tool is disabled for your package.',
                               });
                               return;
                             }
@@ -673,14 +673,6 @@ export default function AIGenerator() {
                             className="h-8 w-8"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (!isOwner) {
-                                toast({
-                                  variant: 'destructive',
-                                  title: 'Tidak bisa edit',
-                                  description: 'Hanya pembuat tool yang bisa edit.',
-                                });
-                                return;
-                              }
                               handleEditTool(tool);
                             }}
                             aria-label={`Edit ${tool.title}`}
@@ -688,58 +680,39 @@ export default function AIGenerator() {
                             <Pencil className="h-4 w-4" />
                           </Button>
 
-                          {isOwner ? (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive"
-                                  onClick={(e) => e.stopPropagation()}
-                                  aria-label={`Delete ${tool.title}`}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`Delete ${tool.title}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this tool?</AlertDialogTitle>
+                                <AlertDialogDescription className="break-words">
+                                  "{tool.title}" will be permanently deleted and cannot be restored.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>No</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handleDeleteTool(tool.id);
+                                  }}
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete this tool?</AlertDialogTitle>
-                                  <AlertDialogDescription className="break-words">
-                                    "{tool.title}" will be permanently deleted and cannot be restored.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>No</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      void handleDeleteTool(tool.id);
-                                    }}
-                                  >
-                                    Yes
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toast({
-                                  variant: 'destructive',
-                                  title: 'Tidak bisa delete',
-                                  description: 'Hanya pembuat tool yang bisa delete.',
-                                });
-                              }}
-                              aria-label={`Delete ${tool.title}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                                  Yes
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </CardHeader>
