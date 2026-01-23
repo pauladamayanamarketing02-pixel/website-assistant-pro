@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AssistantActions } from "@/pages/dashboard/admin/assistants/AssistantActions";
+import { formatAssistStatusLabel } from "@/lib/assistStatus";
 
 type AssistantRow = {
   id: string;
@@ -79,13 +80,7 @@ export default function AdminAssistants() {
     }
   };
 
-  const formatStatusLabel = (status: string | null) => {
-    const s = String(status ?? "").toLowerCase();
-    if (s === "active") return "Active";
-    if (s === "inactive" || s === "nonactive") return "Nonactive";
-    if (s === "pending") return "Pending";
-    return "—";
-  };
+  const formatStatusLabel = (status: string | null) => formatAssistStatusLabel(status);
 
   return (
     <div className="space-y-6">
