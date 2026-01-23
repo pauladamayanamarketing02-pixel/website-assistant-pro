@@ -248,52 +248,66 @@ export default function AdminBusinessUsers() {
           {loading ? (
             <div className="py-8 text-sm text-muted-foreground">Loading business accounts...</div>
           ) : (
-            <div className="overflow-x-auto lg:overflow-visible">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[100px] lg:min-w-0">Business ID</TableHead>
-                    <TableHead className="min-w-[150px] lg:min-w-0">Business Name</TableHead>
-                    <TableHead className="min-w-[120px] lg:min-w-0">Contact</TableHead>
-                    <TableHead className="min-w-[180px] lg:min-w-0">Email</TableHead>
-                    <TableHead className="min-w-[100px] lg:min-w-0">Status</TableHead>
-                     <TableHead className="text-center min-w-[220px] lg:min-w-0">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-
-                <TableBody>
-                  {filteredRows.length === 0 ? (
+            <div className="space-y-3">
+              <div className="overflow-x-auto lg:overflow-visible">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        No businesses found.
-                      </TableCell>
+                      <TableHead className="min-w-[100px] lg:min-w-0">Business ID</TableHead>
+                      <TableHead className="min-w-[150px] lg:min-w-0">Business Name</TableHead>
+                      <TableHead className="min-w-[120px] lg:min-w-0">Contact</TableHead>
+                      <TableHead className="min-w-[180px] lg:min-w-0">Email</TableHead>
+                      <TableHead className="min-w-[100px] lg:min-w-0">Status</TableHead>
+                      <TableHead className="text-center min-w-[220px] lg:min-w-0">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredRows.map((row) => (
-                      <TableRow key={`${row.businessId}-${row.email}`}>
-                        <TableCell className="font-medium">{row.businessId}</TableCell>
-                        <TableCell className="font-medium">{row.businessName}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.contactName}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.email}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{statusLabel[row.status]}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <BusinessUserActions
-                            userId={row.userId}
-                            email={row.email}
-                            paymentActive={row.paymentActive}
-                            accountStatus={row.status}
-                            onUpdated={fetchBusinessUsers}
-                            onDeleted={fetchBusinessUsers}
-                            onView={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
-                          />
+                  </TableHeader>
+
+                  <TableBody>
+                    {filteredRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          No businesses found.
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      filteredRows.map((row) => (
+                        <TableRow key={`${row.businessId}-${row.email}`}>
+                          <TableCell className="font-medium">{row.businessId}</TableCell>
+                          <TableCell className="font-medium">{row.businessName}</TableCell>
+                          <TableCell className="text-muted-foreground">{row.contactName}</TableCell>
+                          <TableCell className="text-muted-foreground">{row.email}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{statusLabel[row.status]}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <BusinessUserActions
+                              userId={row.userId}
+                              email={row.email}
+                              paymentActive={row.paymentActive}
+                              accountStatus={row.status}
+                              onUpdated={fetchBusinessUsers}
+                              onDeleted={fetchBusinessUsers}
+                              onView={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                <div>
+                  <span className="font-medium">Pending:</span> New registration
+                </div>
+                <div>
+                  <span className="font-medium">Approved:</span> Payment completed (requires activation)
+                </div>
+                <div>
+                  <span className="font-medium">Active:</span> Account active based on selected package
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
