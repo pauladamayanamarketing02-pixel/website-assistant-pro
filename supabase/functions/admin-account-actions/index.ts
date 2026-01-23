@@ -4,6 +4,7 @@
 // - change_email: change user's email (requires confirmation to new email)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -51,6 +52,34 @@ function getErrorMessage(e: unknown) {
   }
 }
 
+async function sendPasswordResetEmail(params: { to: string; actionLink: string }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  const from = Deno.env.get("RESEND_FROM_EMAIL");
+  if (!apiKey || !from) {
+    throw new Error("Missing RESEND_API_KEY or RESEND_FROM_EMAIL");
+  }
+
+  const resend = new Resend(apiKey);
+
+  await resend.emails.send({
+    from,
+    to: [params.to],
+    subject: "Reset your password",
+    html: `
+      <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; line-height: 1.5;">
+        <h2 style="margin: 0 0 12px;">Reset your password</h2>
+        <p style="margin: 0 0 16px;">Click the button below to reset your password.</p>
+        <p style="margin: 0 0 20px;">
+          <a href="${params.actionLink}" style="display: inline-block; padding: 10px 14px; border-radius: 10px; text-decoration: none; background: #111827; color: #ffffff;">
+            Reset password
+          </a>
+        </p>
+        <p style="margin: 0; font-size: 12px; color: #6b7280;">If you did not request this, you can ignore this email.</p>
+      </div>
+    `,
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
@@ -92,8 +121,19 @@ Deno.serve(async (req) => {
       const origin = req.headers.get("origin") ?? "";
       const redirectTo = origin ? `${origin}/auth/reset-password` : undefined;
 
-      const { error } = await admin.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+      // Avoid Supabase Auth email rate limits by generating the recovery link
+      // and sending the email via Resend instead of `resetPasswordForEmail`.
+      const { data, error } = await admin.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: redirectTo ? { redirectTo } : undefined,
+      } as any);
       if (error) throw error;
+
+      const actionLink = (data as any)?.properties?.action_link as string | undefined;
+      if (!actionLink) throw new Error("Failed to generate password reset link");
+
+      await sendPasswordResetEmail({ to: email, actionLink });
 
       return json(200, { ok: true });
     }
