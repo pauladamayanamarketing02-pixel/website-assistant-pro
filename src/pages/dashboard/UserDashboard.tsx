@@ -34,7 +34,7 @@ import LogActivity from './user/LogActivity';
 import UserSettings from './user/Settings';
 
 const menuItems: UserNavItem[] = [
-  { title: 'Overview', url: '/dashboard/user', icon: Home },
+  { title: 'Overview', url: '/dashboard/user/overview', icon: Home },
   { title: 'My Business', url: '/dashboard/user/business', icon: Building2 },
   { title: 'Content Planner', url: '/dashboard/user/content-planner', icon: CalendarDays },
   { title: 'Tasks & Progress', url: '/dashboard/user/tasks', icon: CheckSquare },
@@ -163,7 +163,15 @@ export default function UserDashboard() {
   const gatedMenuItems = useMemo(() => {
     // Keep hooks order stable (must run on every render)
     if (paymentActive === false) {
-      return menuItems.map((i) => ({ ...i, disabled: i.url !== "/dashboard/user/package" }));
+      const allowed = new Set<string>([
+        "/dashboard/user/package",
+        "/dashboard/user/support",
+        "/dashboard/user/log-activity",
+        "/dashboard/user/settings",
+        "/dashboard/user/overview",
+      ]);
+
+      return menuItems.map((i) => ({ ...i, disabled: !allowed.has(i.url) }));
     }
 
     // paymentActive === true OR still loading payment -> show normal menu set
@@ -204,6 +212,10 @@ export default function UserDashboard() {
                 element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <DashboardOverview />}
               />
               <Route
+                path="overview"
+                element={<DashboardOverview />}
+              />
+              <Route
                 path="business"
                 element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <MyBusiness />}
               />
@@ -231,7 +243,7 @@ export default function UserDashboard() {
               />
               <Route
                 path="support"
-                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <UserSupport />}
+                element={<UserSupport />}
               />
               <Route path="package" element={<MyPackage />} />
               <Route
@@ -240,11 +252,11 @@ export default function UserDashboard() {
               />
               <Route
                 path="log-activity"
-                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <LogActivity />}
+                element={<LogActivity />}
               />
               <Route
                 path="settings"
-                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <UserSettings />}
+                element={<UserSettings />}
               />
             </Routes>
           </main>

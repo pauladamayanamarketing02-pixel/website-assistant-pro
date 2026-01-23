@@ -137,6 +137,8 @@ export function UserSidebar({
               {items.map((item) => {
                 const isMessages = item.url === "/dashboard/user/messages";
                 const isDisabled = Boolean(item.disabled);
+                const isRootEnd =
+                  item.url === "/dashboard/user" || item.url === "/dashboard/user/overview";
 
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -153,7 +155,7 @@ export function UserSidebar({
                       ) : (
                         <NavLink
                           to={item.url}
-                          end={item.url === "/dashboard/user"}
+                          end={isRootEnd}
                           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent/70"
                           activeClassName="bg-sidebar-accent text-sidebar-primary"
                         >
