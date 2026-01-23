@@ -155,9 +155,15 @@ type ClientListProps = {
   initialClientId?: string;
   backTo?: string;
   hideClientList?: boolean;
+  /**
+   * Default: false.
+   * When true, the initialClientId view will load even if the client is not payment_active.
+   * (Used by Admin to review Pending/Approved/Suspended/Expired accounts.)
+   */
+  allowInactive?: boolean;
 };
 
-export default function ClientList({ initialClientId, backTo, hideClientList }: ClientListProps) {
+export default function ClientList({ initialClientId, backTo, hideClientList, allowInactive = false }: ClientListProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -280,7 +286,7 @@ export default function ClientList({ initialClientId, backTo, hideClientList }: 
           if (profileErr) throw profileErr;
           if (businessErr) throw businessErr;
           if (!profile?.id) throw new Error('Client not found.');
-          if (!(profile as any)?.payment_active) throw new Error('Client is Pending (not Active).');
+           if (!allowInactive && !(profile as any)?.payment_active) throw new Error('Client is Pending (not Active).');
 
           const nextClient: Client = {
             id: profile.id,
