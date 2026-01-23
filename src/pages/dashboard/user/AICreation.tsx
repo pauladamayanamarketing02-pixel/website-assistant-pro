@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -303,6 +304,8 @@ export default function AICreation() {
                               {/* NOTE: match assist page: do NOT show description in the card list */}
                             </div>
                           </div>
+
+                          {!toolAllowed ? <Badge variant="secondary">Upgrade Plan</Badge> : null}
                         </div>
                       </CardHeader>
                     </Card>
