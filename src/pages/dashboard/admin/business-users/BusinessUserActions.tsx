@@ -29,12 +29,13 @@ type Props = {
   userId: string;
   email: string;
   paymentActive: boolean;
+  accountStatus: "pending" | "approved" | "active" | "suspended" | "expired";
   onView: () => void;
   onDeleted?: () => void;
   onUpdated?: () => void;
 };
 
-export function BusinessUserActions({ userId, email, paymentActive, onView, onDeleted, onUpdated }: Props) {
+export function BusinessUserActions({ userId, email, paymentActive, accountStatus, onView, onDeleted, onUpdated }: Props) {
   const { toast } = useToast();
   const [sendingReset, setSendingReset] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -52,6 +53,8 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
 
   const canTrigger = useMemo(() => Boolean(userId) && Boolean(email && email !== "—"), [email, userId]);
 
+  const isPending = accountStatus === "pending";
+
   const nextPaymentActive = !paymentActive;
 
   const accountStatusLabel = paymentActive ? "Active" : "Pending";
@@ -67,11 +70,20 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
       if (error) throw error;
       if ((data as any)?.error) throw new Error(String((data as any).error));
 
+      // When toggling to Active, also set account_status=active.
+      // When toggling back to Pending, keep it as approved (not pending), to match the workflow.
+      const nextAccountStatus = nextPaymentActive ? "active" : "approved";
+      const { data: stData, error: stError } = await supabase.functions.invoke("admin-set-account-status", {
+        body: { user_id: userId, account_status: nextAccountStatus },
+      });
+      if (stError) throw stError;
+      if ((stData as any)?.error) throw new Error(String((stData as any).error));
+
       toast({
-        title: `Business Account: ${nextAccountStatusLabel}`,
+        title: `Business Account: ${nextPaymentActive ? "Active" : "Approved"}`,
         description: nextPaymentActive
           ? "User now has full access to the dashboard."
-          : "Business account is pending; user access is limited to My Package.",
+          : "User is approved but still pending activation.",
       });
 
       setPaymentDialogOpen(false);
@@ -81,6 +93,33 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
         variant: "destructive",
         title: "Failed",
         description: e?.message ?? "Could not update payment status.",
+      });
+    } finally {
+      setUpdatingPayment(false);
+    }
+  };
+
+  const onApprove = async () => {
+    if (!userId) return;
+    setUpdatingPayment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-set-account-status", {
+        body: { user_id: userId, account_status: "approved" },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error(String((data as any).error));
+
+      toast({
+        title: "User approved",
+        description: "Actions are now available. Click the status icon to activate the account.",
+      });
+
+      onUpdated?.();
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed",
+        description: e?.message ?? "Could not approve user.",
       });
     } finally {
       setUpdatingPayment(false);
@@ -196,6 +235,13 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
 
   return (
     <>
+      {isPending ? (
+        <div className="flex items-center justify-center">
+          <Button variant="outline" size="sm" onClick={() => void onApprove()} disabled={!userId || updatingPayment}>
+            {updatingPayment ? "Approving..." : "Approve"}
+          </Button>
+        </div>
+      ) : (
       <div className="flex items-center justify-center gap-1">
         <Button
           variant="ghost"
@@ -249,6 +295,7 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
           <Eye className="h-4 w-4" />
         </Button>
       </div>
+      )}
 
       <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
         <DialogContent>
@@ -294,7 +341,7 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
               Set Business Account to <span className="font-medium">{nextAccountStatusLabel}</span> for this user. {" "}
               {nextPaymentActive
                 ? "Active gives full access to all /dashboard/user menus."
-                : "Pending limits access to My Package only."}
+                : "Approved keeps access limited (activation required)."}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
