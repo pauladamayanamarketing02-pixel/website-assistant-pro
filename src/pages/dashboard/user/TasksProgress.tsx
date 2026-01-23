@@ -141,7 +141,8 @@ export default function TasksProgress() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { isEnabled } = usePackageMenuRules(user?.id);
-  const canCreateTasks = isEnabled('tasks_progress');
+  const canCreateTasks = isEnabled('tasks_progress_create') && isEnabled('tasks_progress');
+  const canEditTasks = isEnabled('tasks_progress_editing') && isEnabled('tasks_progress');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -467,12 +468,13 @@ export default function TasksProgress() {
     const deriveStatusFromAssignee = (assignee: string) =>
       assignee && assignee !== 'none' ? ('assigned' as Task['status']) : ('pending' as Task['status']);
 
-    // Only allow editing of the fields when Edit mode is enabled
-    const canEditDetails = isEditing;
+    // Only allow editing of the fields when Edit mode is enabled AND permission allows.
+    const canEditDetails = isEditing && canEditTasks;
 
     const derivedStatus = deriveStatusFromAssignee(editData.assignee);
 
     const handleSaveChanges = async () => {
+      if (!canEditTasks) return;
       if (!user) return;
 
       const nextPlatform = editData.type === 'social_media' ? (editData.platform || null) : null;
@@ -692,7 +694,9 @@ export default function TasksProgress() {
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!canEditTasks}
                   onClick={() => {
+                    if (!canEditTasks) return;
                     setIsEditing((v) => {
                       const next = !v;
                       setEditUploadedFile(null);
