@@ -148,7 +148,9 @@ export default function AdminBusinessUsers() {
         const businessNumber = b?.business_number as number | null | undefined;
         const businessId = businessNumber ? `B${String(businessNumber).padStart(5, "0")}` : "—";
 
-        const paymentActive = Boolean(p?.payment_active ?? true);
+        // IMPORTANT: payment_active must default to false for new/uninitialized rows,
+        // otherwise newly created accounts look Active and show full Actions.
+        const paymentActive = Boolean(p?.payment_active ?? false);
 
         return {
           userId: p.id,
