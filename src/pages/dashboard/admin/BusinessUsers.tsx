@@ -272,7 +272,7 @@ export default function AdminBusinessUsers() {
                         <TableCell className="text-muted-foreground">{row.contactName}</TableCell>
                         <TableCell className="text-muted-foreground">{row.email}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{statusLabel[row.status]}</Badge>
+                          <Badge variant="secondary">{row.paymentActive ? "Active" : "Pending"}</Badge>
                         </TableCell>
                         <TableCell className="text-center">
                           <BusinessUserActions
