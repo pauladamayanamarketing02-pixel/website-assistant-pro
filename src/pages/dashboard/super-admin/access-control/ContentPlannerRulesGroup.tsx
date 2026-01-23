@@ -52,8 +52,12 @@ export function ContentPlannerRulesGroup({ ruleByKey, setRule }: Props) {
         // User request: remove 'Show/hide ...' wording from description
         description="Control access to the Content Planner feature in User Dashboard."
         checked={Boolean(ruleByKey.content_planner)}
-        onCheckedChange={(v) => setRule("content_planner", v)}
+        onCheckedChange={() => {
+          // Intentionally no-op: user requested removing the ON/OFF switch for parent rule.
+          // Sub-rules are still controllable below.
+        }}
         leading={parentLeading}
+        hideSwitch
       />
 
       {open ? (
