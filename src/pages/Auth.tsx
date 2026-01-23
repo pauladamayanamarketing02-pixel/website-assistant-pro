@@ -129,10 +129,22 @@ export default function Auth() {
         selectedRole
       );
       if (error) {
+        const anyErr = error as any;
+        const code = String(anyErr?.code ?? "").trim();
+        const status = Number(anyErr?.status ?? 0);
+
         let message = error.message;
         if (message.includes('already registered')) {
           message = 'An account with this email already exists. Please login instead.';
         }
+
+        // Supabase Auth sends emails on signup; repeated tests can hit rate limits (HTTP 429)
+        if (status === 429 || code === 'over_email_send_rate_limit' || message.toLowerCase().includes('email rate limit exceeded')) {
+          message =
+            'Terlalu banyak percobaan signup dalam waktu singkat (rate limit email). ' +
+            'Silakan tunggu beberapa menit lalu coba lagi.';
+        }
+
         toast({
           variant: 'destructive',
           title: 'Sign up failed',
@@ -185,7 +197,16 @@ export default function Auth() {
       setForgotOpen(false);
       setForgotEmail('');
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Failed', description: e?.message ?? 'Failed to send reset email.' });
+      const msg = String(e?.message ?? 'Failed to send reset email.');
+      const code = String(e?.code ?? '').trim();
+      const status = Number(e?.status ?? 0);
+
+      const description =
+        status === 429 || code === 'over_email_send_rate_limit' || msg.toLowerCase().includes('email rate limit exceeded')
+          ? 'Terlalu banyak permintaan email dalam waktu singkat. Silakan tunggu beberapa menit lalu coba lagi.'
+          : msg;
+
+      toast({ variant: 'destructive', title: 'Failed', description });
     } finally {
       setForgotSubmitting(false);
     }
