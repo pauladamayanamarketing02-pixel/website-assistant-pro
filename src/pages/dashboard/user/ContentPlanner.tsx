@@ -177,8 +177,17 @@ export default function ContentPlanner() {
   const navigate = useNavigate();
 
   const { isEnabled } = usePackageMenuRules(user?.id);
-  const canSendToTasks = useMemo(() => isEnabled("content_planner_send_to_tasks"), [isEnabled]);
-  const canEditScheduled = useMemo(() => isEnabled("content_planner_edit_scheduled"), [isEnabled]);
+  const canUseContentPlanner = useMemo(() => isEnabled("content_planner"), [isEnabled]);
+  const canSendToTasks = useMemo(
+    () => canUseContentPlanner && isEnabled("content_planner_send_to_tasks"),
+    [canUseContentPlanner, isEnabled]
+  );
+  const canEditScheduled = useMemo(
+    () => canUseContentPlanner && isEnabled("content_planner_edit_scheduled"),
+    [canUseContentPlanner, isEnabled]
+  );
+
+  const viewOnly = !canUseContentPlanner;
 
   const [month, setMonth] = useState<Date>(new Date());
   const [filter, setFilter] = useState<ContentFilter>("all");
@@ -225,6 +234,26 @@ export default function ContentPlanner() {
 
     if (!itemId || !businessId) return;
 
+    if (viewOnly) {
+      toast({
+        title: "Content Planner disabled",
+        description: "Your package can view the calendar only. Editing is disabled.",
+      });
+
+      // Clean URL so refreshing doesn't keep trying to open it.
+      params.delete("item");
+      params.delete("business");
+      const nextSearch = params.toString();
+      navigate(
+        {
+          pathname: location.pathname,
+          search: nextSearch ? `?${nextSearch}` : "",
+        },
+        { replace: true }
+      );
+      return;
+    }
+
     setEditItemId(itemId);
     setEditBusinessId(businessId);
     setEditOpen(true);
@@ -240,7 +269,7 @@ export default function ContentPlanner() {
       },
       { replace: true }
     );
-  }, [location.pathname, location.search, navigate]);
+  }, [location.pathname, location.search, navigate, toast, viewOnly]);
 
   useEffect(() => {
     let cancelled = false;
@@ -754,6 +783,13 @@ export default function ContentPlanner() {
         <p className="text-muted-foreground">
           Plan your content month by month, review scheduled items, and follow recommendations.
         </p>
+
+        {viewOnly ? (
+          <div className="rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground">
+            Content Planner is disabled for your package. You can view the calendar and scheduled items, but actions and
+            editing are disabled.
+          </div>
+        ) : null}
       </header>
 
       <section className="grid gap-4 lg:grid-cols-3">
@@ -766,7 +802,7 @@ export default function ContentPlanner() {
               </CardTitle>
 
               <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId}>
-                <SelectTrigger className="w-full sm:w-[280px]" disabled={businesses.length <= 1}>
+                <SelectTrigger className="w-full sm:w-[280px]" disabled={viewOnly || businesses.length <= 1}>
                   <SelectValue placeholder="Business" />
                 </SelectTrigger>
                 <SelectContent className="z-50">
@@ -790,9 +826,15 @@ export default function ContentPlanner() {
                 <Calendar
                   mode="single"
                   selected={month}
-                  onSelect={(d) => d && setMonth(d)}
+                  onSelect={(d) => {
+                    if (viewOnly) return;
+                    if (d) setMonth(d);
+                  }}
                   month={month}
-                  onMonthChange={setMonth}
+                  onMonthChange={(d) => {
+                    if (viewOnly) return;
+                    setMonth(d);
+                  }}
                   modifiers={{ hasContent: daysWithItems }}
                   modifiersClassNames={{
                     hasContent: "ring-1 ring-primary/30 rounded-md",
@@ -853,7 +895,7 @@ export default function ContentPlanner() {
             <div className="space-y-2">
               <div className="text-sm font-medium">Filter</div>
               <Select value={filter} onValueChange={(v) => setFilter(v as ContentFilter)}>
-                <SelectTrigger>
+                <SelectTrigger disabled={viewOnly}>
                   <SelectValue placeholder="Select a content type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -905,6 +947,7 @@ export default function ContentPlanner() {
                             size="sm"
                             disabled={rec.kind === "scheduled" && postedScheduledIds.has(rec.id)}
                             onClick={() => {
+                              if (viewOnly) return;
                               if (rec.kind === "scheduled") {
                                 setEditItemId(rec.id);
                                 setEditBusinessId(rec.businessId);
@@ -922,7 +965,9 @@ export default function ContentPlanner() {
                             variant="secondary"
                             size="sm"
                             disabled={
-                              !canSendToTasks || (rec.kind === "scheduled" && postedScheduledIds.has(rec.id))
+                              viewOnly ||
+                              !canSendToTasks ||
+                              (rec.kind === "scheduled" && postedScheduledIds.has(rec.id))
                             }
                             onClick={() => handlePost(rec)}
                           >
@@ -944,6 +989,7 @@ export default function ContentPlanner() {
       <Dialog
         open={postOpen}
         onOpenChange={(open) => {
+          if (viewOnly) return;
           setPostOpen(open);
           if (!open) {
             setPostTarget(null);
@@ -1041,7 +1087,7 @@ export default function ContentPlanner() {
               </div>
 
               <div className="pt-2">
-                <Button type="button" className="w-full" onClick={() => handlePost(viewItem)}>
+                <Button type="button" className="w-full" onClick={() => handlePost(viewItem)} disabled={viewOnly || !canSendToTasks}>
                   Post
                 </Button>
               </div>

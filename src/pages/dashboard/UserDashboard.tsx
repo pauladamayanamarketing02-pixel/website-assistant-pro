@@ -58,7 +58,6 @@ export default function UserDashboard() {
 
   const visibleMenuItems = useMemo(() => {
     const hideWhenDisabledByUrl: Record<string, any> = {
-      '/dashboard/user/content-planner': 'content_planner',
       '/dashboard/user/reporting': 'reporting',
     };
 
