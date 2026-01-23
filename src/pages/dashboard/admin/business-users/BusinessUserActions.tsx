@@ -236,9 +236,20 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
   return (
     <>
       {isPending ? (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" onClick={() => void onApprove()} disabled={!userId || updatingPayment}>
             {updatingPayment ? "Approving..." : "Approve"}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            title="View"
+            onClick={onView}
+            disabled={!userId}
+          >
+            <Eye className="h-4 w-4" />
           </Button>
         </div>
       ) : (
