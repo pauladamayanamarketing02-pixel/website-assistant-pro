@@ -238,15 +238,6 @@ export default function MyPackage() {
                     <span className="text-sm font-normal text-muted-foreground"> /month</span>
                   </p>
                 </div>
-
-                <div className="pt-2">
-                  <Button className="w-full" variant="outline" disabled>
-                    Renew Plan
-                  </Button>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Renewal is handled automatically. Manual renewals will be available soon.
-                  </p>
-                </div>
               </CardContent>
             </Card>
           ) : (
