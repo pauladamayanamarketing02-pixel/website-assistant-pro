@@ -19,6 +19,7 @@ type ProfileRow = {
   name: string;
   email: string;
   status?: string | null;
+  payment_active?: boolean | null;
 };
 
 type AccountRow = {
@@ -27,6 +28,7 @@ type AccountRow = {
   email: string;
   role: string;
   status: string;
+  paymentActive: boolean;
 };
 
 type SortKey = "name" | "email" | "role" | "account_status";
@@ -58,6 +60,15 @@ export default function SuperAdminUsersAssists() {
     return "—";
   };
 
+  const getAccountStatus = (row: Pick<AccountRow, "role" | "paymentActive" | "status">) => {
+    // Match /dashboard/admin/business-users behavior for Business Users:
+    // Active when payment_active=true; Pending when payment_active=false.
+    if (normalizeRole(row.role) === "user") {
+      return row.paymentActive ? "active" : "pending";
+    }
+    return row.status;
+  };
+
   const renderStatusBadge = (status: string) => {
     const label = formatStatusLabel(status);
     if (label === "—") return <span className="text-muted-foreground">—</span>;
@@ -73,7 +84,10 @@ export default function SuperAdminUsersAssists() {
     setLoading(true);
     try {
       const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
-        supabase.from("profiles").select("id,name,email,status").order("created_at", { ascending: false }),
+        supabase
+          .from("profiles")
+          .select("id,name,email,status,payment_active")
+          .order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id,role"),
       ]);
 
@@ -83,13 +97,19 @@ export default function SuperAdminUsersAssists() {
       const roleByUserId = new Map<string, string>();
       (roles as RoleRow[] | null)?.forEach((r) => roleByUserId.set(String(r.user_id), String(r.role)));
 
-      const mapped: AccountRow[] = ((profiles as ProfileRow[] | null) ?? []).map((p) => ({
-        id: String(p.id),
-        name: String(p.name ?? ""),
-        email: String(p.email ?? ""),
-        role: roleByUserId.get(String(p.id)) ?? "unknown",
-        status: String((p as any).status ?? "pending"),
-      }));
+      const mapped: AccountRow[] = ((profiles as ProfileRow[] | null) ?? []).map((p) => {
+        const role = roleByUserId.get(String(p.id)) ?? "unknown";
+        return {
+          id: String(p.id),
+          name: String(p.name ?? ""),
+          email: String(p.email ?? ""),
+          role,
+          status: String((p as any).status ?? "pending"),
+          // Default true here keeps existing behavior elsewhere, but for Super Admin list
+          // we want explicit Pending when payment_active=false.
+          paymentActive: Boolean((p as any).payment_active ?? true),
+        };
+      });
 
       setRows(mapped);
     } catch (err) {
@@ -115,7 +135,7 @@ export default function SuperAdminUsersAssists() {
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       const getSortValue = (row: AccountRow) => {
-        if (sortKey === "account_status") return formatStatusLabel(row.status).toLowerCase();
+        if (sortKey === "account_status") return formatStatusLabel(getAccountStatus(row)).toLowerCase();
         return String((row as any)[sortKey] ?? "").toLowerCase();
       };
 
@@ -236,7 +256,7 @@ export default function SuperAdminUsersAssists() {
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>{r.email}</TableCell>
                       <TableCell className="capitalize">{r.role.replace("_", " ")}</TableCell>
-                      <TableCell>{renderStatusBadge(r.status)}</TableCell>
+                      <TableCell>{renderStatusBadge(getAccountStatus(r))}</TableCell>
                       <TableCell className="text-right">
                         {canLoginAs(r.role) ? (
                           <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>
