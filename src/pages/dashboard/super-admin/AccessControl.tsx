@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AiToolsAccessCard } from "./access-control/AiToolsAccessCard";
+import { AccessRuleRow } from "./access-control/AccessRuleRow";
+import { ContentPlannerRulesGroup } from "./access-control/ContentPlannerRulesGroup";
 
 type PackageRow = {
   id: string;
@@ -23,8 +24,10 @@ type MenuKey =
   | "reporting"
   | "tasks_progress";
 
-const MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
-  { key: "content_planner", label: "Content Planner", description: "Show/hide Content Planner in User Dashboard." },
+// NOTE: We keep a single source-of-truth list for seeding keys in DB.
+const ALL_MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
+  // Content Planner group (rendered as expandable section)
+  { key: "content_planner", label: "Content Planner", description: "Control access to the Content Planner feature in User Dashboard." },
   {
     key: "content_planner_send_to_tasks",
     label: "↳ Send to Tasks",
@@ -35,11 +38,17 @@ const MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
     label: "↳ Edit Scheduled Content",
     description: "Enable/disable editing fields (read-only when disabled) in /dashboard/user/content-planner.",
   },
+
+  // Other items (rendered as flat list)
   { key: "tasks_progress", label: "Tasks & Progress", description: "Enable/disable creating tasks (New Task / Create Task) in User Dashboard." },
   { key: "ai_agents", label: "AI Agents", description: "Enable/disable clicking tools in AI Agents — All Tools." },
   { key: "messages", label: "Messages", description: "Enable/disable sending messages in User Dashboard." },
   { key: "reporting", label: "Reporting & Visibility", description: "Show/hide Reporting & Visibility in User Dashboard." },
 ];
+
+const FLAT_MENU_ITEMS = ALL_MENU_ITEMS.filter(
+  (i) => !["content_planner", "content_planner_send_to_tasks", "content_planner_edit_scheduled"].includes(i.key)
+);
 
 type RuleRow = {
   menu_key: string;
@@ -47,7 +56,7 @@ type RuleRow = {
 };
 
 async function ensureMenuRuleRowsExist(packageId: string, existingKeys: Set<string>) {
-  const missing = MENU_ITEMS.filter((i) => !existingKeys.has(i.key));
+  const missing = ALL_MENU_ITEMS.filter((i) => !existingKeys.has(i.key));
   if (missing.length === 0) return;
 
   // Seed missing keys as enabled=true so they exist as rows in DB.
@@ -227,21 +236,19 @@ export default function SuperAdminAccessControl() {
             <p className="text-muted-foreground text-sm">Select a package to configure.</p>
           ) : (
             <div className="space-y-3">
-              {MENU_ITEMS.map((item) => (
-                <div
-                  key={item.key}
-                  className="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground">{item.label}</div>
-                    <div className="text-xs text-muted-foreground">{item.description}</div>
-                  </div>
+              <ContentPlannerRulesGroup
+                ruleByKey={ruleByKey as any}
+                setRule={setRule as any}
+              />
 
-                  <Switch
-                    checked={Boolean(ruleByKey[item.key])}
-                    onCheckedChange={(v) => setRule(item.key, Boolean(v))}
-                  />
-                </div>
+              {FLAT_MENU_ITEMS.map((item) => (
+                <AccessRuleRow
+                  key={item.key}
+                  label={item.label}
+                  description={item.description}
+                  checked={Boolean(ruleByKey[item.key])}
+                  onCheckedChange={(v) => setRule(item.key, v)}
+                />
               ))}
             </div>
           )}
