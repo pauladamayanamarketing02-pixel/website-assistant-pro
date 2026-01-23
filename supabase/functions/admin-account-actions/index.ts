@@ -42,6 +42,15 @@ function json(status: number, body: unknown) {
   });
 }
 
+function getErrorMessage(e: unknown) {
+  if (e instanceof Error) return e.message;
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return String(e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
@@ -65,14 +74,14 @@ Deno.serve(async (req) => {
     if (requesterErr || !requester?.user) return json(401, { error: "Unauthorized" });
 
     // Authorize requester: admin only
-    const { data: roleRow, error: roleErr } = await admin
+    const { data: roleRows, error: roleErr } = await admin
       .from("user_roles")
       .select("role")
-      .eq("user_id", requester.user.id)
-      .maybeSingle();
+      .eq("user_id", requester.user.id);
 
     if (roleErr) throw roleErr;
-    if (roleRow?.role !== "admin") return json(403, { error: "Forbidden" });
+    const isAdmin = (roleRows ?? []).some((r) => r.role === "admin");
+    if (!isAdmin) return json(403, { error: "Forbidden" });
 
     const body = (await req.json()) as Payload;
 
@@ -185,7 +194,7 @@ Deno.serve(async (req) => {
 
     return json(400, { error: "Invalid action" });
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    return json(500, { error: message });
+    console.error("admin-account-actions error:", e);
+    return json(500, { error: getErrorMessage(e) });
   }
 });

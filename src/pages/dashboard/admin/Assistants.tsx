@@ -79,6 +79,13 @@ export default function AdminAssistants() {
     }
   };
 
+  const formatStatusLabel = (status: string | null) => {
+    const s = String(status ?? "").toLowerCase();
+    if (s === "active") return "Active";
+    if (s === "nonactive") return "Nonactive";
+    return "—";
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -133,7 +140,7 @@ export default function AdminAssistants() {
                       <TableCell className="text-muted-foreground">{row.email}</TableCell>
                       <TableCell className="text-muted-foreground">{row.phone ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{row.country ?? "—"}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.status ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatStatusLabel(row.status)}</TableCell>
                       <TableCell className="text-center">
                         <AssistantActions
                           userId={row.id}
