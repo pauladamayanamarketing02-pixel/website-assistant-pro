@@ -151,6 +151,10 @@ export default function MyPackage() {
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
 
+  const hasUpgradeToScale = upgradePackages.some(
+    (pkg) => normalizeTier(pkg.type) === "scale" || normalizeTier(pkg.name) === "scale" || normalizeTier(pkg.name).includes("scale")
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -238,6 +242,14 @@ export default function MyPackage() {
                     <span className="text-sm font-normal text-muted-foreground"> /month</span>
                   </p>
                 </div>
+
+                {hasUpgradeToScale && (
+                  <div className="pt-2">
+                    <Button className="w-full" variant="outline">
+                      Renew Plan
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (
