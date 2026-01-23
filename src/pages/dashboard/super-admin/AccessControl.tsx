@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AiToolsAccessCard } from "./access-control/AiToolsAccessCard";
 import { AccessRuleRow } from "./access-control/AccessRuleRow";
+import { AiAgentsToolsRulesGroup } from "./access-control/AiAgentsToolsRulesGroup";
 import { ContentPlannerRulesGroup } from "./access-control/ContentPlannerRulesGroup";
 import { TasksProgressRulesGroup } from "./access-control/TasksProgressRulesGroup";
 
@@ -56,7 +56,7 @@ const ALL_MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
   },
 
   // Other items (rendered as flat list)
-  { key: "ai_agents", label: "AI Agents", description: "Enable/disable clicking tools in AI Agents — All Tools." },
+  { key: "ai_agents", label: "AI Agents", description: "(Managed per tool below)" },
   { key: "messages", label: "Messages", description: "Enable/disable sending messages in User Dashboard." },
   { key: "reporting", label: "Reporting & Visibility", description: "Show/hide Reporting & Visibility in User Dashboard." },
 ];
@@ -64,6 +64,7 @@ const ALL_MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
 const FLAT_MENU_ITEMS = ALL_MENU_ITEMS.filter(
   (i) =>
     ![
+      "ai_agents",
       "content_planner",
       "content_planner_send_to_tasks",
       "content_planner_edit_scheduled",
@@ -270,6 +271,8 @@ export default function SuperAdminAccessControl() {
 
               <TasksProgressRulesGroup ruleByKey={ruleByKey as any} setRule={setRule as any} />
 
+              {selectedPackageId ? <AiAgentsToolsRulesGroup packageId={selectedPackageId} /> : null}
+
               {FLAT_MENU_ITEMS.map((item) => (
                 <AccessRuleRow
                   key={item.key}
@@ -283,8 +286,6 @@ export default function SuperAdminAccessControl() {
           )}
         </CardContent>
       </Card>
-
-      {selectedPackageId ? <AiToolsAccessCard packageId={selectedPackageId} /> : null}
     </div>
   );
 }
