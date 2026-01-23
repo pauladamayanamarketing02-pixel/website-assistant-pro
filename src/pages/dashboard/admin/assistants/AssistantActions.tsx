@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Eye, KeyRound, Mail, Trash2 } from "lucide-react";
+import { CircleCheck, CircleX, Eye, KeyRound, Mail, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,13 +28,16 @@ import { supabase } from "@/integrations/supabase/client";
 type Props = {
   userId: string;
   email: string;
+  status?: string | null;
   onView: () => void;
   onDeleted?: () => void;
+  onUpdated?: () => void;
 };
 
-export function AssistantActions({ userId, email, onView, onDeleted }: Props) {
+export function AssistantActions({ userId, email, status, onView, onDeleted, onUpdated }: Props) {
   const { toast } = useToast();
   const [sendingReset, setSendingReset] = useState(false);
+  const [settingStatus, setSettingStatus] = useState<"active" | "nonactive" | null>(null);
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -48,6 +51,35 @@ export function AssistantActions({ userId, email, onView, onDeleted }: Props) {
   const [deleting, setDeleting] = useState(false);
 
   const canTrigger = useMemo(() => Boolean(userId) && Boolean(email && email !== "—"), [email, userId]);
+
+  const normalizedStatus = useMemo(() => String(status ?? "active").toLowerCase(), [status]);
+  const isActive = normalizedStatus === "active";
+
+  const setProfileStatus = async (next: "active" | "nonactive") => {
+    if (!userId) return;
+    setSettingStatus(next);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-account-actions", {
+        body: { action: "set_profile_status", user_id: userId, status: next },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error(String((data as any).error));
+
+      toast({
+        title: "Updated",
+        description: `Assistant status set to ${next}.`,
+      });
+      onUpdated?.();
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed",
+        description: e?.message ?? "Could not update assistant status.",
+      });
+    } finally {
+      setSettingStatus(null);
+    }
+  };
 
   const onResetPassword = async () => {
     if (!email || email === "—") return;
@@ -162,9 +194,31 @@ export function AssistantActions({ userId, email, onView, onDeleted }: Props) {
           variant="ghost"
           size="icon"
           className="h-8 w-8"
+          title="Set Active"
+          onClick={() => void setProfileStatus("active")}
+          disabled={!userId || isActive || sendingReset || sendingEmailChange || deleting || settingStatus !== null}
+        >
+          <CircleCheck className="h-4 w-4 text-success" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="Set Nonactive"
+          onClick={() => void setProfileStatus("nonactive")}
+          disabled={!userId || !isActive || sendingReset || sendingEmailChange || deleting || settingStatus !== null}
+        >
+          <CircleX className="h-4 w-4 text-destructive" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
           title="Reset Password"
           onClick={onResetPassword}
-          disabled={!canTrigger || sendingReset || sendingEmailChange || deleting}
+          disabled={!canTrigger || sendingReset || sendingEmailChange || deleting || settingStatus !== null}
         >
           <KeyRound className="h-4 w-4" />
         </Button>
@@ -175,7 +229,7 @@ export function AssistantActions({ userId, email, onView, onDeleted }: Props) {
           className="h-8 w-8"
           title="Reset Email"
           onClick={openEmailDialog}
-          disabled={!canTrigger || sendingReset || sendingEmailChange || deleting}
+          disabled={!canTrigger || sendingReset || sendingEmailChange || deleting || settingStatus !== null}
         >
           <Mail className="h-4 w-4" />
         </Button>
@@ -186,7 +240,7 @@ export function AssistantActions({ userId, email, onView, onDeleted }: Props) {
           className="h-8 w-8"
           title="Delete"
           onClick={() => setDeleteOpen(true)}
-          disabled={!userId || sendingReset || sendingEmailChange || deleting}
+          disabled={!userId || sendingReset || sendingEmailChange || deleting || settingStatus !== null}
         >
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
