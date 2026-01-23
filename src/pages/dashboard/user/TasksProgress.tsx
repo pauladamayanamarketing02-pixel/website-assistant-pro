@@ -142,6 +142,7 @@ export default function TasksProgress() {
   const { toast } = useToast();
   const { isEnabled } = usePackageMenuRules(user?.id);
   const canCreateTasks = isEnabled('tasks_progress');
+  const canEditTasks = isEnabled('tasks_progress_editing');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -467,8 +468,11 @@ export default function TasksProgress() {
     const deriveStatusFromAssignee = (assignee: string) =>
       assignee && assignee !== 'none' ? ('assigned' as Task['status']) : ('pending' as Task['status']);
 
-    // Only allow editing of the fields when Edit mode is enabled
-    const canEditDetails = isEditing;
+    // View-only when Task Editing is disabled for the package.
+    const viewOnly = !canEditTasks;
+
+    // Only allow editing of the fields when Edit mode is enabled AND package allows editing
+    const canEditDetails = isEditing && !viewOnly;
 
     const derivedStatus = deriveStatusFromAssignee(editData.assignee);
 
@@ -693,6 +697,7 @@ export default function TasksProgress() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    if (viewOnly) return;
                     setIsEditing((v) => {
                       const next = !v;
                       setEditUploadedFile(null);
@@ -711,6 +716,7 @@ export default function TasksProgress() {
                     });
                   }}
                   aria-pressed={isEditing}
+                  disabled={viewOnly}
                 >
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
@@ -914,7 +920,7 @@ export default function TasksProgress() {
               </div>
 
               <div className="flex justify-end pt-2">
-                <Button onClick={handleSaveChanges} disabled={!isEditing}>
+                <Button onClick={handleSaveChanges} disabled={!isEditing || viewOnly}>
                   Save Changes
                 </Button>
               </div>
@@ -933,7 +939,7 @@ export default function TasksProgress() {
                 <Button
                   size="sm"
                   variant={selectedTask.status === 'ready_for_review' ? 'default' : 'outline'}
-                  disabled={selectedTask.status !== 'ready_for_review'}
+                  disabled={viewOnly || selectedTask.status !== 'ready_for_review'}
                   onClick={() => setConfirmCompleteOpen(true)}
                 >
                   <CheckSquare className="h-4 w-4 mr-2" />
@@ -950,7 +956,9 @@ export default function TasksProgress() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>No</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleMarkCompleted}>Yes</AlertDialogAction>
+                      <AlertDialogAction onClick={handleMarkCompleted} disabled={viewOnly}>
+                        Yes
+                      </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -1006,7 +1014,7 @@ export default function TasksProgress() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled={decidingRequestId === req.id}
+                                disabled={viewOnly || decidingRequestId === req.id}
                                 onClick={() => handleDecideDeleteRequest(req, 'rejected')}
                               >
                                 Reject
@@ -1014,7 +1022,9 @@ export default function TasksProgress() {
                               <Button
                                 size="sm"
                                 variant={approveCanceledRequestIds.has(req.id) ? 'outline' : 'default'}
-                                disabled={decidingRequestId === req.id || approveCanceledRequestIds.has(req.id)}
+                                disabled={
+                                  viewOnly || decidingRequestId === req.id || approveCanceledRequestIds.has(req.id)
+                                }
                                 onClick={() => {
                                   setConfirmApproveRequest(req);
                                   setConfirmApproveOpen(true);
