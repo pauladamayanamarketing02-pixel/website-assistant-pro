@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,10 +14,12 @@ type RuleRow = {
 export function usePackageAiToolRules(userId?: string) {
   const [loading, setLoading] = useState(true);
   const [enabledByToolId, setEnabledByToolId] = useState<Record<string, boolean> | null>(null);
+  const lastPackageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const run = async () => {
       setLoading(true);
@@ -35,6 +37,37 @@ export function usePackageAiToolRules(userId?: string) {
         if (!packageId) {
           if (!cancelled) setEnabledByToolId(null);
           return;
+        }
+
+        // If package changed, re-bind realtime listener.
+        if (lastPackageIdRef.current !== packageId) {
+          lastPackageIdRef.current = packageId;
+          if (channel) {
+            try {
+              await supabase.removeChannel(channel);
+            } catch {
+              // ignore
+            }
+            channel = null;
+          }
+
+          // Keep rules fresh when super-admin toggles tool access.
+          channel = supabase
+            .channel(`realtime:package_ai_tool_rules:${packageId}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "*",
+                schema: "public",
+                table: "package_ai_tool_rules",
+                filter: `package_id=eq.${packageId}`,
+              },
+              () => {
+                // Re-fetch rules on any change.
+                void run();
+              }
+            )
+            .subscribe();
         }
 
         const { data: rules, error } = await (supabase as any)
@@ -62,8 +95,24 @@ export function usePackageAiToolRules(userId?: string) {
     };
 
     void run();
+
+    const onFocus = () => {
+      void run();
+    };
+
+    // Ensure we also refresh when the user switches tabs.
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
     return () => {
       cancelled = true;
+
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [userId]);
 
