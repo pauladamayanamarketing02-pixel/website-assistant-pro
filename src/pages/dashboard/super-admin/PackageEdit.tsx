@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import PackageAddOnsEditor, { type PackageAddOnDraft } from "@/components/super-admin/PackageAddOnsEditor";
+import { DEFAULT_DURATION_PRESETS, formatDurationLabel, type PackageDurationRow } from "@/lib/packageDurations";
 
 type PackageRow = {
   id: string;
@@ -20,6 +21,14 @@ type PackageRow = {
   price: number | null;
   features: string[];
   is_active: boolean;
+};
+
+type DurationDraft = {
+  id?: string;
+  duration_months: number;
+  discount_percent: number;
+  is_active: boolean;
+  sort_order: number;
 };
 
 function normalizeFeatures(raw: unknown): string[] {
@@ -45,6 +54,9 @@ export default function SuperAdminPackageEdit() {
   const [pkg, setPkg] = useState<PackageRow | null>(null);
   const [addOns, setAddOns] = useState<PackageAddOnDraft[]>([]);
   const [removedAddOnIds, setRemovedAddOnIds] = useState<string[]>([]);
+
+  const [durations, setDurations] = useState<DurationDraft[]>([]);
+  const [removedDurationIds, setRemovedDurationIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!id) {
@@ -77,6 +89,27 @@ export default function SuperAdminPackageEdit() {
           features: normalizeFeatures(data.features),
           is_active: Boolean(data.is_active),
         });
+
+        // Load durations for this package
+        const { data: durationRows, error: durationErr } = await (supabase as any)
+          .from("package_durations")
+          .select("id,package_id,duration_months,discount_percent,is_active,sort_order")
+          .eq("package_id", String(data.id))
+          .order("sort_order", { ascending: true })
+          .order("duration_months", { ascending: true });
+
+        if (durationErr) throw durationErr;
+
+        setDurations(
+          ((durationRows as PackageDurationRow[]) || []).map((r: any) => ({
+            id: String(r.id),
+            duration_months: Number(r.duration_months ?? 1),
+            discount_percent: Number(r.discount_percent ?? 0),
+            is_active: Boolean(r.is_active ?? true),
+            sort_order: Number(r.sort_order ?? 0),
+          }))
+        );
+        setRemovedDurationIds([]);
 
         // Load add-ons for this package
         const { data: addOnRows, error: addOnErr } = await (supabase as any)
@@ -196,6 +229,58 @@ export default function SuperAdminPackageEdit() {
         if (delErr) throw delErr;
       }
 
+      // Save durations + delete removed ones
+      const validDurations = durations
+        .map((d) => ({
+          ...d,
+          duration_months: Number(d.duration_months),
+          discount_percent: Number(d.discount_percent ?? 0),
+          sort_order: Number(d.sort_order ?? 0),
+        }))
+        .filter((d) => Number.isFinite(d.duration_months) && d.duration_months > 0);
+
+      const existingDurations = validDurations.filter((d) => Boolean(d.id));
+      const newDurations = validDurations.filter((d) => !d.id);
+
+      if (existingDurations.length > 0) {
+        const updateResults = await Promise.all(
+          existingDurations.map((d) => {
+            const updatePayload = {
+              package_id: pkg.id,
+              duration_months: Number(d.duration_months),
+              discount_percent: Number(d.discount_percent ?? 0),
+              is_active: Boolean(d.is_active ?? true),
+              sort_order: Number(d.sort_order ?? 0),
+            };
+            return (supabase as any).from("package_durations").update(updatePayload).eq("id", d.id);
+          })
+        );
+
+        const firstErr = updateResults.find((r) => r?.error)?.error;
+        if (firstErr) throw firstErr;
+      }
+
+      if (newDurations.length > 0) {
+        const insertPayload = newDurations.map((d) => ({
+          package_id: pkg.id,
+          duration_months: Number(d.duration_months),
+          discount_percent: Number(d.discount_percent ?? 0),
+          is_active: Boolean(d.is_active ?? true),
+          sort_order: Number(d.sort_order ?? 0),
+        }));
+
+        const { error: upsertErr } = await (supabase as any)
+          .from("package_durations")
+          .upsert(insertPayload, { onConflict: "package_id,duration_months", defaultToNull: false });
+
+        if (upsertErr) throw upsertErr;
+      }
+
+      if (removedDurationIds.length > 0) {
+        const { error: delErr } = await (supabase as any).from("package_durations").delete().in("id", removedDurationIds);
+        if (delErr) throw delErr;
+      }
+
       toast.success("Package berhasil disimpan");
       navigate("/dashboard/super-admin/packages");
     } catch (err: any) {
@@ -288,6 +373,112 @@ export default function SuperAdminPackageEdit() {
                 onRemove={(idToRemove) => setRemovedAddOnIds((prev) => (prev.includes(idToRemove) ? prev : [...prev, idToRemove]))}
                 disabled={saving}
               />
+
+              <div className="space-y-3 rounded-lg border border-border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground">Duration & Discount</div>
+                    <div className="text-xs text-muted-foreground">
+                      Opsi durasi untuk onboarding (diskon dari total harga normal per bulan).
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving}
+                    onClick={() => {
+                      const existing = new Set(durations.map((d) => Number(d.duration_months)));
+                      const missing = DEFAULT_DURATION_PRESETS.filter((p) => !existing.has(p.months));
+                      if (missing.length === 0) {
+                        toast.info("Preset durations sudah ada semua");
+                        return;
+                      }
+                      setDurations((prev) => [
+                        ...prev,
+                        ...missing.map((m) => ({
+                          duration_months: m.months,
+                          discount_percent: m.discountPercent,
+                          is_active: true,
+                          sort_order: m.sortOrder,
+                        })),
+                      ]);
+                    }}
+                  >
+                    Add Preset (6/12/24/36)
+                  </Button>
+                </div>
+
+                {durations.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Belum ada duration. Klik “Add Preset”.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {durations
+                      .slice()
+                      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.duration_months - b.duration_months)
+                      .map((d, idx) => (
+                        <div key={d.id ?? `${d.duration_months}-${idx}`} className="grid gap-3 sm:grid-cols-12 items-end">
+                          <div className="sm:col-span-3 grid gap-2">
+                            <Label>Duration</Label>
+                            <Input value={formatDurationLabel(d.duration_months)} disabled />
+                          </div>
+
+                          <div className="sm:col-span-3 grid gap-2">
+                            <Label>Discount %</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={d.discount_percent}
+                              onChange={(e) => {
+                                const v = e.target.value === "" ? 0 : Number(e.target.value);
+                                setDurations((prev) =>
+                                  prev.map((x) =>
+                                    x === d ? { ...x, discount_percent: Number.isFinite(v) ? v : 0 } : x
+                                  )
+                                );
+                              }}
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 grid gap-2">
+                            <Label>Sort</Label>
+                            <Input
+                              type="number"
+                              value={d.sort_order}
+                              onChange={(e) => {
+                                const v = e.target.value === "" ? 0 : Number(e.target.value);
+                                setDurations((prev) => prev.map((x) => (x === d ? { ...x, sort_order: v } : x)));
+                              }}
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                            <div className="text-sm text-foreground">Active</div>
+                            <Switch
+                              checked={d.is_active}
+                              onCheckedChange={(v) => setDurations((prev) => prev.map((x) => (x === d ? { ...x, is_active: v } : x)))}
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              disabled={saving}
+                              onClick={() => {
+                                if (d.id) setRemovedDurationIds((prev) => (prev.includes(d.id!) ? prev : [...prev, d.id!]));
+                                setDurations((prev) => prev.filter((x) => x !== d));
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>

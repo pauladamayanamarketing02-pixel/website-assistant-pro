@@ -3,7 +3,10 @@ import { Check, Plus, Minus, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { computeDiscountedTotal, type DurationOption } from '@/lib/packageDurations';
 
 interface AddOn {
   id: string;
@@ -21,6 +24,9 @@ interface PackageCardProps {
   basePrice: number;
   features: string[];
   addOns?: AddOn[];
+  durationOptions?: DurationOption[];
+  selectedDurationMonths?: number | null;
+  onDurationChange?: (months: number) => void;
   isPopular?: boolean;
   isSelected?: boolean;
   onSelect: (totalPrice: number, addOns: Record<string, number>) => void;
@@ -51,6 +57,9 @@ export default function PackageCard({
   basePrice,
   features,
   addOns = [],
+  durationOptions = [],
+  selectedDurationMonths = null,
+  onDurationChange,
   isPopular = false,
   isSelected = false,
   onSelect,
@@ -63,6 +72,20 @@ export default function PackageCard({
       return sum + quantity * addOn.pricePerUnit;
     }, basePrice);
   }, [addOns, basePrice, selectedAddOns]);
+
+  const selectedDuration = useMemo(() => {
+    const months = selectedDurationMonths ?? 1;
+    const opt = durationOptions.find((d) => d.months === months);
+    return opt ?? { months: 1, label: '1 Month', discountPercent: 0, isFromDb: false };
+  }, [durationOptions, selectedDurationMonths]);
+
+  const discountedTotal = useMemo(() => {
+    return computeDiscountedTotal({
+      monthlyPrice: totalPrice,
+      months: selectedDuration.months,
+      discountPercent: selectedDuration.discountPercent,
+    });
+  }, [selectedDuration.discountPercent, selectedDuration.months, totalPrice]);
 
   // Keep parent (SelectPackage) in sync when user changes add-ons on the selected card.
   useEffect(() => {
@@ -105,10 +128,39 @@ export default function PackageCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-foreground">${totalPrice}</span>
-          <span className="text-muted-foreground">/ month</span>
+        <div className="space-y-1">
+          <div className="flex items-baseline gap-1">
+            <span className="text-3xl font-bold text-foreground">${totalPrice}</span>
+            <span className="text-muted-foreground">/ month</span>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Total {selectedDuration.label}: <span className="font-medium text-foreground">${discountedTotal}</span>
+            {selectedDuration.discountPercent > 0 && (
+              <span className="ml-2">(Save {selectedDuration.discountPercent}%)</span>
+            )}
+          </div>
         </div>
+
+        {durationOptions.length > 0 && (
+          <div className="space-y-2 rounded-lg border border-border p-3" onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-medium text-foreground">Duration (required)</div>
+            <RadioGroup
+              value={String(selectedDuration.months)}
+              onValueChange={(v) => onDurationChange?.(Number(v))}
+              className="grid gap-2"
+            >
+              {durationOptions.map((opt) => (
+                <div key={opt.months} className="flex items-center gap-2">
+                  <RadioGroupItem value={String(opt.months)} id={`${type}-dur-${opt.months}`} />
+                  <Label htmlFor={`${type}-dur-${opt.months}`} className="cursor-pointer">
+                    {opt.label}
+                    {opt.discountPercent > 0 ? ` (-${opt.discountPercent}%)` : ''}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        )}
 
         <ul className="space-y-2">
           {features.map((feature, index) => (
