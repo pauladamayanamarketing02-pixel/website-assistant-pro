@@ -29,9 +29,12 @@ import TasksProgress from './user/TasksProgress';
 import Messages from './user/Messages';
 import UserSupport from './user/Support';
 import MyPackage from './user/MyPackage';
-import Reporting from './user/Reporting';
 import LogActivity from './user/LogActivity';
 import UserSettings from './user/Settings';
+
+import ReportingLayout from './user/reporting/ReportingLayout';
+import TaskReports from './user/reporting/TaskReports';
+import ReportingComingSoon from './user/reporting/ReportingComingSoon';
 
 const menuItems: UserNavItem[] = [
   { title: 'Overview', url: '/dashboard/user/overview', icon: Home },
@@ -248,8 +251,17 @@ export default function UserDashboard() {
               <Route path="package" element={<MyPackage />} />
               <Route
                 path="reporting"
-                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <Reporting />}
-              />
+                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <ReportingLayout />}
+              >
+                <Route index element={<Navigate to="task-reports" replace />} />
+                <Route path="task-reports" element={<TaskReports />} />
+                <Route path="performance-summary" element={<ReportingComingSoon title="Performance Summary" />} />
+                <Route path="local-insights" element={<ReportingComingSoon title="Local Insights" />} />
+                <Route path="keyword-rankings" element={<ReportingComingSoon title="Keyword Rankings" />} />
+                <Route path="traffic-insights" element={<ReportingComingSoon title="Traffic Insights" />} />
+                <Route path="conversion-insights" element={<ReportingComingSoon title="Conversion Insights" />} />
+                <Route path="downloadable-reports" element={<ReportingComingSoon title="Downloadable Reports" />} />
+              </Route>
               <Route
                 path="log-activity"
                 element={<LogActivity />}
