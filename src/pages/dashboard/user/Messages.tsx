@@ -39,6 +39,7 @@ interface AssistContact {
   name: string;
   email: string;
   avatar_url: string | null;
+  status?: string;
 }
 
 export default function Messages() {
@@ -79,36 +80,21 @@ export default function Messages() {
   useEffect(() => {
     const fetchAssists = async () => {
       try {
-        // Get Assist accounts (role = 'assist') using a DB function (more reliable than client-side joins)
-        const { data: assistAccounts, error: rpcError } = await supabase.rpc('get_assist_accounts');
+        // Use RLS-safe RPC and filter contacts to Active only (hide Nonactive)
+        const { data: contacts, error: rpcError } = await supabase.rpc('get_assist_contacts');
         if (rpcError) throw rpcError;
 
-        const assistIds = (assistAccounts ?? []).map((a: any) => a.id);
-        if (assistIds.length === 0) {
-          setAssists([]);
-          setSelectedAssist(null);
-          return;
-        }
+        const normalized = (contacts ?? []).map((c: any) => ({
+          id: String(c.id),
+          name: String(c.name ?? ''),
+          email: String(c.email ?? ''),
+          avatar_url: (c.avatar_url ?? null) as string | null,
+          status: String(c.status ?? 'active').toLowerCase().trim(),
+        })) as AssistContact[];
 
-        // Fetch optional profile fields for display (email/avatar)
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email, avatar_url')
-          .in('id', assistIds);
-        if (profilesError) throw profilesError;
-
-        const merged = (assistAccounts ?? []).map((a: any) => {
-          const p = (profiles ?? []).find((x: any) => x.id === a.id);
-          return {
-            id: a.id,
-            name: a.name,
-            email: p?.email ?? '',
-            avatar_url: p?.avatar_url ?? null,
-          } as AssistContact;
-        });
-
-        setAssists(merged);
-        if (merged.length > 0) setSelectedAssist(merged[0]);
+        const activeOnly = normalized.filter((c) => c.status === 'active');
+        setAssists(activeOnly);
+        setSelectedAssist(activeOnly[0] ?? null);
       } catch (error: any) {
         toast({
           variant: 'destructive',
