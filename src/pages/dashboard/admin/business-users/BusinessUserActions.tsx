@@ -30,7 +30,7 @@ type Props = {
   email: string;
   paymentActive: boolean;
   accountStatus: "pending" | "approved" | "active" | "suspended" | "expired";
-  onView: () => void;
+  onView?: () => void;
   onDeleted?: () => void;
   onUpdated?: () => void;
 };
@@ -59,6 +59,10 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
 
   const accountStatusLabel = paymentActive ? "Active" : "Pending";
   const nextAccountStatusLabel = nextPaymentActive ? "Active" : "Pending";
+
+  const handleView = () => {
+    onView?.();
+  };
 
   const onConfirmTogglePayment = async () => {
     if (!userId) return;
@@ -247,7 +251,7 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
             className="h-8 w-8"
             title="View"
             type="button"
-            onClick={onView}
+            onClick={handleView}
           >
             <Eye className="h-4 w-4" />
           </Button>
@@ -302,7 +306,7 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
 
-        <Button variant="outline" size="icon" className="h-8 w-8" title="View" type="button" onClick={onView}>
+        <Button variant="outline" size="icon" className="h-8 w-8" title="View" type="button" onClick={handleView}>
           <Eye className="h-4 w-4" />
         </Button>
       </div>
