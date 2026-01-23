@@ -224,20 +224,35 @@ export default function SelectPackage() {
     setTotalPrice(price);
     setSelectedAddOns(addOns);
 
-    // Ensure duration has a value (required). Default to first option (usually 1 month).
+    // If there are duration options beyond the implicit 1 month, the user must explicitly pick one.
+    // Otherwise, default to 1 month.
     setSelectedDurationByPackageId((prev) => {
       if (prev[pkgId]) return prev;
       const opts = buildDurationOptionsFromDb(dbDurationsByPackageId[pkgId]);
-      const first = opts[0]?.months ?? 1;
-      return { ...prev, [pkgId]: first };
+      const visible = opts.filter((o) => o.months !== 1);
+      if (visible.length === 0) return { ...prev, [pkgId]: 1 };
+      return prev;
     });
   };
 
-  // Duration is optional in UI; default to 1 month if user hasn't selected one.
-  const selectedDurationMonths = selectedPackage ? (selectedDurationByPackageId[selectedPackage] ?? 1) : null;
+  const selectedDurationOptions = useMemo(() => {
+    if (!selectedPackage) return [];
+    return buildDurationOptionsFromDb(dbDurationsByPackageId[selectedPackage]);
+  }, [dbDurationsByPackageId, selectedPackage]);
 
-  const selectedDurationMeta = selectedPackage
-    ? buildDurationOptionsFromDb(dbDurationsByPackageId[selectedPackage]).find((o) => o.months === (selectedDurationMonths ?? 1))
+  const visibleSelectedDurationOptions = useMemo(
+    () => selectedDurationOptions.filter((o) => o.months !== 1),
+    [selectedDurationOptions]
+  );
+
+  const requiresDurationPick = visibleSelectedDurationOptions.length > 0;
+
+  const selectedDurationMonths = selectedPackage
+    ? (selectedDurationByPackageId[selectedPackage] ?? (requiresDurationPick ? null : 1))
+    : null;
+
+  const selectedDurationMeta = selectedPackage && selectedDurationMonths
+    ? selectedDurationOptions.find((o) => o.months === selectedDurationMonths)
     : null;
 
   const totalWithDuration = useMemo(() => {
@@ -454,13 +469,15 @@ export default function SelectPackage() {
           <Button
             size="lg"
             onClick={handleContinue}
-            disabled={isSubmitting || !selectedPackage}
+            disabled={isSubmitting || !selectedPackage || (requiresDurationPick && !selectedDurationMonths)}
             className="px-8"
           >
             {isSubmitting
               ? 'Setting up...'
               : selectedPackage
-                ? `Continue with $${totalWithDuration} (${selectedDurationMeta?.label ?? '1 Month'})`
+                ? (requiresDurationPick && !selectedDurationMonths)
+                  ? 'Choose a duration to continue'
+                  : `Continue with $${totalWithDuration} (${selectedDurationMeta?.label ?? '1 Month'})`
                 : 'Select a package to continue'}
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
