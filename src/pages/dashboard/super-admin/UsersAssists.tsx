@@ -20,6 +20,7 @@ type ProfileRow = {
   email: string;
   status?: string | null;
   payment_active?: boolean | null;
+  account_status?: string | null;
 };
 
 type AccountRow = {
@@ -29,6 +30,7 @@ type AccountRow = {
   role: string;
   status: string;
   paymentActive: boolean;
+  accountStatus: string;
 };
 
 type SortKey = "name" | "email" | "role" | "account_status";
@@ -55,18 +57,32 @@ export default function SuperAdminUsersAssists() {
   const formatStatusLabel = (status: string) => {
     const s = String(status ?? "").toLowerCase().trim();
     if (s === "active") return "Active";
-    if (s === "inactive" || s === "nonactive") return "Nonactive";
+    if (s === "approved") return "Approved";
+    if (s === "pending") return "Pending";
+    if (s === "suspended" || s === "inactive" || s === "nonactive" || s === "blacklisted") return "Suspended";
+    if (s === "expired") return "Expired";
     if (s === "pending") return "Pending";
     return "—";
   };
 
+  const normalizeAccountStatus = (status: string) => {
+    const s = String(status ?? "").toLowerCase().trim();
+    // Back-compat with previous enum values
+    if (s === "nonactive" || s === "inactive" || s === "blacklisted") return "suspended";
+    if (s === "") return "pending";
+    return s;
+  };
+
   const getAccountStatus = (row: Pick<AccountRow, "role" | "paymentActive" | "status">) => {
-    // Match /dashboard/admin/business-users behavior for Business Users:
-    // Active when payment_active=true; Pending when payment_active=false.
+    // For role=user, show richer onboarding states from account_status.
+    // payment_active=true always means Active access.
     if (normalizeRole(row.role) === "user") {
-      return row.paymentActive ? "active" : "pending";
+      const r = row as any as AccountRow;
+      if (r.paymentActive) return "active";
+      return normalizeAccountStatus(r.accountStatus);
     }
-    return row.status;
+    // For assistants/admins keep existing profiles.status behavior.
+    return String((row as any).status ?? "pending");
   };
 
   const renderStatusBadge = (status: string) => {
@@ -86,7 +102,7 @@ export default function SuperAdminUsersAssists() {
       const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id,name,email,status,payment_active")
+          .select("id,name,email,status,payment_active,account_status")
           .order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id,role"),
       ]);
@@ -105,6 +121,7 @@ export default function SuperAdminUsersAssists() {
           email: String(p.email ?? ""),
           role,
           status: String((p as any).status ?? "pending"),
+          accountStatus: String((p as any).account_status ?? "pending"),
           // Default true here keeps existing behavior elsewhere, but for Super Admin list
           // we want explicit Pending when payment_active=false.
           paymentActive: Boolean((p as any).payment_active ?? true),

@@ -24,7 +24,7 @@ import {
 
 import { BusinessUserActions } from "./business-users/BusinessUserActions";
 
-type BusinessStatus = "active" | "pending" | "inactive" | "trial" | "expired" | "cancelled";
+ type BusinessStatus = "pending" | "approved" | "active" | "suspended" | "expired";
 
 type BusinessPackage =
   | "starter"
@@ -42,29 +42,30 @@ type BusinessAccountRow = {
   contactName: string;
   email: string;
   phone: string;
-  status: BusinessStatus;
+    status: BusinessStatus;
   package: BusinessPackage;
   paymentActive: boolean;
 };
 
 const statusLabel: Record<BusinessStatus, string> = {
-  active: "Active",
   pending: "Pending",
-  inactive: "Inactive",
-  trial: "Trial",
+  approved: "Approved",
+  active: "Active",
+  suspended: "Suspended",
   expired: "Expired",
-  cancelled: "Cancelled",
 };
 
-const mapDbStatusToUi = (status: unknown): BusinessStatus => {
-  const s = String(status ?? "active").toLowerCase();
-  if (s === "active") return "active";
+const mapDbAccountStatusToUi = (status: unknown, paymentActive: boolean): BusinessStatus => {
+  // payment_active=true always means Active access, regardless of intermediate states.
+  if (paymentActive) return "active";
+  const s = String(status ?? "pending").toLowerCase().trim();
   if (s === "pending") return "pending";
-  if (s === "inactive") return "inactive";
-  if (s === "trial") return "trial";
+  if (s === "approved") return "approved";
   if (s === "expired") return "expired";
-  if (s === "cancelled") return "cancelled";
-  return "active";
+  // Back-compat for old enum values
+  if (s === "nonactive" || s === "blacklisted" || s === "suspended") return "suspended";
+  if (s === "active") return "active";
+  return "pending";
 };
 
 const mapDbPackageToUi = (pkgType: unknown): BusinessPackage => {
@@ -109,7 +110,7 @@ export default function AdminBusinessUsers() {
       // 2) fetch profiles for email/name/phone/status
       const { data: profiles, error: profilesError } = await (supabase as any)
         .from("profiles")
-        .select("id, name, email, phone, status, payment_active")
+        .select("id, name, email, phone, account_status, payment_active")
         .in("id", userIds);
 
       if (profilesError) throw profilesError;
@@ -147,6 +148,8 @@ export default function AdminBusinessUsers() {
         const businessNumber = b?.business_number as number | null | undefined;
         const businessId = businessNumber ? `B${String(businessNumber).padStart(5, "0")}` : "—";
 
+        const paymentActive = Boolean(p?.payment_active ?? true);
+
         return {
           userId: p.id,
           businessId,
@@ -154,9 +157,9 @@ export default function AdminBusinessUsers() {
           contactName: p?.name || "—",
           email: p?.email || "—",
           phone: p?.phone || "—",
-          status: mapDbStatusToUi(p?.status),
+          status: mapDbAccountStatusToUi(p?.account_status, paymentActive),
           package: packageByUserId.get(p.id) ?? "custom",
-          paymentActive: Boolean(p?.payment_active ?? true),
+          paymentActive,
         };
       });
 
@@ -230,10 +233,9 @@ export default function AdminBusinessUsers() {
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="trial">Trial</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
                   <SelectItem value="expired">Expired</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -272,13 +274,14 @@ export default function AdminBusinessUsers() {
                         <TableCell className="text-muted-foreground">{row.contactName}</TableCell>
                         <TableCell className="text-muted-foreground">{row.email}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{row.paymentActive ? "Active" : "Pending"}</Badge>
+                          <Badge variant="secondary">{statusLabel[row.status]}</Badge>
                         </TableCell>
                         <TableCell className="text-center">
                           <BusinessUserActions
                             userId={row.userId}
                             email={row.email}
                             paymentActive={row.paymentActive}
+                            accountStatus={row.status}
                             onUpdated={fetchBusinessUsers}
                             onDeleted={fetchBusinessUsers}
                             onView={() => navigate(`/dashboard/admin/business-users/${row.userId}`)}
