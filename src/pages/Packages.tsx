@@ -15,7 +15,15 @@ type FaqRow = Database["public"]["Tables"]["website_faqs"]["Row"];
 type PackageRow = Database["public"]["Tables"]["packages"]["Row"];
 type PublicPackageRow = PackageRow & { is_recommended?: boolean };
 
-const PUBLIC_PACKAGE_NAME_ORDER = ["starter", "growth", "pro", "optimize", "scale", "dominate"] as const;
+const PUBLIC_PACKAGE_NAME_ORDER = [
+  "starter",
+  "growth",
+  "pro",
+  "optimize",
+  "scale",
+  "dominate",
+  "custom",
+] as const;
 
 function sortPackagesForPublic(p1: PublicPackageRow, p2: PublicPackageRow) {
   const a = (p1.name ?? "").trim().toLowerCase();

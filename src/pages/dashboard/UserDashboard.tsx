@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, Routes, Route, Navigate } from 'react-router-dom';
+import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
 import {
   Home,
   Building2,
@@ -56,6 +56,7 @@ const menuItems: UserNavItem[] = [
 export default function UserDashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [paymentActive, setPaymentActive] = useState<boolean | null>(null);
 
@@ -210,7 +211,12 @@ export default function UserDashboard() {
             </div>
           </header>
 
-          <main className="flex-1 p-6 bg-background overflow-auto">
+          <main
+            className={
+              "flex-1 p-6 bg-background overflow-auto " +
+              (location.pathname.endsWith('/dashboard/user/package') ? 'lg:overflow-hidden' : '')
+            }
+          >
             <Routes>
               <Route
                 index
