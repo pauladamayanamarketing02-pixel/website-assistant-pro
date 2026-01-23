@@ -25,11 +25,13 @@ type AccountRow = {
   id: string;
   name: string;
   email: string;
+  businessName: string;
+  businessType: string;
   role: string;
   status: string;
 };
 
-type SortKey = "name" | "email" | "role" | "account_status";
+type SortKey = "name" | "businessName" | "businessType" | "role" | "account_status";
 type SortDir = "asc" | "desc";
 
 type RoleFilter = "all" | "user" | "assistant" | "super_admin";
@@ -83,10 +85,31 @@ export default function SuperAdminUsersAssists() {
       const roleByUserId = new Map<string, string>();
       (roles as RoleRow[] | null)?.forEach((r) => roleByUserId.set(String(r.user_id), String(r.role)));
 
+      const profileIds = ((profiles as ProfileRow[] | null) ?? []).map((p) => String(p.id)).filter(Boolean);
+      const businessByUserId = new Map<string, { business_name?: string | null; business_type?: string | null }>();
+
+      if (profileIds.length > 0) {
+        const { data: businesses, error: businessesError } = await (supabase as any)
+          .from("businesses")
+          .select("user_id,business_name,business_type")
+          .in("user_id", profileIds);
+
+        if (businessesError) throw businessesError;
+        ((businesses as any[]) ?? []).forEach((b) => {
+          if (!b?.user_id) return;
+          businessByUserId.set(String(b.user_id), {
+            business_name: b?.business_name ?? null,
+            business_type: b?.business_type ?? null,
+          });
+        });
+      }
+
       const mapped: AccountRow[] = ((profiles as ProfileRow[] | null) ?? []).map((p) => ({
         id: String(p.id),
         name: String(p.name ?? ""),
         email: String(p.email ?? ""),
+        businessName: String(businessByUserId.get(String(p.id))?.business_name ?? "—"),
+        businessType: String(businessByUserId.get(String(p.id))?.business_type ?? "—"),
         role: roleByUserId.get(String(p.id)) ?? "unknown",
         status: String((p as any).status ?? "pending"),
       }));
@@ -208,7 +231,30 @@ export default function SuperAdminUsersAssists() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("businessName")}
+                      className="inline-flex items-center gap-2 hover:underline"
+                    >
+                      Business Name
+                      {sortKey === "businessName" ? (
+                        <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>
+                      ) : null}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("businessType")}
+                      className="inline-flex items-center gap-2 hover:underline"
+                    >
+                      Business Type
+                      {sortKey === "businessType" ? (
+                        <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>
+                      ) : null}
+                    </button>
+                  </TableHead>
                   <TableHead>
                     <button
                       type="button"
@@ -226,7 +272,7 @@ export default function SuperAdminUsersAssists() {
               <TableBody>
                 {sorted.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-muted-foreground">
+                    <TableCell colSpan={6} className="text-muted-foreground">
                       No accounts found.
                     </TableCell>
                   </TableRow>
@@ -234,7 +280,8 @@ export default function SuperAdminUsersAssists() {
                   sorted.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.name}</TableCell>
-                      <TableCell>{r.email}</TableCell>
+                      <TableCell>{r.businessName}</TableCell>
+                      <TableCell className="capitalize">{r.businessType}</TableCell>
                       <TableCell className="capitalize">{r.role.replace("_", " ")}</TableCell>
                       <TableCell>{renderStatusBadge(r.status)}</TableCell>
                       <TableCell className="text-right">
