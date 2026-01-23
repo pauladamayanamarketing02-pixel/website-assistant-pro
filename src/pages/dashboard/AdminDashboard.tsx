@@ -70,6 +70,7 @@ export default function AdminDashboard() {
   const location = useLocation();
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [supportNewCount, setSupportNewCount] = useState(0);
+  const [businessPendingCount, setBusinessPendingCount] = useState(0);
 
   const fetchSupportNewCount = async () => {
     try {
@@ -86,10 +87,30 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchBusinessPendingCount = async () => {
+    try {
+      const { count, error } = await (supabase as any)
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("account_status", "pending");
+
+      if (error) throw error;
+      setBusinessPendingCount(Number(count ?? 0));
+    } catch {
+      // If anything fails, don't block the dashboard.
+      setBusinessPendingCount(0);
+    }
+  };
+
   const navItems: AdminNavItem[] = useMemo(
     () => [
       { title: "Dashboard", url: "/dashboard/admin", icon: LayoutDashboard },
-      { title: "Business", url: "/dashboard/admin/business-users", icon: Users },
+      {
+        title: "Business",
+        url: "/dashboard/admin/business-users",
+        icon: Users,
+        badgeCount: businessPendingCount > 0 ? businessPendingCount : undefined,
+      },
       { title: "Assistant", url: "/dashboard/admin/assistants", icon: ShieldCheck },
       { title: "Tasks", url: "/dashboard/admin/tasks", icon: CheckSquare },
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
@@ -135,11 +156,12 @@ export default function AdminDashboard() {
       { title: "Activity Logs (soon)", url: "/dashboard/admin/logs", icon: AlertCircle },
       { title: "My Account", url: "/dashboard/admin/account", icon: User },
     ],
-    [supportNewCount]
+    [businessPendingCount, supportNewCount]
   );
 
   useEffect(() => {
     void fetchSupportNewCount();
+    void fetchBusinessPendingCount();
 
     const channel = supabase
       .channel("admin-support-badge")
@@ -147,6 +169,11 @@ export default function AdminDashboard() {
         "postgres_changes",
         { event: "*", schema: "public", table: "website_inquiries" },
         () => void fetchSupportNewCount()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => void fetchBusinessPendingCount()
       )
       .subscribe();
 
