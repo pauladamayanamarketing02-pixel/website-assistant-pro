@@ -57,7 +57,6 @@ export default function UserDashboard() {
   const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
 
   const visibleMenuItems = useMemo(() => {
-    // Some items are hidden when disabled; others stay visible but become non-clickable.
     const hideWhenDisabledByUrl: Record<string, any> = {
       '/dashboard/user/content-planner': 'content_planner',
       '/dashboard/user/reporting': 'reporting',
@@ -69,13 +68,7 @@ export default function UserDashboard() {
         if (!key) return true;
         return isEnabled(key);
       })
-      .map((item) => {
-        // Messages: keep visible, but disable click when rule is OFF.
-        if (item.url === '/dashboard/user/messages' && !isEnabled('messages')) {
-          return { ...item, disabled: true };
-        }
-        return item;
-      });
+      .map((item) => item);
   }, [isEnabled]);
 
   const welcomeName = useMemo(() => {

@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeContactActivity } from '@/hooks/useRealtimeContactActivity';
+import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -43,6 +44,12 @@ interface AssistContact {
 export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
+  const canSendMessages = useMemo(() => {
+    // Default allow while loading to avoid briefly locking sending on slow rule loads.
+    if (loadingMenuRules) return true;
+    return isEnabled('messages');
+  }, [isEnabled, loadingMenuRules]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [assists, setAssists] = useState<AssistContact[]>([]);
   const [selectedAssist, setSelectedAssist] = useState<AssistContact | null>(null);
@@ -364,6 +371,14 @@ export default function Messages() {
   };
 
   const handleSend = async () => {
+    if (!canSendMessages) {
+      toast({
+        variant: 'destructive',
+        title: 'Send message dinonaktifkan',
+        description: 'Fitur kirim pesan tidak tersedia untuk package kamu.',
+      });
+      return;
+    }
     if (!user || !selectedAssist || (!newMessage.trim() && !uploadedFile)) return;
 
     const contentToSend = newMessage.trim() || (uploadedFile ? `📎 ${uploadedFile.name}` : '');
@@ -728,6 +743,11 @@ export default function Messages() {
 
                 {/* Message Input */}
                 <div className="border-t p-3 space-y-2 bg-background/60 backdrop-blur">
+                  {!canSendMessages && (
+                    <div className="text-xs rounded-md border border-border bg-muted/40 px-3 py-2 text-muted-foreground">
+                      Send message dinonaktifkan untuk package kamu. Kamu masih bisa membaca pesan yang masuk.
+                    </div>
+                  )}
                   {uploadedFile && (
                     <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/60 rounded-md px-3 py-1">
                       <span className="flex items-center gap-2">
@@ -757,7 +777,7 @@ export default function Messages() {
                       variant="outline"
                       size="icon"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
+                      disabled={uploading || !canSendMessages}
                       className="h-10 w-10 shrink-0"
                       aria-label="Upload file"
                     >
@@ -770,6 +790,7 @@ export default function Messages() {
                         placeholder="Type your message..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
+                        disabled={!canSendMessages}
                         onKeyDown={(e) => {
                           if (e.key !== 'Enter' || e.shiftKey) return;
 
@@ -778,6 +799,7 @@ export default function Messages() {
 
                           if (sending || uploading) return;
                           if (!newMessage.trim() && !uploadedFile) return;
+                          if (!canSendMessages) return;
 
                           handleSend();
                         }}
@@ -793,7 +815,12 @@ export default function Messages() {
                     <Button
                       type="button"
                       onClick={handleSend}
-                      disabled={sending || (!newMessage.trim() && !uploadedFile)}
+                      disabled={
+                        !canSendMessages ||
+                        sending ||
+                        uploading ||
+                        (!newMessage.trim() && !uploadedFile)
+                      }
                       className="h-10 shrink-0"
                     >
                       <Send className="h-4 w-4 mr-1" />

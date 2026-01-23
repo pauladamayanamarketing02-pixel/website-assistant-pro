@@ -37,7 +37,7 @@ const MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
   },
   { key: "tasks_progress", label: "Tasks & Progress", description: "Enable/disable creating tasks (New Task / Create Task) in User Dashboard." },
   { key: "ai_agents", label: "AI Agents", description: "Enable/disable clicking tools in AI Agents — All Tools." },
-  { key: "messages", label: "Messages", description: "Show/hide Messages in User Dashboard." },
+  { key: "messages", label: "Messages", description: "Enable/disable sending messages in User Dashboard." },
   { key: "reporting", label: "Reporting & Visibility", description: "Show/hide Reporting & Visibility in User Dashboard." },
 ];
 
