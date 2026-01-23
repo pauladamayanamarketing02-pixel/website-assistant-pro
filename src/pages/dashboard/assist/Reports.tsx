@@ -296,66 +296,75 @@ export default function Reports() {
       </Card>
 
       {selectedBusinessId ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle>Report URLs</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {reportFields.map((f) => (
-                <div key={f.kind} className="grid gap-2">
-                  <Label htmlFor={`report-${f.kind}`}>{f.label}</Label>
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle>Report URLs</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {reportFields.map((f) => (
+                  <div key={f.kind} className="grid gap-2">
+                    <Label htmlFor={`report-${f.kind}`}>{f.label}</Label>
+                    <Input
+                      id={`report-${f.kind}`}
+                      placeholder={f.placeholder}
+                      value={urlsByKind[f.kind]}
+                      onChange={(e) => setUrlsByKind((prev) => ({ ...prev, [f.kind]: e.target.value }))}
+                      disabled={loadingReports || savingUrls}
+                    />
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button onClick={saveUrls} disabled={loadingReports || savingUrls}>
+                    {savingUrls ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Downloadable Reports</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="downloadable-file">Upload File</Label>
                   <Input
-                    id={`report-${f.kind}`}
-                    placeholder={f.placeholder}
-                    value={urlsByKind[f.kind]}
-                    onChange={(e) => setUrlsByKind((prev) => ({ ...prev, [f.kind]: e.target.value }))}
-                    disabled={loadingReports || savingUrls}
+                    id="downloadable-file"
+                    type="file"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                    disabled={uploading || loadingReports}
+                  />
+                  <p className="text-xs text-muted-foreground">This file will also appear in the client’s My Gallery.</p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="downloadable-desc">Description</Label>
+                  <Textarea
+                    id="downloadable-desc"
+                    value={uploadDescription}
+                    onChange={(e) => setUploadDescription(e.target.value)}
+                    placeholder="Optional description..."
+                    disabled={uploading || loadingReports}
                   />
                 </div>
-              ))}
 
-              <div className="flex items-center justify-end gap-2">
-                <Button onClick={saveUrls} disabled={loadingReports || savingUrls}>
-                  {savingUrls ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex items-center justify-end gap-2">
+                  <Button onClick={uploadDownloadable} disabled={uploading || !uploadFile || loadingReports}>
+                    {uploading ? "Uploading..." : "Save"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Downloadable Reports</CardTitle>
+              <CardTitle>Downloadable Reports List</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="downloadable-file">Upload File</Label>
-                <Input
-                  id="downloadable-file"
-                  type="file"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
-                  disabled={uploading || loadingReports}
-                />
-                <p className="text-xs text-muted-foreground">This file will also appear in the client’s My Gallery.</p>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="downloadable-desc">Description</Label>
-                <Textarea
-                  id="downloadable-desc"
-                  value={uploadDescription}
-                  onChange={(e) => setUploadDescription(e.target.value)}
-                  placeholder="Optional description..."
-                  disabled={uploading || loadingReports}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2">
-                <Button onClick={uploadDownloadable} disabled={uploading || !uploadFile || loadingReports}>
-                  {uploading ? "Uploading..." : "Save"}
-                </Button>
-              </div>
-
+            <CardContent>
               <div className="rounded-md border border-border">
                 <Table>
                   <TableHeader>
