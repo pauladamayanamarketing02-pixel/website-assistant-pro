@@ -12,6 +12,7 @@ export default function AdminBusinessUserDetails() {
       initialClientId={userId}
       backTo="/dashboard/admin/business-users"
       hideClientList
+      allowInactive
     />
   );
 }
