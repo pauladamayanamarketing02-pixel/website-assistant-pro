@@ -143,7 +143,7 @@ export default function PackageCard({
 
         {durationOptions.length > 0 && (
           <div className="space-y-2 rounded-lg border border-border p-3" onClick={(e) => e.stopPropagation()}>
-            <div className="text-sm font-medium text-foreground">Duration (required)</div>
+            <div className="text-sm font-medium text-foreground">Duration</div>
             <RadioGroup
               value={String(selectedDuration.months)}
               onValueChange={(v) => onDurationChange?.(Number(v))}

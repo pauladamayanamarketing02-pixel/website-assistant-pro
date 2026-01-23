@@ -233,7 +233,8 @@ export default function SelectPackage() {
     });
   };
 
-  const selectedDurationMonths = selectedPackage ? (selectedDurationByPackageId[selectedPackage] ?? null) : null;
+  // Duration is optional in UI; default to 1 month if user hasn't selected one.
+  const selectedDurationMonths = selectedPackage ? (selectedDurationByPackageId[selectedPackage] ?? 1) : null;
 
   const selectedDurationMeta = selectedPackage
     ? buildDurationOptionsFromDb(dbDurationsByPackageId[selectedPackage]).find((o) => o.months === (selectedDurationMonths ?? 1))
@@ -248,11 +249,7 @@ export default function SelectPackage() {
 
   const handleContinue = async () => {
     if (!user || !selectedPackage) return;
-    const months = selectedDurationByPackageId[selectedPackage];
-    if (!months) {
-      toast({ variant: 'destructive', title: 'Duration required', description: 'Silakan pilih duration dulu.' });
-      return;
-    }
+    const months = selectedDurationByPackageId[selectedPackage] ?? 1;
 
     setIsSubmitting(true);
     try {
@@ -457,7 +454,7 @@ export default function SelectPackage() {
           <Button
             size="lg"
             onClick={handleContinue}
-            disabled={isSubmitting || !selectedPackage || !selectedDurationMonths}
+            disabled={isSubmitting || !selectedPackage}
             className="px-8"
           >
             {isSubmitting
