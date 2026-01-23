@@ -1722,6 +1722,16 @@ export type Database = {
           name: string
         }[]
       }
+      get_assist_contacts: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          email: string
+          id: string
+          name: string
+          status: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
