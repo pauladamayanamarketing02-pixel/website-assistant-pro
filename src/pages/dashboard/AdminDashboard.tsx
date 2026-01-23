@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   BarChart3,
@@ -53,6 +53,8 @@ import AdminAssistantCreate from "./admin/AssistantCreate";
 import AdminTasks from "./admin/Tasks";
 import AdminTaskCreate from "./admin/TaskCreate";
 import AdminReports from "./admin/Reports";
+import AdminReportsLayout from "./admin/reports/AdminReportsLayout";
+import ReportingComingSoon from "./user/reporting/ReportingComingSoon";
 import AdminSupport from "./admin/Support";
 import AdminAccount from "./admin/Account";
 function LoadingScreen() {
@@ -223,7 +225,16 @@ export default function AdminDashboard() {
               <Route path="assistants/:userId" element={<AdminAssistantDetails />} />
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="tasks/new" element={<AdminTaskCreate />} />
-              <Route path="reports" element={<AdminReports />} />
+              <Route path="reports" element={<AdminReportsLayout />}>
+                <Route index element={<Navigate to="task-reports" replace />} />
+                <Route path="task-reports" element={<AdminReports />} />
+                <Route path="performance-summary" element={<ReportingComingSoon title="Performance Summary" />} />
+                <Route path="local-insights" element={<ReportingComingSoon title="Local Insights" />} />
+                <Route path="keyword-rankings" element={<ReportingComingSoon title="Keyword Rankings" />} />
+                <Route path="traffic-insights" element={<ReportingComingSoon title="Traffic Insights" />} />
+                <Route path="conversion-insights" element={<ReportingComingSoon title="Conversion Insights" />} />
+                <Route path="downloadable-reports" element={<ReportingComingSoon title="Downloadable Reports" />} />
+              </Route>
               <Route path="message-monitor" element={<AdminPlaceholder title="Message Monitor" />} />
               <Route path="support-tickets" element={<AdminSupport />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
