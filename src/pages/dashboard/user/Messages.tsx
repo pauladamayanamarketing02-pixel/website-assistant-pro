@@ -374,8 +374,8 @@ export default function Messages() {
     if (!canSendMessages) {
       toast({
         variant: 'destructive',
-        title: 'Send message dinonaktifkan',
-        description: 'Fitur kirim pesan tidak tersedia untuk package kamu.',
+        title: 'Sending disabled',
+        description: 'Sending messages is not available for your package.',
       });
       return;
     }
@@ -745,7 +745,7 @@ export default function Messages() {
                 <div className="border-t p-3 space-y-2 bg-background/60 backdrop-blur">
                   {!canSendMessages && (
                     <div className="text-xs rounded-md border border-border bg-muted/40 px-3 py-2 text-muted-foreground">
-                      Send message dinonaktifkan untuk package kamu. Kamu masih bisa membaca pesan yang masuk.
+                      Sending is disabled for your package. You can still read incoming messages.
                     </div>
                   )}
                   {uploadedFile && (
