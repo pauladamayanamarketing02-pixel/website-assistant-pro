@@ -664,20 +664,29 @@ export default function AIGenerator() {
                           </div>
                         </div>
 
-                        {isOwner && (
-                          <div className="flex gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditTool(tool);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isOwner) {
+                                toast({
+                                  variant: 'destructive',
+                                  title: 'Tidak bisa edit',
+                                  description: 'Hanya pembuat tool yang bisa edit.',
+                                });
+                                return;
+                              }
+                              handleEditTool(tool);
+                            }}
+                            aria-label={`Edit ${tool.title}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
 
+                          {isOwner ? (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -698,7 +707,7 @@ export default function AIGenerator() {
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel>No</AlertDialogCancel>
                                   <AlertDialogAction
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                     onClick={(e) => {
@@ -706,13 +715,30 @@ export default function AIGenerator() {
                                       void handleDeleteTool(tool.id);
                                     }}
                                   >
-                                    Yes, delete
+                                    Yes
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
-                          </div>
-                        )}
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toast({
+                                  variant: 'destructive',
+                                  title: 'Tidak bisa delete',
+                                  description: 'Hanya pembuat tool yang bisa delete.',
+                                });
+                              }}
+                              aria-label={`Delete ${tool.title}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardHeader>
                   </Card>
