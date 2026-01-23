@@ -35,6 +35,8 @@ import UserSettings from './user/Settings';
 import ReportingLayout from './user/reporting/ReportingLayout';
 import TaskReports from './user/reporting/TaskReports';
 import ReportingComingSoon from './user/reporting/ReportingComingSoon';
+import ReportUrlPage from './user/reporting/ReportUrlPage';
+import DownloadableReportsPage from './user/reporting/DownloadableReportsPage';
 
 const menuItems: UserNavItem[] = [
   { title: 'Overview', url: '/dashboard/user/overview', icon: Home },
@@ -256,11 +258,11 @@ export default function UserDashboard() {
                 <Route index element={<Navigate to="task-reports" replace />} />
                 <Route path="task-reports" element={<TaskReports />} />
                 <Route path="performance-summary" element={<ReportingComingSoon title="Performance Summary" />} />
-                <Route path="local-insights" element={<ReportingComingSoon title="Local Insights" />} />
-                <Route path="keyword-rankings" element={<ReportingComingSoon title="Keyword Rankings" />} />
-                <Route path="traffic-insights" element={<ReportingComingSoon title="Traffic Insights" />} />
-                <Route path="conversion-insights" element={<ReportingComingSoon title="Conversion Insights" />} />
-                <Route path="downloadable-reports" element={<ReportingComingSoon title="Downloadable Reports" />} />
+                <Route path="local-insights" element={<ReportUrlPage kind="local_insights" />} />
+                <Route path="keyword-rankings" element={<ReportUrlPage kind="keyword_rankings" />} />
+                <Route path="traffic-insights" element={<ReportUrlPage kind="traffic_insights" />} />
+                <Route path="conversion-insights" element={<ReportUrlPage kind="conversion_insights" />} />
+                <Route path="downloadable-reports" element={<DownloadableReportsPage />} />
               </Route>
               <Route
                 path="log-activity"
