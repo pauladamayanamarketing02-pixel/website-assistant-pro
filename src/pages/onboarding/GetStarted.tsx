@@ -68,7 +68,8 @@ export default function GetStarted() {
                   placeholder="John"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  disabled={isPrefilled}
+                  // Jangan lock input; kalau sessionStorage hanya terisi sebagian,
+                  // user bisa stuck karena tombol Continue disabled tapi field tidak bisa diedit.
                 />
               </div>
 
@@ -79,10 +80,16 @@ export default function GetStarted() {
                   placeholder="Doe"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  disabled={isPrefilled}
+                  // Jangan lock input; lihat catatan di field firstName.
                 />
               </div>
             </div>
+
+            {isPrefilled ? (
+              <p className="text-xs text-muted-foreground">
+                Nama kamu diisi otomatis dari sesi sebelumnya—kamu masih bisa mengubahnya jika perlu.
+              </p>
+            ) : null}
 
             <Button
               size="lg"
