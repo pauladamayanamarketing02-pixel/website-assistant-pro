@@ -72,6 +72,7 @@ export default function AdminDashboard() {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [supportNewCount, setSupportNewCount] = useState(0);
   const [businessPendingCount, setBusinessPendingCount] = useState(0);
+  const [tasksPendingCount, setTasksPendingCount] = useState(0);
 
   const fetchSupportNewCount = async () => {
     try {
@@ -103,6 +104,20 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchTasksPendingCount = async () => {
+    try {
+      const { count, error } = await (supabase as any)
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+
+      if (error) throw error;
+      setTasksPendingCount(Number(count ?? 0));
+    } catch {
+      setTasksPendingCount(0);
+    }
+  };
+
   const navItems: AdminNavItem[] = useMemo(
     () => [
       { title: "Dashboard", url: "/dashboard/admin", icon: LayoutDashboard },
@@ -113,7 +128,12 @@ export default function AdminDashboard() {
         badgeCount: businessPendingCount > 0 ? businessPendingCount : undefined,
       },
       { title: "Assistant", url: "/dashboard/admin/assistants", icon: ShieldCheck },
-      { title: "Tasks", url: "/dashboard/admin/tasks", icon: CheckSquare },
+      {
+        title: "Tasks",
+        url: "/dashboard/admin/tasks",
+        icon: CheckSquare,
+        badgeCount: tasksPendingCount > 0 ? tasksPendingCount : undefined,
+      },
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
       { title: "Message Monitor (soon)", url: "/dashboard/admin/message-monitor", icon: MessageSquare },
       {
@@ -157,12 +177,13 @@ export default function AdminDashboard() {
       { title: "Activity Logs (soon)", url: "/dashboard/admin/logs", icon: AlertCircle },
       { title: "My Account", url: "/dashboard/admin/account", icon: User },
     ],
-    [businessPendingCount, supportNewCount]
+    [businessPendingCount, supportNewCount, tasksPendingCount]
   );
 
   useEffect(() => {
     void fetchSupportNewCount();
     void fetchBusinessPendingCount();
+    void fetchTasksPendingCount();
 
     const channel = supabase
       .channel("admin-support-badge")
@@ -175,6 +196,11 @@ export default function AdminDashboard() {
         "postgres_changes",
         { event: "*", schema: "public", table: "profiles" },
         () => void fetchBusinessPendingCount()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks" },
+        () => void fetchTasksPendingCount()
       )
       .subscribe();
 

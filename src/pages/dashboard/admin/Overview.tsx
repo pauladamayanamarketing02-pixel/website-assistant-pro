@@ -56,7 +56,7 @@ function StatCard({
 export default function AdminOverview() {
   const today = useMemo(
     () =>
-      new Intl.DateTimeFormat("id-ID", {
+      new Intl.DateTimeFormat("en-US", {
         weekday: "long",
         day: "2-digit",
         month: "long",
@@ -95,34 +95,34 @@ export default function AdminOverview() {
 
       <section className="grid gap-4 lg:grid-cols-12">
         {/* Left column */}
-        <Card className="lg:col-span-5">
+        <Card className="lg:col-span-5 min-w-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Today's Priorities</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 min-w-0">
             <div className="space-y-2">
-              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 min-w-0">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-foreground">Review pending reports</div>
-                  <div className="text-xs text-muted-foreground">Approve/reject so they can be sent to users.</div>
+                    <div className="text-xs text-muted-foreground break-words">Approve/reject so they can be sent to users.</div>
                 </div>
                 <Badge variant="outline">High</Badge>
               </div>
               <Separator />
 
-              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 min-w-0">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-foreground">Monitor overdue tasks</div>
-                  <div className="text-xs text-muted-foreground">Reassign or reset SLA if needed.</div>
+                    <div className="text-xs text-muted-foreground break-words">Reassign or reset SLA if needed.</div>
                 </div>
                 <Badge variant="outline">High</Badge>
               </div>
               <Separator />
 
-              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 min-w-0">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-foreground">Follow up on complaints</div>
-                  <div className="text-xs text-muted-foreground">Review user ↔ assist conversation & create tickets.</div>
+                    <div className="text-xs text-muted-foreground break-words">Review user ↔ assist conversation & create tickets.</div>
                 </div>
                 <Badge variant="secondary">Normal</Badge>
               </div>
@@ -162,17 +162,17 @@ export default function AdminOverview() {
         </Card>
 
         {/* Right column */}
-        <div className="space-y-4 lg:col-span-7">
+        <div className="space-y-4 lg:col-span-7 min-w-0">
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Reports Pending Approval</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+               <CardContent className="space-y-3 min-w-0">
                 <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
                   No data yet.
                 </div>
-                <div className="text-xs text-muted-foreground">
+                 <div className="text-xs text-muted-foreground break-words">
                   Will show the 5 latest reports: user name, assist, status, and actions.
                 </div>
               </CardContent>
@@ -182,42 +182,42 @@ export default function AdminOverview() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Complaints / Support Tickets</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+               <CardContent className="space-y-3 min-w-0">
                 <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
                   No data yet.
                 </div>
-                <div className="text-xs text-muted-foreground">
+                 <div className="text-xs text-muted-foreground break-words">
                   Will show active tickets + priority + SLA breach alerts.
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <Card>
+          <Card className="min-w-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Operations Summary</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-lg border bg-card p-3">
+            <CardContent className="grid gap-3 md:grid-cols-3 min-w-0">
+              <div className="rounded-lg border bg-card p-3 min-w-0">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <CalendarClock className="h-4 w-4 text-muted-foreground" />
                   SLA Monitor
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Automatic deadline & reminder (soon).</p>
+                <p className="mt-1 text-xs text-muted-foreground break-words">Automatic deadline & reminder (soon).</p>
               </div>
-              <div className="rounded-lg border bg-card p-3">
+              <div className="rounded-lg border bg-card p-3 min-w-0">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                   Activity Logs
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Activity audit (read-only) (soon).</p>
+                <p className="mt-1 text-xs text-muted-foreground break-words">Activity audit (read-only) (soon).</p>
               </div>
-              <div className="rounded-lg border bg-card p-3">
+              <div className="rounded-lg border bg-card p-3 min-w-0">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   Announcement
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Broadcast info to users/assists (soon).</p>
+                <p className="mt-1 text-xs text-muted-foreground break-words">Broadcast info to users/assists (soon).</p>
               </div>
             </CardContent>
           </Card>
