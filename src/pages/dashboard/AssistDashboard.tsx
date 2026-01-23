@@ -33,6 +33,7 @@ import Reports from './assist/Reports';
 import LogActivity from './assist/LogActivity';
 import AssistSettings from './assist/Settings';
 import AssistProfile from './assist/Profile';
+import AssistSupportLocked from './assist/SupportLocked';
 
 const mainMenuItems: AssistNavItem[] = [
   { title: 'Overview', url: '/dashboard/assist', icon: Home },
@@ -98,6 +99,10 @@ export default function AssistDashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [accountChecked, setAccountChecked] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<string>('active');
+  const [profileName, setProfileName] = useState<string>('');
+  const [profileEmail, setProfileEmail] = useState<string>('');
 
   const welcomeName = useMemo(() => {
     if (!user) return '';
@@ -119,6 +124,41 @@ export default function AssistDashboard() {
     if (!loading && user && role === 'assist') {
       (async () => {
         try {
+          const { data, error } = await (supabase as any)
+            .from('profiles')
+            .select('status, name, email')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (error) throw error;
+
+          setProfileStatus(String((data as any)?.status ?? 'active'));
+          setProfileName(String((data as any)?.name ?? ''));
+          setProfileEmail(String((data as any)?.email ?? user.email ?? ''));
+        } catch (err) {
+          console.error('Error checking profile status:', err);
+          setProfileStatus('active');
+          setProfileName('');
+          setProfileEmail(String(user.email ?? ''));
+        } finally {
+          setAccountChecked(true);
+        }
+      })();
+    } else if (!loading) {
+      setAccountChecked(true);
+    }
+  }, [loading, user, role]);
+
+  useEffect(() => {
+    if (!loading && user && role === 'assist') {
+      (async () => {
+        try {
+          const isActive = String(profileStatus ?? 'active').toLowerCase() === 'active';
+          if (!isActive) {
+            setOnboardingChecked(true);
+            return;
+          }
+
           // If opened via Super Admin magic-link, allow bypass orientation check (verified server-side).
           const imp = new URLSearchParams(window.location.search).get('imp');
           if (imp) {
@@ -156,13 +196,18 @@ export default function AssistDashboard() {
         }
       })();
     }
-  }, [loading, user, role, navigate]);
+  }, [loading, user, role, navigate, profileStatus]);
 
-  if (loading || (role === 'assist' && !onboardingChecked)) {
+  if (loading || !accountChecked || (role === 'assist' && !onboardingChecked)) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
   if (!user) return null;
+
+  const isActive = String(profileStatus ?? 'active').toLowerCase() === 'active';
+  if (!isActive) {
+    return <AssistSupportLocked name={profileName || (welcomeName || 'Assistant')} email={profileEmail || ''} />;
+  }
 
 
   return (

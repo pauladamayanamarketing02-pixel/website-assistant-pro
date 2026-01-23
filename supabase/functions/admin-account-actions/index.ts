@@ -17,6 +17,11 @@ type Payload =
       email: string;
     }
   | {
+      action: "set_profile_status";
+      user_id: string;
+      status: string;
+    }
+  | {
       action: "get_user_email";
       user_id: string;
     }
@@ -82,6 +87,21 @@ Deno.serve(async (req) => {
       if (error) throw error;
 
       return json(200, { ok: true });
+    }
+
+    if (body.action === "set_profile_status") {
+      const userId = String(body.user_id ?? "").trim();
+      const status = String(body.status ?? "").trim().toLowerCase();
+      if (!userId) return json(400, { error: "user_id is required" });
+      if (!status) return json(400, { error: "status is required" });
+      if (status !== "active" && status !== "nonactive") {
+        return json(400, { error: "status must be 'active' or 'nonactive'" });
+      }
+
+      const { error } = await admin.from("profiles").update({ status }).eq("id", userId);
+      if (error) throw error;
+
+      return json(200, { ok: true, user_id: userId, status });
     }
 
     if (body.action === "change_email") {

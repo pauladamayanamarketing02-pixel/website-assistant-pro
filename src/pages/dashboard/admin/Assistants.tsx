@@ -138,7 +138,9 @@ export default function AdminAssistants() {
                         <AssistantActions
                           userId={row.id}
                           email={row.email}
+                          status={row.status}
                           onDeleted={() => void fetchAssistants()}
+                          onUpdated={() => void fetchAssistants()}
                           onView={() => navigate(`/dashboard/admin/assistants/${row.id}`)}
                         />
                       </TableCell>
