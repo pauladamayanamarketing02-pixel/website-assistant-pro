@@ -52,6 +52,7 @@ import AdminAssistantDetails from "./admin/AssistantDetails";
 import AdminAssistantCreate from "./admin/AssistantCreate";
 import AdminTasks from "./admin/Tasks";
 import AdminTaskCreate from "./admin/TaskCreate";
+import AdminReports from "./admin/Reports";
 import AdminSupport from "./admin/Support";
 import AdminAccount from "./admin/Account";
 function LoadingScreen() {
@@ -222,7 +223,7 @@ export default function AdminDashboard() {
               <Route path="assistants/:userId" element={<AdminAssistantDetails />} />
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="tasks/new" element={<AdminTaskCreate />} />
-              <Route path="reports" element={<AdminPlaceholder title="Reports" />} />
+              <Route path="reports" element={<AdminReports />} />
               <Route path="message-monitor" element={<AdminPlaceholder title="Message Monitor" />} />
               <Route path="support-tickets" element={<AdminSupport />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
