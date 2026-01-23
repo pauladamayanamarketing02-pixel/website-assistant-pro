@@ -20,7 +20,15 @@ type PackageRow = {
   created_at: string;
 };
 
-const PUBLIC_PACKAGE_NAME_ORDER = ["starter", "growth", "pro", "optimize", "scale", "dominate"] as const;
+const PUBLIC_PACKAGE_NAME_ORDER = [
+  "starter",
+  "growth",
+  "pro",
+  "optimize",
+  "scale",
+  "dominate",
+  "custom",
+] as const;
 
 function sortPackagesForPublic(p1: PackageRow, p2: PackageRow) {
   const a = (p1.name ?? "").trim().toLowerCase();

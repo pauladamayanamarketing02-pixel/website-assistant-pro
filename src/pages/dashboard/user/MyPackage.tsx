@@ -32,11 +32,29 @@ interface AvailablePackage {
 const packageUpgradeRecommendations: Record<string, string> = {
   starter: "growth",
   growth: "pro",
-  pro: "scale", // Pro users get recommended Scale
+  pro: "optimize",
   optimize: "scale",
   scale: "dominate",
-  dominate: "", // Already at top
+  dominate: "custom",
+  custom: "", // Already at top
 };
+
+const PACKAGE_TIER_ORDER = ["starter", "growth", "pro", "optimize", "scale", "dominate", "custom"] as const;
+
+function normalizeTier(value?: string | null): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function sortByTier(aNameOrType: string, bNameOrType: string): number {
+  const a = normalizeTier(aNameOrType);
+  const b = normalizeTier(bNameOrType);
+  const ai = (PACKAGE_TIER_ORDER as readonly string[]).indexOf(a);
+  const bi = (PACKAGE_TIER_ORDER as readonly string[]).indexOf(b);
+  const aRank = ai === -1 ? Number.POSITIVE_INFINITY : ai;
+  const bRank = bi === -1 ? Number.POSITIVE_INFINITY : bi;
+  if (aRank !== bRank) return aRank - bRank;
+  return a.localeCompare(b);
+}
 
 export default function MyPackage() {
   const { user } = useAuth();
@@ -87,7 +105,8 @@ export default function MyPackage() {
             features: Array.isArray((pkg as any).features)
               ? (pkg as any).features
               : JSON.parse(((pkg as any).features as string) || "[]"),
-          })) as AvailablePackage[]
+          }))
+            .sort((a, b) => sortByTier(a.type ?? a.name, b.type ?? b.name)) as AvailablePackage[]
         );
       }
 
@@ -98,31 +117,34 @@ export default function MyPackage() {
   }, [user]);
 
   // Filter packages to only show those with higher price than active package
-  // If Pro package, recommend Scale
   const getUpgradePackages = () => {
     if (!activePackage) {
       return availablePackages;
     }
 
-    const currentPrice = activePackage.packages.price || 0;
-    const currentType = activePackage.packages.type?.toLowerCase() || "";
-    const recommendedType = packageUpgradeRecommendations[currentType] || "";
+    const currentType = normalizeTier(activePackage.packages.type);
+    const currentName = normalizeTier(activePackage.packages.name);
+    const recommendedType = normalizeTier(packageUpgradeRecommendations[currentType] || "");
 
-    // Filter to higher priced packages
-    let upgrades = availablePackages.filter(
-      (pkg) => pkg.name !== activePackage.packages.name && pkg.price > currentPrice
+    // Only recommend 1 tier above.
+    if (!recommendedType) return [];
+
+    const exact = availablePackages.find(
+      (pkg) => normalizeTier(pkg.type) === recommendedType || normalizeTier(pkg.name) === recommendedType
     );
 
-    // Sort so recommended package comes first
-    if (recommendedType) {
-      upgrades = upgrades.sort((a, b) => {
-        if (a.type === recommendedType) return -1;
-        if (b.type === recommendedType) return 1;
-        return a.price - b.price;
-      });
-    }
+    // If not found, fall back to the next tier by our known order.
+    if (exact) return [exact];
 
-    return upgrades;
+    const currentIndex = (PACKAGE_TIER_ORDER as readonly string[]).indexOf(currentType || currentName);
+    const nextTier = currentIndex >= 0 ? (PACKAGE_TIER_ORDER as readonly string[])[currentIndex + 1] : undefined;
+    if (!nextTier) return [];
+
+    const fallback = availablePackages.find(
+      (pkg) => normalizeTier(pkg.type) === nextTier || normalizeTier(pkg.name) === nextTier
+    );
+
+    return fallback ? [fallback] : [];
   };
 
   const upgradePackages = getUpgradePackages();
@@ -140,16 +162,21 @@ export default function MyPackage() {
     );
   }
 
+  const currentFeaturesDesktop = activePackage ? activePackage.packages.features.slice(0, 6) : [];
+  const currentFeaturesOverflow = activePackage
+    ? Math.max(0, activePackage.packages.features.length - currentFeaturesDesktop.length)
+    : 0;
+
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="h-full min-h-0 flex flex-col gap-6">
+      <div className="shrink-0">
         <h1 className="text-3xl font-bold text-foreground">My Package</h1>
         <p className="text-muted-foreground">View your active package and available upgrades</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
+      <div className="flex-1 min-h-0 grid gap-6 lg:grid-cols-2 items-start">
         {/* LEFT: Active Package */}
-        <div className="space-y-4">
+        <div className="min-h-0 space-y-4">
           <h2 className="text-xl font-semibold text-foreground">Current Package</h2>
 
           {activePackage ? (
@@ -172,20 +199,36 @@ export default function MyPackage() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 min-w-0">
                 <p className="text-muted-foreground">{activePackage.packages.description}</p>
 
                 <div className="space-y-2">
                   <p className="font-medium text-foreground">What’s included:</p>
-                  <ul className="space-y-2">
+                  {/* Mobile: show full list (page can scroll) */}
+                  <ul className="space-y-2 lg:hidden">
                     {activePackage.packages.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2">
+                      <li key={index} className="flex items-start gap-2 min-w-0">
                         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                           <Check className="h-3 w-3 text-primary" />
                         </div>
-                        <span className="text-sm text-foreground">{feature}</span>
+                        <span className="text-sm text-foreground break-words whitespace-normal">{feature}</span>
                       </li>
                     ))}
+                  </ul>
+
+                  {/* Desktop: limit list so the page fits 1 screen */}
+                  <ul className="hidden lg:block space-y-2">
+                    {currentFeaturesDesktop.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2 min-w-0">
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
+                          <Check className="h-3 w-3 text-primary" />
+                        </div>
+                        <span className="text-sm text-foreground break-words whitespace-normal">{feature}</span>
+                      </li>
+                    ))}
+                    {currentFeaturesOverflow > 0 && (
+                      <li className="text-xs text-muted-foreground pl-7">+{currentFeaturesOverflow} more…</li>
+                    )}
                   </ul>
                 </div>
 
@@ -209,7 +252,7 @@ export default function MyPackage() {
         </div>
 
         {/* RIGHT: Upgrade Options */}
-        <div className="space-y-4">
+        <div className="min-h-0 space-y-4">
           <h2 className="text-xl font-semibold text-foreground">
             {activePackage ? "Upgrade Options" : "Available Packages"}
           </h2>
@@ -217,7 +260,9 @@ export default function MyPackage() {
           {upgradePackages.length > 0 ? (
             <div className="grid gap-4">
               {upgradePackages.map((pkg) => {
-                const isRecommended = pkg.type === recommendedType;
+                const isRecommended = normalizeTier(pkg.type) === normalizeTier(recommendedType);
+                const desktopFeatures = pkg.features.slice(0, 6);
+                const overflowCount = Math.max(0, pkg.features.length - desktopFeatures.length);
 
                 return (
                   <Card
@@ -238,7 +283,7 @@ export default function MyPackage() {
                       }
                     />
 
-                    <CardHeader className="space-y-3">
+                    <CardHeader className="space-y-3 min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -265,21 +310,34 @@ export default function MyPackage() {
                       </div>
                     </CardHeader>
 
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 min-w-0">
                       <div className="rounded-lg border bg-card/50 p-3">
                         <p className="text-sm font-medium text-foreground">What you’ll get</p>
-                        <ul className="mt-3 space-y-2">
+                        {/* Mobile: full list */}
+                        <ul className="mt-3 space-y-2 lg:hidden">
                           {pkg.features.map((feature, index) => (
-                            <li
-                              key={index}
-                              className="flex items-start gap-2 text-sm text-muted-foreground"
-                            >
+                            <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground min-w-0">
                               <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                                 <Check className="h-3 w-3 text-primary" />
                               </div>
-                              <span>{feature}</span>
+                              <span className="break-words whitespace-normal">{feature}</span>
                             </li>
                           ))}
+                        </ul>
+
+                        {/* Desktop: limited list */}
+                        <ul className="hidden lg:block mt-3 space-y-2">
+                          {desktopFeatures.map((feature, index) => (
+                            <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground min-w-0">
+                              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
+                                <Check className="h-3 w-3 text-primary" />
+                              </div>
+                              <span className="break-words whitespace-normal">{feature}</span>
+                            </li>
+                          ))}
+                          {overflowCount > 0 && (
+                            <li className="text-xs text-muted-foreground pl-7">+{overflowCount} more…</li>
+                          )}
                         </ul>
                       </div>
 
