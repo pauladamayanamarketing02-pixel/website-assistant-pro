@@ -8,9 +8,10 @@ type Props = {
   onCheckedChange: (next: boolean) => void;
   leading?: ReactNode;
   className?: string;
+  hideSwitch?: boolean;
 };
 
-export function AccessRuleRow({ label, description, checked, onCheckedChange, leading, className }: Props) {
+export function AccessRuleRow({ label, description, checked, onCheckedChange, leading, className, hideSwitch }: Props) {
   return (
     <div className={"flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4 " + (className ?? "")}>
       <div className="min-w-0 flex items-start gap-2">
@@ -21,7 +22,7 @@ export function AccessRuleRow({ label, description, checked, onCheckedChange, le
         </div>
       </div>
 
-      <Switch checked={Boolean(checked)} onCheckedChange={(v) => onCheckedChange(Boolean(v))} />
+      {hideSwitch ? null : <Switch checked={Boolean(checked)} onCheckedChange={(v) => onCheckedChange(Boolean(v))} />}
     </div>
   );
 }
