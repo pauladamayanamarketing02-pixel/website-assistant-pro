@@ -52,6 +52,7 @@ import AdminAssistantDetails from "./admin/AssistantDetails";
 import AdminAssistantCreate from "./admin/AssistantCreate";
 import AdminTasks from "./admin/Tasks";
 import AdminTaskCreate from "./admin/TaskCreate";
+import AdminTaskDetails from "./admin/TaskDetails";
 import AdminReports from "./admin/Reports";
 import AdminReportsLayout from "./admin/reports/AdminReportsLayout";
 import ReportingComingSoon from "./user/reporting/ReportingComingSoon";
@@ -252,6 +253,7 @@ export default function AdminDashboard() {
               <Route path="assistants/:userId" element={<AdminAssistantDetails />} />
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="tasks/new" element={<AdminTaskCreate />} />
+              <Route path="tasks/:taskNumberLabel" element={<AdminTaskDetails />} />
               <Route path="reports" element={<AdminReportsLayout />}>
                 <Route index element={<Navigate to="task-reports" replace />} />
                 <Route path="task-reports" element={<AdminReports />} />

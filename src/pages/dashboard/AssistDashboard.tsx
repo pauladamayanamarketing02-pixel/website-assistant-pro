@@ -35,7 +35,7 @@ import AssistSettings from './assist/Settings';
 import AssistProfile from './assist/Profile';
 import AssistSupportLocked from './assist/SupportLocked';
 
-const mainMenuItems: AssistNavItem[] = [
+const mainMenuItemsBase: AssistNavItem[] = [
   { title: 'Overview', url: '/dashboard/assist', icon: Home },
   { title: 'Profile', url: '/dashboard/assist/profile', icon: User },
   { title: 'Client List', url: '/dashboard/assist/clients', icon: Users },
@@ -103,6 +103,53 @@ export default function AssistDashboard() {
   const [profileStatus, setProfileStatus] = useState<string>('active');
   const [profileName, setProfileName] = useState<string>('');
   const [profileEmail, setProfileEmail] = useState<string>('');
+  const [pendingTasksCount, setPendingTasksCount] = useState(0);
+
+  const fetchPendingTasksCount = async () => {
+    if (!user?.id) return;
+
+    // Assist Task Manager is locked to the current assist account (assigned_to = assist)
+    const { count, error } = await supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_to", user.id)
+      .eq("status", "pending");
+
+    if (error) return;
+    setPendingTasksCount(Number(count ?? 0));
+  };
+
+  useEffect(() => {
+    if (!user?.id || role !== 'assist') return;
+
+    void fetchPendingTasksCount();
+
+    const channel = supabase
+      .channel(`assist-tasks-badge-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks" },
+        () => void fetchPendingTasksCount()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, role]);
+
+  const mainMenuItems: AssistNavItem[] = useMemo(() => {
+    return mainMenuItemsBase.map((item) => {
+      if (item.url === '/dashboard/assist/tasks') {
+        return {
+          ...item,
+          badgeCount: pendingTasksCount > 0 ? pendingTasksCount : undefined,
+        };
+      }
+      return item;
+    });
+  }, [pendingTasksCount]);
 
   const welcomeName = useMemo(() => {
     if (!user) return '';
@@ -213,7 +260,7 @@ export default function AssistDashboard() {
   return (
     <SidebarProvider>
       <div className="h-screen flex w-full overflow-hidden">
-        <AssistSidebar items={mainMenuItems} onLogout={signOut} />
+          <AssistSidebar items={mainMenuItems} onLogout={signOut} />
 
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
