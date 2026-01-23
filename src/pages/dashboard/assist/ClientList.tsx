@@ -267,7 +267,7 @@ export default function ClientList({ initialClientId, backTo, hideClientList }: 
           const [{ data: profile, error: profileErr }, { data: business, error: businessErr }] = await Promise.all([
             (supabase as any)
               .from('profiles')
-              .select('id, name, email, phone')
+              .select('id, name, email, phone, payment_active')
               .eq('id', initialClientId)
               .maybeSingle(),
             (supabase as any)
@@ -280,6 +280,7 @@ export default function ClientList({ initialClientId, backTo, hideClientList }: 
           if (profileErr) throw profileErr;
           if (businessErr) throw businessErr;
           if (!profile?.id) throw new Error('Client not found.');
+          if (!(profile as any)?.payment_active) throw new Error('Client is Pending (not Active).');
 
           const nextClient: Client = {
             id: profile.id,
@@ -311,7 +312,8 @@ export default function ClientList({ initialClientId, backTo, hideClientList }: 
     try {
       const { data: profiles, error: profilesError } = await (supabase as any)
         .from('profiles')
-        .select('id, name, email, phone, business_name');
+        .select('id, name, email, phone, business_name, payment_active')
+        .eq('payment_active', true);
 
       if (profilesError) throw profilesError;
 
