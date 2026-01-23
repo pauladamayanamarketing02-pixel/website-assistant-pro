@@ -205,7 +205,11 @@ export default function AdminTasks() {
                         <Badge variant="secondary">{statusLabel[t.status]}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" disabled>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/dashboard/admin/tasks/${t.id}`)}
+                        >
                           <Eye className="h-4 w-4" />
                           View Details
                         </Button>

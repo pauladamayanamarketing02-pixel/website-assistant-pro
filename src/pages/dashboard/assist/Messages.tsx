@@ -81,7 +81,8 @@ export default function AssistMessages() {
         const { data: profiles } = await (supabase as any)
           .from('profiles')
           .select('id, name, email, business_name')
-          .in('id', userIds);
+            .in('id', userIds)
+            .eq('account_status', 'active');
 
         if (profiles) {
           // Fetch business names

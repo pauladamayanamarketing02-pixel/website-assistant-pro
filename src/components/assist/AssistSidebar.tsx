@@ -21,6 +21,7 @@ export type AssistNavItem = {
   title: string;
   url: string;
   icon: LucideIcon;
+  badgeCount?: number;
 };
 
 export function AssistSidebar({
@@ -135,6 +136,8 @@ export function AssistSidebar({
             <SidebarMenu>
               {items.map((item) => {
                 const isMessages = item.url === "/dashboard/assist/messages";
+                const showItemBadge = (item.badgeCount ?? 0) > 0;
+                const badgeText = item.badgeCount && item.badgeCount > 99 ? "99+" : String(item.badgeCount ?? 0);
 
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -147,6 +150,13 @@ export function AssistSidebar({
                       >
                         <item.icon className="h-4 w-4" />
                         {open && <span className="truncate flex-1">{item.title}</span>}
+
+                        {/* Generic numeric badge (e.g., Task Manager pending count) */}
+                        {!isMessages && showItemBadge && (
+                          <span className="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs tabular-nums">
+                            {badgeText}
+                          </span>
+                        )}
 
                         {/* Unread messages badge */}
                         {isMessages && showMessagesBadge && (

@@ -178,6 +178,7 @@ export default function TaskManager() {
   const [workLogFile, setWorkLogFile] = useState<File | null>(null);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [savingWorkLog, setSavingWorkLog] = useState(false);
+  const [workLogLocked, setWorkLogLocked] = useState(false);
 
   // Work log delete requests (assist -> business owner approval)
   const [deleteRequests, setDeleteRequests] = useState<WorkLogDeleteRequest[]>([]);
@@ -363,6 +364,30 @@ export default function TaskManager() {
     }));
     setWorkLogFile(null);
     setScreenshotFile(null);
+    setWorkLogLocked(false);
+  };
+
+  const initWorkLogForTask = (task: Task) => {
+    if (task.status === 'pending') {
+      setWorkLogLocked(true);
+      setWorkLogForm({
+        hours: '',
+        minutes: '30',
+        workDescription: 'Review Task',
+        sharedUrl: '',
+        status: 'in_progress',
+      });
+      return;
+    }
+
+    setWorkLogLocked(false);
+    setWorkLogForm({
+      hours: '',
+      minutes: '',
+      workDescription: '',
+      sharedUrl: '',
+      status: getDefaultWorkLogStatusForTask(task),
+    });
   };
 
   const getDefaultWorkLogStatusForTask = (task: Task): WorkLogStatus => {
@@ -958,7 +983,7 @@ export default function TaskManager() {
                         placeholder="1"
                         value={workLogForm.hours}
                         onChange={(e) => setWorkLogForm((prev) => ({ ...prev, hours: e.target.value }))}
-                        disabled={isCompleted}
+                        disabled={isCompleted || workLogLocked}
                       />
                     </div>
                     <div className="space-y-2">
@@ -979,7 +1004,7 @@ export default function TaskManager() {
                           const safe = Number.isFinite(n) ? Math.min(59, Math.max(0, n)) : 0;
                           setWorkLogForm((prev) => ({ ...prev, minutes: String(safe) }));
                         }}
-                        disabled={isCompleted}
+                        disabled={isCompleted || workLogLocked}
                       />
                     </div>
                     <div className="space-y-2">
@@ -989,7 +1014,7 @@ export default function TaskManager() {
                         onValueChange={(value) =>
                           setWorkLogForm((prev) => ({ ...prev, status: value as WorkLogStatus }))
                         }
-                        disabled={isCompleted}
+                        disabled={isCompleted || workLogLocked}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -1013,7 +1038,7 @@ export default function TaskManager() {
                     value={workLogForm.workDescription}
                     onChange={(e) => setWorkLogForm((prev) => ({ ...prev, workDescription: e.target.value }))}
                     rows={3}
-                    disabled={isCompleted}
+                    disabled={isCompleted || workLogLocked}
                   />
                 </div>
 
@@ -1026,7 +1051,7 @@ export default function TaskManager() {
                     placeholder="https://..."
                     value={workLogForm.sharedUrl}
                     onChange={(e) => setWorkLogForm((prev) => ({ ...prev, sharedUrl: e.target.value }))}
-                    disabled={isCompleted}
+                    disabled={isCompleted || workLogLocked}
                   />
                 </div>
 
@@ -1038,7 +1063,7 @@ export default function TaskManager() {
                     </Label>
                     <div
                       className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50"
-                      onClick={() => (isCompleted ? undefined : workLogFileRef.current?.click())}
+                      onClick={() => (isCompleted || workLogLocked ? undefined : workLogFileRef.current?.click())}
                     >
                       {workLogFile ? (
                         <div className="flex items-center justify-between">
@@ -1060,7 +1085,7 @@ export default function TaskManager() {
                       type="file"
                       onChange={(e) => e.target.files?.[0] && setWorkLogFile(e.target.files[0])}
                       className="hidden"
-                      disabled={isCompleted}
+                      disabled={isCompleted || workLogLocked}
                     />
                   </div>
 
@@ -1071,7 +1096,7 @@ export default function TaskManager() {
                     </Label>
                     <div
                       className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50"
-                      onClick={() => (isCompleted ? undefined : screenshotRef.current?.click())}
+                      onClick={() => (isCompleted || workLogLocked ? undefined : screenshotRef.current?.click())}
                     >
                       {screenshotFile ? (
                         <div className="flex items-center justify-between">
@@ -1094,14 +1119,24 @@ export default function TaskManager() {
                       accept="image/*"
                       onChange={(e) => e.target.files?.[0] && setScreenshotFile(e.target.files[0])}
                       className="hidden"
-                      disabled={isCompleted}
+                      disabled={isCompleted || workLogLocked}
                     />
                   </div>
                 </div>
 
-                <Button onClick={handleSaveWorkLog} disabled={savingWorkLog || isCompleted} className="w-full">
-                  {isCompleted ? 'Completed' : savingWorkLog ? 'Saving...' : 'Add Work Log'}
-                </Button>
+                {workLogLocked && !isCompleted ? (
+                  <Button
+                    type="button"
+                    onClick={() => setWorkLogLocked(false)}
+                    className="w-full"
+                  >
+                    Start Now
+                  </Button>
+                ) : (
+                  <Button onClick={handleSaveWorkLog} disabled={savingWorkLog || isCompleted} className="w-full">
+                    {isCompleted ? 'Completed' : savingWorkLog ? 'Saving...' : 'Add Work Log'}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1387,13 +1422,7 @@ export default function TaskManager() {
                             setDeleteRequests([]);
                             setWorkLogFile(null);
                             setScreenshotFile(null);
-                            setWorkLogForm({
-                              hours: '',
-                              minutes: '',
-                              workDescription: '',
-                              sharedUrl: '',
-                              status: getDefaultWorkLogStatusForTask(task),
-                            });
+                            initWorkLogForTask(task);
                             fetchWorkLogs(task.id);
                             fetchDeleteRequests(task.id);
                           }}
