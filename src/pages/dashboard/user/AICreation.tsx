@@ -20,6 +20,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { buildToolPreviewSrcDoc, type ToolLanguage } from '@/lib/aiToolPreview';
 import { usePackageAiToolRules } from '@/hooks/usePackageAiToolRules';
 import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
+import { useBusinessInfo } from '@/hooks/useBusinessInfo';
+import BusinessInfoPanel from '@/components/business/BusinessInfoPanel';
 
 interface AITool {
   id: string;
@@ -49,6 +51,8 @@ export default function AICreation() {
   const { user } = useAuth();
   const { loading: loadingToolRules, enabledByToolId, isToolEnabled } = usePackageAiToolRules(user?.id);
   const { isEnabled } = usePackageMenuRules(user?.id);
+
+  const { data: business } = useBusinessInfo(user?.id);
 
   const [viewMode, setViewMode] = useState<ViewMode>('tools');
   const [tools, setTools] = useState<AITool[]>([]);
@@ -207,6 +211,24 @@ export default function AICreation() {
               </div>
 
               <div className="pt-2" />
+
+              <BusinessInfoPanel
+                fields={[
+                  { label: 'Business ID', value: business?.id ?? '' },
+                  { label: 'First Name', value: business?.first_name ?? '' },
+                  { label: 'Last Name', value: business?.last_name ?? '' },
+                  { label: 'Business Name', value: business?.business_name ?? '' },
+                  { label: 'Business Type', value: business?.business_type ?? '' },
+                  { label: 'Email', value: business?.email ?? '' },
+                  { label: 'Website URL', value: business?.website_url ?? '' },
+                  { label: 'Google Business Profile', value: business?.gmb_link ?? '' },
+                  { label: 'My BKB', value: business?.bkb_content ?? '' },
+                  { label: 'Brand Expert', value: business?.brand_expert_content ?? '' },
+                  { label: 'My Persona 1', value: business?.persona1_content ?? '' },
+                  { label: 'My Persona 2', value: business?.persona2_content ?? '' },
+                  { label: 'My Persona 3', value: business?.persona3_content ?? '' },
+                ]}
+              />
             </CardContent>
           </Card>
 

@@ -22,6 +22,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Trash2, Pencil, Sparkles, ArrowLeft, Copy } from 'lucide-react';
 import { usePackageAiToolRules } from '@/hooks/usePackageAiToolRules';
 import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useBusinessInfo } from '@/hooks/useBusinessInfo';
+import BusinessInfoPanel from '@/components/business/BusinessInfoPanel';
 
 type ToolLanguage = 'html' | 'react' | 'nextjs';
 
@@ -44,6 +47,8 @@ export default function AIGenerator() {
   const { isToolEnabled } = usePackageAiToolRules(user?.id);
   const { isEnabled } = usePackageMenuRules(user?.id);
 
+  const { data: business } = useBusinessInfo(user?.id);
+
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -64,6 +69,7 @@ export default function AIGenerator() {
     color: 'bg-primary/10 text-primary',
     codeLanguage: 'html' as ToolLanguage,
     codeContent: '',
+    shareFields: [] as string[],
   });
 
   const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
@@ -133,6 +139,7 @@ export default function AIGenerator() {
       color: 'bg-primary/10 text-primary',
       codeLanguage: 'html',
       codeContent: '',
+      shareFields: [],
     });
     setViewMode('tool-create');
   };
@@ -146,6 +153,7 @@ export default function AIGenerator() {
       color: tool.color,
       codeLanguage: tool.codeLanguage,
       codeContent: tool.codeContent,
+      shareFields: [],
     });
     setViewMode('tool-create');
   };
@@ -239,6 +247,22 @@ export default function AIGenerator() {
 
   // Create/edit tool view (full page)
   if (viewMode === 'tool-create') {
+    const shareOptions = [
+      'Business ID',
+      'First Name',
+      'Last Name',
+      'Business Name',
+      'Business Type',
+      'Email',
+      'Website URL',
+      'Google Business Profile',
+      'My BKB',
+      'Brand Expert',
+      'My Persona 1',
+      'My Persona 2',
+      'My Persona 3',
+    ];
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -351,6 +375,37 @@ export default function AIGenerator() {
                 rows={12}
                 className="font-mono text-sm"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Share</Label>
+              <div className="rounded-md border border-border bg-background p-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {shareOptions.map((label) => {
+                    const checked = toolForm.shareFields.includes(label);
+                    return (
+                      <label key={label} className="flex items-center gap-2 text-sm text-foreground">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            const nextChecked = v === true;
+                            setToolForm((prev) => {
+                              const current = new Set(prev.shareFields);
+                              if (nextChecked) current.add(label);
+                              else current.delete(label);
+                              return { ...prev, shareFields: Array.from(current) };
+                            });
+                          }}
+                        />
+                        <span className="leading-snug">{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Checklist ini hanya untuk kebutuhan share di UI (tidak disimpan).
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -487,6 +542,24 @@ export default function AIGenerator() {
               </div>
 
               <div className="pt-2" />
+
+              <BusinessInfoPanel
+                fields={[
+                  { label: 'Business ID', value: business?.id ?? '' },
+                  { label: 'First Name', value: business?.first_name ?? '' },
+                  { label: 'Last Name', value: business?.last_name ?? '' },
+                  { label: 'Business Name', value: business?.business_name ?? '' },
+                  { label: 'Business Type', value: business?.business_type ?? '' },
+                  { label: 'Email', value: business?.email ?? '' },
+                  { label: 'Website URL', value: business?.website_url ?? '' },
+                  { label: 'Google Business Profile', value: business?.gmb_link ?? '' },
+                  { label: 'My BKB', value: business?.bkb_content ?? '' },
+                  { label: 'Brand Expert', value: business?.brand_expert_content ?? '' },
+                  { label: 'My Persona 1', value: business?.persona1_content ?? '' },
+                  { label: 'My Persona 2', value: business?.persona2_content ?? '' },
+                  { label: 'My Persona 3', value: business?.persona3_content ?? '' },
+                ]}
+              />
 
               {/* Generator UI removed per request */}
 
