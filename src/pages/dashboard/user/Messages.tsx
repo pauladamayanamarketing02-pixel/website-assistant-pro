@@ -90,32 +90,25 @@ export default function Messages() {
           return;
         }
 
-        // Fetch optional profile fields for display (email/avatar) + status filter
+        // Fetch optional profile fields for display (email/avatar)
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, email, avatar_url, account_status')
-          .in('id', assistIds)
-          .eq('account_status', 'active');
+          .select('id, email, avatar_url')
+          .in('id', assistIds);
         if (profilesError) throw profilesError;
 
-        // Keep only assists that have an active profile
-        const activeAssistIds = new Set<string>((profiles ?? []).map((p: any) => p.id));
-
-        const merged = (assistAccounts ?? [])
-          .filter((a: any) => activeAssistIds.has(a.id))
-          .map((a: any) => {
-            const p = (profiles ?? []).find((x: any) => x.id === a.id);
-            return {
-              id: a.id,
-              name: a.name,
-              email: p?.email ?? '',
-              avatar_url: p?.avatar_url ?? null,
-            } as AssistContact;
-          });
+        const merged = (assistAccounts ?? []).map((a: any) => {
+          const p = (profiles ?? []).find((x: any) => x.id === a.id);
+          return {
+            id: a.id,
+            name: a.name,
+            email: p?.email ?? '',
+            avatar_url: p?.avatar_url ?? null,
+          } as AssistContact;
+        });
 
         setAssists(merged);
         if (merged.length > 0) setSelectedAssist(merged[0]);
-        else setSelectedAssist(null);
       } catch (error: any) {
         toast({
           variant: 'destructive',
