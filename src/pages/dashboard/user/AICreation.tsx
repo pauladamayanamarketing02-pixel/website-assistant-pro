@@ -102,6 +102,22 @@ export default function AICreation() {
     }
   };
 
+  const sortedTools = useMemo(() => {
+    // Keep current order while rules are still loading to avoid flicker.
+    if (loadingToolRules) return tools;
+
+    // Stable sort: enabled tools first, then disabled tools; keep original order within groups.
+    return tools
+      .map((t, idx) => ({ t, idx }))
+      .sort((a, b) => {
+        const aAllowed = isToolAllowed(a.t.id);
+        const bAllowed = isToolAllowed(b.t.id);
+        if (aAllowed === bAllowed) return a.idx - b.idx;
+        return aAllowed ? -1 : 1;
+      })
+      .map((x) => x.t);
+  }, [tools, loadingToolRules, isToolAllowed]);
+
   useEffect(() => {
     if (!user?.id) return;
     void loadTools();
@@ -257,7 +273,7 @@ export default function AICreation() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {tools.map((tool) => {
+                {sortedTools.map((tool) => {
                   const ToolIcon = iconMap[tool.icon] ?? Sparkles;
                   // While rules are loading, prevent clicks to avoid briefly allowing a disabled tool.
                   const toolAllowed = !loadingToolRules && isToolAllowed(tool.id);
