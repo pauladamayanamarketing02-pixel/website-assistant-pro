@@ -141,8 +141,8 @@ export default function Auth() {
         // Supabase Auth sends emails on signup; repeated tests can hit rate limits (HTTP 429)
         if (status === 429 || code === 'over_email_send_rate_limit' || message.toLowerCase().includes('email rate limit exceeded')) {
           message =
-            'Terlalu banyak percobaan signup dalam waktu singkat (rate limit email). ' +
-            'Silakan tunggu beberapa menit lalu coba lagi.';
+            'Too many sign-up attempts in a short time (email rate limit). ' +
+            'Please wait a few minutes and try again.';
         }
 
         toast({
@@ -203,7 +203,7 @@ export default function Auth() {
 
       const description =
         status === 429 || code === 'over_email_send_rate_limit' || msg.toLowerCase().includes('email rate limit exceeded')
-          ? 'Terlalu banyak permintaan email dalam waktu singkat. Silakan tunggu beberapa menit lalu coba lagi.'
+          ? 'Too many email requests in a short time. Please wait a few minutes and try again.'
           : msg;
 
       toast({ variant: 'destructive', title: 'Failed', description });
