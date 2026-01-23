@@ -66,6 +66,12 @@ export default function PackageCard({
 }: PackageCardProps) {
   const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
 
+  // In onboarding UI we don't want to show the redundant 1-month option (it's the implicit default).
+  const visibleDurationOptions = useMemo(
+    () => durationOptions.filter((d) => d.months !== 1),
+    [durationOptions]
+  );
+
   const totalPrice = useMemo(() => {
     return addOns.reduce((sum, addOn) => {
       const quantity = selectedAddOns[addOn.id] || 0;
@@ -141,15 +147,15 @@ export default function PackageCard({
           </div>
         </div>
 
-        {durationOptions.length > 0 && (
+        {visibleDurationOptions.length > 0 && (
           <div className="space-y-2 rounded-lg border border-border p-3" onClick={(e) => e.stopPropagation()}>
             <div className="text-sm font-medium text-foreground">Duration</div>
             <RadioGroup
-              value={String(selectedDuration.months)}
+              value={selectedDuration.months === 1 ? '' : String(selectedDuration.months)}
               onValueChange={(v) => onDurationChange?.(Number(v))}
               className="grid gap-2"
             >
-              {durationOptions.map((opt) => (
+              {visibleDurationOptions.map((opt) => (
                 <div key={opt.months} className="flex items-center gap-2">
                   <RadioGroupItem value={String(opt.months)} id={`${type}-dur-${opt.months}`} />
                   <Label htmlFor={`${type}-dur-${opt.months}`} className="cursor-pointer">
