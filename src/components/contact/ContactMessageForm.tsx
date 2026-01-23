@@ -23,6 +23,7 @@ export type ContactMessageFormProps = {
   defaultValues?: Partial<z.infer<typeof contactSchema>>;
   onSubmitted?: () => void;
   wrapper?: "card" | "none";
+  disableNameEmail?: boolean;
 };
 
 export function ContactMessageForm({
@@ -30,6 +31,7 @@ export function ContactMessageForm({
   defaultValues,
   onSubmitted,
   wrapper = "card",
+  disableNameEmail = false,
 }: ContactMessageFormProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -97,6 +99,7 @@ export function ContactMessageForm({
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             className={errors.name ? "border-destructive" : ""}
+            disabled={disableNameEmail}
           />
           {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
         </div>
@@ -109,6 +112,7 @@ export function ContactMessageForm({
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             className={errors.email ? "border-destructive" : ""}
+            disabled={disableNameEmail}
           />
           {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
         </div>

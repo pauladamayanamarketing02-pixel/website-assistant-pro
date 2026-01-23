@@ -29,6 +29,7 @@ export default function UserSupport() {
         wrapper="card"
         source="business_support"
         defaultValues={{ name, email }}
+        disableNameEmail
       />
     </div>
   );
