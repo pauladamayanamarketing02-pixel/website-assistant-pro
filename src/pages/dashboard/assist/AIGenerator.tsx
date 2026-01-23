@@ -37,6 +37,7 @@ interface AITool {
   codeLanguage: ToolLanguage;
   codeContent: string;
   createdBy?: string;
+  shareFields?: string[];
 }
 
 type ViewMode = 'tools' | 'tool-detail' | 'tool-create';
@@ -83,7 +84,7 @@ export default function AIGenerator() {
       const { data, error } = await (supabase as any)
         .from('assist_ai_tools')
         // Show ALL active tools across all assist accounts
-        .select('id,title,description,icon,color,code_language,code_content,created_by')
+        .select('id,title,description,icon,color,code_language,code_content,created_by,json_config')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -98,6 +99,7 @@ export default function AIGenerator() {
         codeLanguage: (row.code_language ?? 'html') as ToolLanguage,
         codeContent: row.code_content ?? '',
         createdBy: row.created_by ?? undefined,
+        shareFields: Array.isArray(row?.json_config?.share_fields) ? row.json_config.share_fields : [],
       }));
 
       setTools(mapped);
@@ -153,7 +155,7 @@ export default function AIGenerator() {
       color: tool.color,
       codeLanguage: tool.codeLanguage,
       codeContent: tool.codeContent,
-      shareFields: [],
+      shareFields: tool.shareFields ?? [],
     });
     setViewMode('tool-create');
   };
@@ -179,7 +181,7 @@ export default function AIGenerator() {
             description: toolForm.description ?? '',
             icon: toolForm.icon,
             color: toolForm.color,
-            json_config: {},
+            json_config: { share_fields: toolForm.shareFields ?? [] },
             code_language: toolForm.codeLanguage,
             code_content: toolForm.codeContent,
           })
@@ -197,7 +199,7 @@ export default function AIGenerator() {
             description: toolForm.description ?? '',
             icon: toolForm.icon,
             color: toolForm.color,
-            json_config: {},
+            json_config: { share_fields: toolForm.shareFields ?? [] },
             code_language: toolForm.codeLanguage,
             code_content: toolForm.codeContent,
             is_active: true,
