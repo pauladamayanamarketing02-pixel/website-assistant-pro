@@ -33,6 +33,7 @@ interface AITool {
   color: string;
   codeLanguage: ToolLanguage;
   codeContent: string;
+  createdBy?: string;
 }
 
 type ViewMode = 'tools' | 'tool-detail' | 'tool-create';
@@ -75,8 +76,8 @@ export default function AIGenerator() {
     try {
       const { data, error } = await (supabase as any)
         .from('assist_ai_tools')
-        .select('id,title,description,icon,color,code_language,code_content')
-        .eq('created_by', user.id)
+        // Show ALL active tools across all assist accounts
+        .select('id,title,description,icon,color,code_language,code_content,created_by')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -90,6 +91,7 @@ export default function AIGenerator() {
         color: row.color ?? 'bg-primary/10 text-primary',
         codeLanguage: (row.code_language ?? 'html') as ToolLanguage,
         codeContent: row.code_content ?? '',
+        createdBy: row.created_by ?? undefined,
       }));
 
       setTools(mapped);
@@ -553,6 +555,7 @@ export default function AIGenerator() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {tools.map((tool) => {
                   const toolClickable = canUseTools && isToolEnabled(tool.id);
+                  const isOwner = Boolean(user?.id) && tool.createdBy === user?.id;
                   return (
                   <Card 
                     key={tool.id}
@@ -588,53 +591,55 @@ export default function AIGenerator() {
                           </div>
                         </div>
 
-                        <div className="flex gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditTool(tool);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                        {isOwner && (
+                          <div className="flex gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditTool(tool);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
 
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive"
-                                onClick={(e) => e.stopPropagation()}
-                                aria-label={`Delete ${tool.title}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Hapus tool ini?</AlertDialogTitle>
-                                <AlertDialogDescription className="break-words">
-                                  Tool "{tool.title}" akan dihapus permanen dan tidak bisa dikembalikan.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    void handleDeleteTool(tool.id);
-                                  }}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label={`Delete ${tool.title}`}
                                 >
-                                  Ya, hapus
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Hapus tool ini?</AlertDialogTitle>
+                                  <AlertDialogDescription className="break-words">
+                                    Tool "{tool.title}" akan dihapus permanen dan tidak bisa dikembalikan.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void handleDeleteTool(tool.id);
+                                    }}
+                                  >
+                                    Ya, hapus
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
                   </Card>
