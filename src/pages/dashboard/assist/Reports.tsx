@@ -1,21 +1,402 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useMemo, useState } from "react";
+
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+
+type BusinessOption = {
+  id: string;
+  business_name: string | null;
+  user_id: string;
+};
+
+type ReportKind = "local_insights" | "keyword_rankings" | "traffic_insights" | "conversion_insights";
+
+const reportFields: Array<{ kind: ReportKind; label: string; placeholder: string }> = [
+  {
+    kind: "local_insights",
+    label: "Local Insights URL",
+    placeholder: "https://...",
+  },
+  {
+    kind: "keyword_rankings",
+    label: "Keyword Rankings URL",
+    placeholder: "https://...",
+  },
+  {
+    kind: "traffic_insights",
+    label: "Traffic Insights URL",
+    placeholder: "https://...",
+  },
+  {
+    kind: "conversion_insights",
+    label: "Conversion Insights URL",
+    placeholder: "https://...",
+  },
+];
+
+type DownloadableRow = {
+  id: string;
+  created_at: string;
+  description: string | null;
+  file_name: string;
+  file_url: string;
+};
 
 export default function Reports() {
+  const { user } = useAuth();
+
+  const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
+
+  const selectedBusiness = useMemo(
+    () => businesses.find((b) => b.id === selectedBusinessId) ?? null,
+    [businesses, selectedBusinessId]
+  );
+
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [urlsByKind, setUrlsByKind] = useState<Record<ReportKind, string>>({
+    local_insights: "",
+    keyword_rankings: "",
+    traffic_insights: "",
+    conversion_insights: "",
+  });
+
+  const [savingUrls, setSavingUrls] = useState(false);
+
+  const [downloadable, setDownloadable] = useState<DownloadableRow[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadDescription, setUploadDescription] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoadingBusinesses(true);
+      try {
+        const { data, error } = await supabase
+          .from("businesses")
+          .select("id,business_name,user_id")
+          .order("business_name", { ascending: true });
+
+        if (error) throw error;
+        const list = (data as any as BusinessOption[]) ?? [];
+        if (!cancelled) {
+          setBusinesses(list);
+          if (!selectedBusinessId && list.length > 0) setSelectedBusinessId(list[0].id);
+        }
+      } catch (e) {
+        console.error("Failed to load businesses", e);
+        if (!cancelled) setBusinesses([]);
+      } finally {
+        if (!cancelled) setLoadingBusinesses(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!selectedBusinessId) return;
+    let cancelled = false;
+
+    const run = async () => {
+      setLoadingReports(true);
+      try {
+        const { data: links, error: linksError } = await supabase
+          .from("business_report_links")
+          .select("kind,url")
+          .eq("business_id", selectedBusinessId);
+        if (linksError) throw linksError;
+
+        const { data: files, error: filesError } = await supabase
+          .from("downloadable_reports")
+          .select("id,created_at,description,file_name,file_url")
+          .eq("business_id", selectedBusinessId)
+          .order("created_at", { ascending: false });
+        if (filesError) throw filesError;
+
+        const next: Record<ReportKind, string> = {
+          local_insights: "",
+          keyword_rankings: "",
+          traffic_insights: "",
+          conversion_insights: "",
+        };
+
+        (links as any[] | null)?.forEach((row) => {
+          const k = row.kind as ReportKind;
+          if (k in next) next[k] = String(row.url ?? "");
+        });
+
+        if (!cancelled) {
+          setUrlsByKind(next);
+          setDownloadable((files as any as DownloadableRow[]) ?? []);
+        }
+      } catch (e) {
+        console.error("Failed to load reports", e);
+        if (!cancelled) {
+          setUrlsByKind({
+            local_insights: "",
+            keyword_rankings: "",
+            traffic_insights: "",
+            conversion_insights: "",
+          });
+          setDownloadable([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingReports(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBusinessId]);
+
+  const saveUrls = async () => {
+    if (!user?.id || !selectedBusinessId) return;
+    setSavingUrls(true);
+    try {
+      // Upsert non-empty URLs; delete rows when field cleared.
+      const upserts = reportFields
+        .map((f) => {
+          const url = (urlsByKind[f.kind] ?? "").trim();
+          return url
+            ? {
+                business_id: selectedBusinessId,
+                kind: f.kind,
+                url,
+                created_by: user.id,
+              }
+            : null;
+        })
+        .filter(Boolean);
+
+      const deletes = reportFields
+        .map((f) => f.kind)
+        .filter((k) => !(urlsByKind[k] ?? "").trim());
+
+      if (deletes.length > 0) {
+        const { error } = await (((supabase as any)
+          .from("business_report_links")
+          .delete()
+          .eq("business_id", selectedBusinessId)
+          .in("kind", deletes as any)) as Promise<any>);
+        if (error) throw error;
+      }
+
+      if (upserts.length > 0) {
+        const { error } = await (((supabase as any)
+          .from("business_report_links")
+          .upsert(upserts, { onConflict: "business_id,kind" })) as Promise<any>);
+        if (error) throw error;
+      }
+    } catch (e) {
+      console.error("Failed to save report URLs", e);
+    } finally {
+      setSavingUrls(false);
+    }
+  };
+
+  const uploadDownloadable = async () => {
+    if (!user?.id || !selectedBusinessId || !selectedBusiness || !uploadFile) return;
+    setUploading(true);
+    try {
+      const ownerUserId = selectedBusiness.user_id;
+      const safeName = uploadFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const filePath = `${ownerUserId}/${selectedBusinessId}/downloadable-reports/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage.from("user-files").upload(filePath, uploadFile);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("user-files").getPublicUrl(filePath);
+      const fileUrl = urlData.publicUrl;
+
+      const description = uploadDescription.trim() || null;
+
+      const { error: repErr } = await supabase.from("downloadable_reports").insert({
+        business_id: selectedBusinessId,
+        file_name: uploadFile.name,
+        file_url: fileUrl,
+        description,
+        created_by: user.id,
+      });
+      if (repErr) throw repErr;
+
+      // Make file visible in /dashboard/user/gallery
+      const { error: galErr } = await supabase.from("user_gallery").insert({
+        user_id: ownerUserId,
+        name: uploadFile.name,
+        type: uploadFile.type || "application/octet-stream",
+        url: fileUrl,
+        size: uploadFile.size,
+      });
+      if (galErr) throw galErr;
+
+      // refresh downloadable list
+      const { data: files, error: filesError } = await supabase
+        .from("downloadable_reports")
+        .select("id,created_at,description,file_name,file_url")
+        .eq("business_id", selectedBusinessId)
+        .order("created_at", { ascending: false });
+
+      if (filesError) throw filesError;
+
+      setDownloadable((files as any as DownloadableRow[]) ?? []);
+      setUploadFile(null);
+      setUploadDescription("");
+    } catch (e) {
+      console.error("Failed to upload downloadable report", e);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Reports</h1>
-        <p className="text-muted-foreground">View analytics and performance reports.</p>
+        <p className="text-muted-foreground">Save report URLs and downloadable files for each client business.</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Reports Overview</CardTitle>
+          <CardTitle>Select Business</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-center py-8">Reports will be available soon.</p>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2">
+            <Label>Business</Label>
+            <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId} disabled={loadingBusinesses}>
+              <SelectTrigger>
+                <SelectValue placeholder={loadingBusinesses ? "Loading businesses..." : "Select a business"} />
+              </SelectTrigger>
+              <SelectContent>
+                {businesses.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.business_name || "(Unnamed business)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
+
+      {selectedBusinessId ? (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Report URLs</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {reportFields.map((f) => (
+                <div key={f.kind} className="grid gap-2">
+                  <Label htmlFor={`report-${f.kind}`}>{f.label}</Label>
+                  <Input
+                    id={`report-${f.kind}`}
+                    placeholder={f.placeholder}
+                    value={urlsByKind[f.kind]}
+                    onChange={(e) => setUrlsByKind((prev) => ({ ...prev, [f.kind]: e.target.value }))}
+                    disabled={loadingReports || savingUrls}
+                  />
+                </div>
+              ))}
+
+              <div className="flex items-center justify-end gap-2">
+                <Button onClick={saveUrls} disabled={loadingReports || savingUrls}>
+                  {savingUrls ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Downloadable Reports</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="downloadable-file">Upload File</Label>
+                <Input
+                  id="downloadable-file"
+                  type="file"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                  disabled={uploading || loadingReports}
+                />
+                <p className="text-xs text-muted-foreground">This file will also appear in the client’s My Gallery.</p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="downloadable-desc">Description</Label>
+                <Textarea
+                  id="downloadable-desc"
+                  value={uploadDescription}
+                  onChange={(e) => setUploadDescription(e.target.value)}
+                  placeholder="Optional description..."
+                  disabled={uploading || loadingReports}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <Button onClick={uploadDownloadable} disabled={uploading || !uploadFile || loadingReports}>
+                  {uploading ? "Uploading..." : "Save"}
+                </Button>
+              </div>
+
+              <div className="rounded-md border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[180px]">Date</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="w-[140px]">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {downloadable.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground py-10">
+                          No downloadable reports yet.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      downloadable.map((row) => (
+                        <TableRow key={row.id}>
+                          <TableCell>{new Date(row.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="min-w-0">
+                            <div className="text-sm text-foreground truncate">{row.file_name}</div>
+                            <div className="text-xs text-muted-foreground line-clamp-2">{row.description || "-"}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Button asChild variant="outline" size="sm">
+                              <a href={row.file_url} target="_blank" rel="noreferrer">
+                                Open
+                              </a>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }
