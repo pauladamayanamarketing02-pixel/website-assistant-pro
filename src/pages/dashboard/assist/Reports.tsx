@@ -52,6 +52,7 @@ type DownloadableRow = {
 
 export default function Reports() {
   const { user } = useAuth();
+  const sb: any = supabase;
 
   const [loadingBusinesses, setLoadingBusinesses] = useState(true);
   const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
@@ -71,6 +72,13 @@ export default function Reports() {
   });
 
   const [savingUrls, setSavingUrls] = useState(false);
+  const [editingUrls, setEditingUrls] = useState(false);
+  const [draftUrlsByKind, setDraftUrlsByKind] = useState<Record<ReportKind, string>>({
+    local_insights: "",
+    keyword_rankings: "",
+    traffic_insights: "",
+    conversion_insights: "",
+  });
 
   const [downloadable, setDownloadable] = useState<DownloadableRow[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -116,12 +124,13 @@ export default function Reports() {
       setLoadingReports(true);
       try {
         const { data: links, error: linksError } = await supabase
+          // use any-typed client because this table was added after generated TS types
           .from("business_report_links")
           .select("kind,url")
           .eq("business_id", selectedBusinessId);
         if (linksError) throw linksError;
 
-        const { data: files, error: filesError } = await supabase
+        const { data: files, error: filesError } = await sb
           .from("downloadable_reports")
           .select("id,created_at,description,file_name,file_url")
           .eq("business_id", selectedBusinessId)
@@ -142,6 +151,8 @@ export default function Reports() {
 
         if (!cancelled) {
           setUrlsByKind(next);
+          setDraftUrlsByKind(next);
+          setEditingUrls(false);
           setDownloadable((files as any as DownloadableRow[]) ?? []);
         }
       } catch (e) {
@@ -153,6 +164,13 @@ export default function Reports() {
             traffic_insights: "",
             conversion_insights: "",
           });
+          setDraftUrlsByKind({
+            local_insights: "",
+            keyword_rankings: "",
+            traffic_insights: "",
+            conversion_insights: "",
+          });
+          setEditingUrls(false);
           setDownloadable([]);
         }
       } finally {
@@ -173,7 +191,7 @@ export default function Reports() {
       // Upsert non-empty URLs; delete rows when field cleared.
       const upserts = reportFields
         .map((f) => {
-          const url = (urlsByKind[f.kind] ?? "").trim();
+          const url = (draftUrlsByKind[f.kind] ?? "").trim();
           return url
             ? {
                 business_id: selectedBusinessId,
@@ -187,28 +205,42 @@ export default function Reports() {
 
       const deletes = reportFields
         .map((f) => f.kind)
-        .filter((k) => !(urlsByKind[k] ?? "").trim());
+        .filter((k) => !(draftUrlsByKind[k] ?? "").trim());
 
       if (deletes.length > 0) {
-        const { error } = await (((supabase as any)
+        const { error } = await sb
           .from("business_report_links")
           .delete()
           .eq("business_id", selectedBusinessId)
-          .in("kind", deletes as any)) as Promise<any>);
+          .in("kind", deletes as any);
         if (error) throw error;
       }
 
       if (upserts.length > 0) {
-        const { error } = await (((supabase as any)
+        const { error } = await sb
           .from("business_report_links")
-          .upsert(upserts, { onConflict: "business_id,kind" })) as Promise<any>);
+          .upsert(upserts, { onConflict: "business_id,kind" });
         if (error) throw error;
       }
+
+      // Commit draft -> saved view
+      setUrlsByKind(draftUrlsByKind);
+      setEditingUrls(false);
     } catch (e) {
       console.error("Failed to save report URLs", e);
     } finally {
       setSavingUrls(false);
     }
+  };
+
+  const startEditUrls = () => {
+    setDraftUrlsByKind(urlsByKind);
+    setEditingUrls(true);
+  };
+
+  const cancelEditUrls = () => {
+    setDraftUrlsByKind(urlsByKind);
+    setEditingUrls(false);
   };
 
   const uploadDownloadable = async () => {
@@ -227,7 +259,7 @@ export default function Reports() {
 
       const description = uploadDescription.trim() || null;
 
-      const { error: repErr } = await supabase.from("downloadable_reports").insert({
+      const { error: repErr } = await sb.from("downloadable_reports").insert({
         business_id: selectedBusinessId,
         file_name: uploadFile.name,
         file_url: fileUrl,
@@ -248,6 +280,7 @@ export default function Reports() {
 
       // refresh downloadable list
       const { data: files, error: filesError } = await supabase
+        // use any-typed client because this table was added after generated TS types
         .from("downloadable_reports")
         .select("id,created_at,description,file_name,file_url")
         .eq("business_id", selectedBusinessId)
@@ -300,7 +333,23 @@ export default function Reports() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card className="h-fit">
               <CardHeader>
-                <CardTitle>Report URLs</CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle>Report URLs</CardTitle>
+                  {!editingUrls ? (
+                    <Button type="button" variant="outline" size="sm" onClick={startEditUrls} disabled={loadingReports}>
+                      Edit
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={cancelEditUrls} disabled={savingUrls}>
+                        Cancel
+                      </Button>
+                      <Button type="button" size="sm" onClick={saveUrls} disabled={loadingReports || savingUrls}>
+                        {savingUrls ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {reportFields.map((f) => (
@@ -309,18 +358,17 @@ export default function Reports() {
                     <Input
                       id={`report-${f.kind}`}
                       placeholder={f.placeholder}
-                      value={urlsByKind[f.kind]}
-                      onChange={(e) => setUrlsByKind((prev) => ({ ...prev, [f.kind]: e.target.value }))}
-                      disabled={loadingReports || savingUrls}
+                      value={editingUrls ? draftUrlsByKind[f.kind] : urlsByKind[f.kind]}
+                      onChange={(e) =>
+                        setDraftUrlsByKind((prev) => ({
+                          ...prev,
+                          [f.kind]: e.target.value,
+                        }))
+                      }
+                      disabled={!editingUrls || loadingReports || savingUrls}
                     />
                   </div>
                 ))}
-
-                <div className="flex items-center justify-end gap-2">
-                  <Button onClick={saveUrls} disabled={loadingReports || savingUrls}>
-                    {savingUrls ? "Saving..." : "Save"}
-                  </Button>
-                </div>
               </CardContent>
             </Card>
 
