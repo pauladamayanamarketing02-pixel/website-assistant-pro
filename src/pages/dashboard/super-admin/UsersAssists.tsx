@@ -17,7 +17,7 @@ type ProfileRow = {
   id: string;
   name: string;
   email: string;
-  account_status?: string;
+  status?: string | null;
 };
 
 type AccountRow = {
@@ -25,7 +25,7 @@ type AccountRow = {
   name: string;
   email: string;
   role: string;
-  account_status: string;
+  status: string;
 };
 
 type SortKey = "name" | "email" | "role" | "account_status";
@@ -49,6 +49,14 @@ export default function SuperAdminUsersAssists() {
     return r;
   };
 
+  const formatStatusLabel = (status: string) => {
+    const s = String(status ?? "").toLowerCase().trim();
+    if (s === "active") return "Active";
+    if (s === "inactive" || s === "nonactive") return "Nonactive";
+    if (s === "pending") return "Pending";
+    return "—";
+  };
+
   const canLoginAs = (role: string) => {
     // Super Admin accounts should not be impersonated from this list.
     return normalizeRole(role) !== "super_admin";
@@ -58,7 +66,7 @@ export default function SuperAdminUsersAssists() {
     setLoading(true);
     try {
       const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
-        supabase.from("profiles").select("id,name,email,account_status").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("id,name,email,status").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id,role"),
       ]);
 
@@ -73,7 +81,7 @@ export default function SuperAdminUsersAssists() {
         name: String(p.name ?? ""),
         email: String(p.email ?? ""),
         role: roleByUserId.get(String(p.id)) ?? "unknown",
-        account_status: String((p as any).account_status ?? "active"),
+        status: String((p as any).status ?? "pending"),
       }));
 
       setRows(mapped);
@@ -99,8 +107,13 @@ export default function SuperAdminUsersAssists() {
   const sorted = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
-      const av = String(a[sortKey] ?? "").toLowerCase();
-      const bv = String(b[sortKey] ?? "").toLowerCase();
+      const getSortValue = (row: AccountRow) => {
+        if (sortKey === "account_status") return formatStatusLabel(row.status).toLowerCase();
+        return String((row as any)[sortKey] ?? "").toLowerCase();
+      };
+
+      const av = getSortValue(a);
+      const bv = getSortValue(b);
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
       return 0;
@@ -216,7 +229,7 @@ export default function SuperAdminUsersAssists() {
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>{r.email}</TableCell>
                       <TableCell className="capitalize">{r.role.replace("_", " ")}</TableCell>
-                      <TableCell className="capitalize">{r.account_status}</TableCell>
+                      <TableCell>{formatStatusLabel(r.status)}</TableCell>
                       <TableCell className="text-right">
                         {canLoginAs(r.role) ? (
                           <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>
