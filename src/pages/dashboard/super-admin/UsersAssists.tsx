@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -55,6 +56,12 @@ export default function SuperAdminUsersAssists() {
     if (s === "inactive" || s === "nonactive") return "Nonactive";
     if (s === "pending") return "Pending";
     return "—";
+  };
+
+  const renderStatusBadge = (status: string) => {
+    const label = formatStatusLabel(status);
+    if (label === "—") return <span className="text-muted-foreground">—</span>;
+    return <Badge variant="secondary">{label}</Badge>;
   };
 
   const canLoginAs = (role: string) => {
@@ -229,7 +236,7 @@ export default function SuperAdminUsersAssists() {
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>{r.email}</TableCell>
                       <TableCell className="capitalize">{r.role.replace("_", " ")}</TableCell>
-                      <TableCell>{formatStatusLabel(r.status)}</TableCell>
+                      <TableCell>{renderStatusBadge(r.status)}</TableCell>
                       <TableCell className="text-right">
                         {canLoginAs(r.role) ? (
                           <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>
