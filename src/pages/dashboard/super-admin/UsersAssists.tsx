@@ -267,7 +267,18 @@ export default function SuperAdminUsersAssists() {
                       {sortKey === "role" ? <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span> : null}
                     </button>
                   </TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("account_status")}
+                      className="inline-flex items-center gap-2 hover:underline"
+                    >
+                      Status
+                      {sortKey === "account_status" ? (
+                        <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>
+                      ) : null}
+                    </button>
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
