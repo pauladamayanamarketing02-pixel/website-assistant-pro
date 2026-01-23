@@ -24,8 +24,8 @@ export default function ReportingLayout() {
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <aside className="space-y-2">
+      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="space-y-2 min-w-0">
           <div className="text-xs font-medium text-muted-foreground">Submenu</div>
           <nav className="space-y-1">
             {items.map((item) => (
@@ -35,6 +35,8 @@ export default function ReportingLayout() {
                 className={({ isActive }) =>
                   [
                     "block rounded-md border border-border px-3 py-2 text-sm transition-colors",
+                    // keep submenu narrow but ensure labels are fully visible
+                    "whitespace-normal break-words leading-snug",
                     isActive
                       ? "bg-accent text-accent-foreground"
                       : "bg-background hover:bg-accent/60",
