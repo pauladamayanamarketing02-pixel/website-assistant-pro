@@ -31,6 +31,7 @@ interface AITool {
   color: string;
   codeLanguage: ToolLanguage;
   codeContent: string;
+  shareFields?: string[];
 }
 
 type ViewMode = 'tools' | 'tool-detail';
@@ -59,6 +60,63 @@ export default function AICreation() {
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
   const [loadingTools, setLoadingTools] = useState(false);
 
+  const formatBusinessId = (businessNumber: number | null | undefined, fallback: string) => {
+    if (typeof businessNumber === 'number' && Number.isFinite(businessNumber)) {
+      return `B${String(businessNumber).padStart(5, '0')}`;
+    }
+    return fallback;
+  };
+
+  const businessFieldValueByLabel = useMemo(() => {
+    return {
+      'Business ID': formatBusinessId(business?.business_number ?? null, business?.id ?? ''),
+      'First Name': business?.first_name ?? '',
+      'Last Name': business?.last_name ?? '',
+      'Business Name': business?.business_name ?? '',
+      'Business Type': business?.business_type ?? '',
+      Email: business?.email ?? '',
+      'Website URL': business?.website_url ?? '',
+      'Google Business Profile': business?.gmb_link ?? '',
+      'My BKB': business?.bkb_content ?? '',
+      'Brand Expert': business?.brand_expert_content ?? '',
+      'My Persona 1': business?.persona1_content ?? '',
+      'My Persona 2': business?.persona2_content ?? '',
+      'My Persona 3': business?.persona3_content ?? '',
+    } as Record<string, string>;
+  }, [business?.bkb_content, business?.brand_expert_content, business?.business_name, business?.business_number, business?.business_type, business?.email, business?.first_name, business?.gmb_link, business?.id, business?.last_name, business?.persona1_content, business?.persona2_content, business?.persona3_content, business?.website_url]);
+
+  const defaultBusinessFieldOrder = useMemo(
+    () => [
+      'Business ID',
+      'First Name',
+      'Last Name',
+      'Business Name',
+      'Business Type',
+      'Email',
+      'Website URL',
+      'Google Business Profile',
+      'My BKB',
+      'Brand Expert',
+      'My Persona 1',
+      'My Persona 2',
+      'My Persona 3',
+    ],
+    []
+  );
+
+  const businessInfoFieldsForSelectedTool = useMemo(() => {
+    const shareOrder = (selectedTool?.shareFields ?? []).filter(Boolean);
+    const order = shareOrder.length ? shareOrder : defaultBusinessFieldOrder;
+
+    // Only show selected fields when shareFields is present.
+    const visibleLabels = shareOrder.length ? shareOrder : defaultBusinessFieldOrder;
+    const visible = new Set(visibleLabels);
+
+    return order
+      .filter((label) => visible.has(label))
+      .map((label) => ({ label, value: businessFieldValueByLabel[label] ?? '' }));
+  }, [businessFieldValueByLabel, defaultBusinessFieldOrder, selectedTool?.shareFields]);
+
   const canUsePage = useMemo(() => Boolean(user?.id), [user?.id]);
 
   const aiAgentsEnabled = useMemo(() => isEnabled('ai_agents'), [isEnabled]);
@@ -78,7 +136,7 @@ export default function AICreation() {
     try {
       const { data, error } = await (supabase as any)
         .from('assist_ai_tools')
-        .select('id,title,description,icon,color,code_language,code_content')
+        .select('id,title,description,icon,color,code_language,code_content,json_config')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -92,6 +150,7 @@ export default function AICreation() {
         color: row.color ?? 'bg-primary/10 text-primary',
         codeLanguage: (row.code_language ?? 'html') as ToolLanguage,
         codeContent: row.code_content ?? '',
+        shareFields: Array.isArray(row?.json_config?.share_fields) ? row.json_config.share_fields : [],
       }));
 
       setTools(mapped);
@@ -213,21 +272,7 @@ export default function AICreation() {
               <div className="pt-2" />
 
               <BusinessInfoPanel
-                fields={[
-                  { label: 'Business ID', value: business?.id ?? '' },
-                  { label: 'First Name', value: business?.first_name ?? '' },
-                  { label: 'Last Name', value: business?.last_name ?? '' },
-                  { label: 'Business Name', value: business?.business_name ?? '' },
-                  { label: 'Business Type', value: business?.business_type ?? '' },
-                  { label: 'Email', value: business?.email ?? '' },
-                  { label: 'Website URL', value: business?.website_url ?? '' },
-                  { label: 'Google Business Profile', value: business?.gmb_link ?? '' },
-                  { label: 'My BKB', value: business?.bkb_content ?? '' },
-                  { label: 'Brand Expert', value: business?.brand_expert_content ?? '' },
-                  { label: 'My Persona 1', value: business?.persona1_content ?? '' },
-                  { label: 'My Persona 2', value: business?.persona2_content ?? '' },
-                  { label: 'My Persona 3', value: business?.persona3_content ?? '' },
-                ]}
+                fields={businessInfoFieldsForSelectedTool}
               />
             </CardContent>
           </Card>
