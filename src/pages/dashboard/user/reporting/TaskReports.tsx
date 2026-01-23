@@ -25,7 +25,7 @@ export default function TaskReports() {
         <div>
           <h2 className="text-xl font-semibold text-foreground">Task Reports</h2>
           <p className="text-sm text-muted-foreground">
-            Reporting Tasks (status: Completed) berdasarkan waktu completion.
+            Completed tasks based on completion timestamp.
           </p>
         </div>
 

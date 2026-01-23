@@ -26,7 +26,7 @@ export default function ReportingLayout() {
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground">Sub Menu</div>
+          <div className="text-xs font-medium text-muted-foreground">Submenu</div>
           <nav className="space-y-1">
             {items.map((item) => (
               <NavLink
