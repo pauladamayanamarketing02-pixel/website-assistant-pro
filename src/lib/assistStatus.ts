@@ -12,7 +12,10 @@ export function formatAssistStatusLabel(status: string | null | undefined): "Act
 
 export function assistStatusBadgeVariant(
   status: string | null | undefined
-): "default" | "secondary" {
+): "success" | "muted" | "warning" {
   const s = String(status ?? "").toLowerCase().trim();
-  return s === "active" ? "default" : "secondary";
+  if (s === "active") return "success";
+  if (s === "pending") return "warning";
+  // inactive | nonactive
+  return "muted";
 }

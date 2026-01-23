@@ -38,6 +38,7 @@ type SortKey = "name" | "email" | "role" | "account_status";
 type SortDir = "asc" | "desc";
 
 type RoleFilter = "all" | "user" | "assistant" | "super_admin";
+type StatusFilter = "all" | string;
 
 export default function SuperAdminUsersAssists() {
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,7 @@ export default function SuperAdminUsersAssists() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const normalizeRole = (role: string) => {
     const r = String(role ?? "").toLowerCase().trim();
@@ -64,6 +66,18 @@ export default function SuperAdminUsersAssists() {
     if (s === "expired") return "Expired";
     if (s === "pending") return "Pending";
     return "—";
+  };
+
+  const userStatusBadgeVariant = (
+    status: string,
+  ): "success" | "secondary" | "warning" | "destructive" | "muted" | "outline" => {
+    const s = String(status ?? "").toLowerCase().trim();
+    if (s === "active") return "success";
+    if (s === "approved") return "secondary";
+    if (s === "pending") return "warning";
+    if (s === "expired") return "muted";
+    if (s === "suspended" || s === "inactive" || s === "nonactive" || s === "blacklisted") return "destructive";
+    return "outline";
   };
 
   const normalizeAccountStatus = (status: string) => {
@@ -95,7 +109,7 @@ export default function SuperAdminUsersAssists() {
 
     const label = formatStatusLabel(status);
     if (label === "—") return <span className="text-muted-foreground">—</span>;
-    return <Badge variant="secondary">{label}</Badge>;
+    return <Badge variant={userStatusBadgeVariant(status)}>{label}</Badge>;
   };
 
   const canLoginAs = (role: string) => {
@@ -149,10 +163,41 @@ export default function SuperAdminUsersAssists() {
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      if (roleFilter === "all") return true;
-      return normalizeRole(r.role) === roleFilter;
+      if (roleFilter !== "all" && normalizeRole(r.role) !== roleFilter) return false;
+      if (statusFilter !== "all") {
+        const s = String(getAccountStatus(r) ?? "").toLowerCase().trim();
+        if (s !== String(statusFilter).toLowerCase().trim()) return false;
+      }
+      return true;
     });
+  }, [roleFilter, rows, statusFilter]);
+
+  const statusOptions = useMemo(() => {
+    // Build options from the current role-filtered dataset (before status filtering)
+    const base = rows.filter((r) => (roleFilter === "all" ? true : normalizeRole(r.role) === roleFilter));
+    const map = new Map<string, string>();
+
+    base.forEach((r) => {
+      const raw = String(getAccountStatus(r) ?? "").toLowerCase().trim();
+      if (!raw) return;
+      const label =
+        normalizeRole(r.role) === "assistant" ? formatAssistStatusLabel(raw) : formatStatusLabel(raw);
+      if (label === "—") return;
+      // Keep first label found for a raw status
+      if (!map.has(raw)) map.set(raw, label);
+    });
+
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [roleFilter, rows]);
+
+  useEffect(() => {
+    if (statusFilter === "all") return;
+    const current = String(statusFilter).toLowerCase().trim();
+    const exists = statusOptions.some((o) => o.value === current);
+    if (!exists) setStatusFilter("all");
+  }, [statusFilter, statusOptions]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
@@ -243,6 +288,22 @@ export default function SuperAdminUsersAssists() {
                   <SelectItem value="user">User</SelectItem>
                   <SelectItem value="assistant">Assistant</SelectItem>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-full sm:w-56">
+              <Select value={String(statusFilter)} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter status" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover">
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {statusOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
