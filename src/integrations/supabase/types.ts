@@ -1055,6 +1055,47 @@ export type Database = {
           },
         ]
       }
+      package_durations: {
+        Row: {
+          created_at: string
+          discount_percent: number
+          duration_months: number
+          id: string
+          is_active: boolean
+          package_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discount_percent?: number
+          duration_months: number
+          id?: string
+          is_active?: boolean
+          package_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discount_percent?: number
+          duration_months?: number
+          id?: string
+          is_active?: boolean
+          package_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_durations_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_menu_rules: {
         Row: {
           created_at: string
