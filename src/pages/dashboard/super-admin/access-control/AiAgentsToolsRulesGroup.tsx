@@ -11,7 +11,7 @@ type Props = {
 };
 
 export function AiAgentsToolsRulesGroup({ packageId }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="space-y-2">
