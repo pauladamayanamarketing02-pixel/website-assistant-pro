@@ -162,7 +162,10 @@ export default function BusinessBasics() {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Failed to save business info. Please try again.',
+          description:
+            (businessError as any)?.message
+              ? `Failed to save business info: ${(businessError as any).message}`
+              : 'Failed to save business info. Please try again.',
         });
         setIsSubmitting(false);
         return;
@@ -188,7 +191,7 @@ export default function BusinessBasics() {
   };
 
   // Get unique phone codes for dropdown
-  const phoneCodes = [...new Set(countries.map(c => c.phoneCode))].sort();
+  const phoneCodes = [...new Set(countries.map((c) => c.phoneCode).filter(Boolean))].sort() as string[];
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4 py-12">
