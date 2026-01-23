@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AiToolsAccessCard } from "./access-control/AiToolsAccessCard";
 import { AccessRuleRow } from "./access-control/AccessRuleRow";
-import { ContentPlannerRulesGroup } from "./access-control/ContentPlannerRulesGroup";
+import { TasksProgressRulesGroup } from "./access-control/TasksProgressRulesGroup";
 
 type PackageRow = {
   id: string;
@@ -18,36 +18,25 @@ type PackageRow = {
 type MenuKey =
   | "ai_agents"
   | "messages"
-  | "content_planner"
-  | "content_planner_send_to_tasks"
-  | "content_planner_edit_scheduled"
   | "reporting"
-  | "tasks_progress";
+  | "tasks_progress"
+  | "tasks_progress_editing";
 
 // NOTE: We keep a single source-of-truth list for seeding keys in DB.
 const ALL_MENU_ITEMS: { key: MenuKey; label: string; description: string }[] = [
-  // Content Planner group (rendered as expandable section)
-  { key: "content_planner", label: "Content Planner", description: "Control access to the Content Planner feature in User Dashboard." },
-  {
-    key: "content_planner_send_to_tasks",
-    label: "↳ Send to Tasks",
-    description: 'Enable/disable button “Send to Tasks” in /dashboard/user/content-planner.',
-  },
-  {
-    key: "content_planner_edit_scheduled",
-    label: "↳ Edit Scheduled Content",
-    description: "Enable/disable editing fields (read-only when disabled) in /dashboard/user/content-planner.",
-  },
-
-  // Other items (rendered as flat list)
   { key: "tasks_progress", label: "Tasks & Progress", description: "Enable/disable creating tasks (New Task / Create Task) in User Dashboard." },
+  {
+    key: "tasks_progress_editing",
+    label: "↳ Task Editing",
+    description: "Enable/disable editing task details in /dashboard/user/tasks (view-only when disabled).",
+  },
   { key: "ai_agents", label: "AI Agents", description: "Enable/disable clicking tools in AI Agents — All Tools." },
   { key: "messages", label: "Messages", description: "Enable/disable sending messages in User Dashboard." },
   { key: "reporting", label: "Reporting & Visibility", description: "Show/hide Reporting & Visibility in User Dashboard." },
 ];
 
 const FLAT_MENU_ITEMS = ALL_MENU_ITEMS.filter(
-  (i) => !["content_planner", "content_planner_send_to_tasks", "content_planner_edit_scheduled"].includes(i.key)
+  (i) => !["tasks_progress", "tasks_progress_editing"].includes(i.key)
 );
 
 type RuleRow = {
@@ -80,11 +69,9 @@ export default function SuperAdminAccessControl() {
   const [ruleByKey, setRuleByKey] = useState<Record<MenuKey, boolean>>({
     ai_agents: true,
     messages: true,
-    content_planner: true,
-    content_planner_send_to_tasks: true,
-    content_planner_edit_scheduled: true,
     reporting: true,
     tasks_progress: true,
+    tasks_progress_editing: true,
   });
 
   const selectedPackage = useMemo(
@@ -156,11 +143,9 @@ export default function SuperAdminAccessControl() {
         const next: Record<MenuKey, boolean> = {
           ai_agents: true,
           messages: true,
-          content_planner: true,
-          content_planner_send_to_tasks: true,
-          content_planner_edit_scheduled: true,
           reporting: true,
           tasks_progress: true,
+          tasks_progress_editing: true,
         };
 
         (data as RuleRow[] | null)?.forEach((r) => {
@@ -236,10 +221,7 @@ export default function SuperAdminAccessControl() {
             <p className="text-muted-foreground text-sm">Select a package to configure.</p>
           ) : (
             <div className="space-y-3">
-              <ContentPlannerRulesGroup
-                ruleByKey={ruleByKey as any}
-                setRule={setRule as any}
-              />
+              <TasksProgressRulesGroup ruleByKey={ruleByKey as any} setRule={setRule as any} />
 
               {FLAT_MENU_ITEMS.map((item) => (
                 <AccessRuleRow
