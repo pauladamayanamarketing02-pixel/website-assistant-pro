@@ -8,8 +8,7 @@ export type MenuKey =
   | "content_planner_send_to_tasks"
   | "content_planner_edit_scheduled"
   | "reporting"
-  | "tasks_progress"
-  | "tasks_progress_editing";
+  | "tasks_progress";
 
 const CONTROLLED_KEYS: MenuKey[] = [
   "ai_agents",
@@ -19,7 +18,6 @@ const CONTROLLED_KEYS: MenuKey[] = [
   "content_planner_edit_scheduled",
   "reporting",
   "tasks_progress",
-  "tasks_progress_editing",
 ];
 
 type RuleRow = {
@@ -69,7 +67,6 @@ export function usePackageMenuRules(userId?: string) {
           content_planner_edit_scheduled: true,
           reporting: true,
           tasks_progress: true,
-          tasks_progress_editing: true,
         };
 
         let foundAny = false;
