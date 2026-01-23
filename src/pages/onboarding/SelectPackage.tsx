@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import PackageCard from '@/components/onboarding/PackageCard';
 import { growingPackages, type GrowingPackage } from '@/data/growingPackages';
+import { buildDurationOptionsFromDb, computeDiscountedTotal, type PackageDurationRow } from '@/lib/packageDurations';
 
 type DbAddOn = { id: string; addOnKey: string; label: string; pricePerUnit: number; unitStep: number; unit: string };
+
+type DbDuration = PackageDurationRow;
 
 interface Package {
   id: string;
@@ -35,7 +38,10 @@ export default function SelectPackage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [businessStage, setBusinessStage] = useState<'new' | 'growing'>('new');
   const [dbAddOnsByPackageId, setDbAddOnsByPackageId] = useState<Record<string, DbAddOn[]>>({});
+  const [dbDurationsByPackageId, setDbDurationsByPackageId] = useState<Record<string, DbDuration[]>>({});
   const [growingUsesDb, setGrowingUsesDb] = useState(false);
+
+  const [selectedDurationByPackageId, setSelectedDurationByPackageId] = useState<Record<string, number>>({});
 
   useEffect(() => {
     // Get the business stage from session storage
@@ -94,6 +100,32 @@ export default function SelectPackage() {
              });
              setDbAddOnsByPackageId(grouped);
            }
+
+            // Load durations for growing packages
+            if (pkgIds.length > 0) {
+              const { data: durationRows } = await (supabase as any)
+                .from('package_durations')
+                .select('id,package_id,duration_months,discount_percent,is_active,sort_order')
+                .in('package_id', pkgIds)
+                .eq('is_active', true)
+                .order('sort_order', { ascending: true })
+                .order('duration_months', { ascending: true });
+
+              const groupedDurations: Record<string, DbDuration[]> = {};
+              ((durationRows as any[]) || []).forEach((r) => {
+                const pid = String(r.package_id);
+                if (!groupedDurations[pid]) groupedDurations[pid] = [];
+                groupedDurations[pid].push({
+                  id: String(r.id),
+                  package_id: pid,
+                  duration_months: Number(r.duration_months ?? 1),
+                  discount_percent: Number(r.discount_percent ?? 0),
+                  is_active: Boolean(r.is_active ?? true),
+                  sort_order: Number(r.sort_order ?? 0),
+                });
+              });
+              setDbDurationsByPackageId(groupedDurations);
+            }
         } catch (error) {
           console.error('Error fetching growing packages:', error);
           // Fallback to frontend-defined growing packages
@@ -150,6 +182,32 @@ export default function SelectPackage() {
              });
              setDbAddOnsByPackageId(grouped);
            }
+
+            // Load durations for new business packages
+            if (pkgIds.length > 0) {
+              const { data: durationRows } = await (supabase as any)
+                .from('package_durations')
+                .select('id,package_id,duration_months,discount_percent,is_active,sort_order')
+                .in('package_id', pkgIds)
+                .eq('is_active', true)
+                .order('sort_order', { ascending: true })
+                .order('duration_months', { ascending: true });
+
+              const groupedDurations: Record<string, DbDuration[]> = {};
+              ((durationRows as any[]) || []).forEach((r) => {
+                const pid = String(r.package_id);
+                if (!groupedDurations[pid]) groupedDurations[pid] = [];
+                groupedDurations[pid].push({
+                  id: String(r.id),
+                  package_id: pid,
+                  duration_months: Number(r.duration_months ?? 1),
+                  discount_percent: Number(r.discount_percent ?? 0),
+                  is_active: Boolean(r.is_active ?? true),
+                  sort_order: Number(r.sort_order ?? 0),
+                });
+              });
+              setDbDurationsByPackageId(groupedDurations);
+            }
          }
       } catch (error) {
         console.error('Error fetching packages:', error);
@@ -165,19 +223,50 @@ export default function SelectPackage() {
     setSelectedPackage(pkgId);
     setTotalPrice(price);
     setSelectedAddOns(addOns);
+
+    // Ensure duration has a value (required). Default to first option (usually 1 month).
+    setSelectedDurationByPackageId((prev) => {
+      if (prev[pkgId]) return prev;
+      const opts = buildDurationOptionsFromDb(dbDurationsByPackageId[pkgId]);
+      const first = opts[0]?.months ?? 1;
+      return { ...prev, [pkgId]: first };
+    });
   };
+
+  const selectedDurationMonths = selectedPackage ? (selectedDurationByPackageId[selectedPackage] ?? null) : null;
+
+  const selectedDurationMeta = selectedPackage
+    ? buildDurationOptionsFromDb(dbDurationsByPackageId[selectedPackage]).find((o) => o.months === (selectedDurationMonths ?? 1))
+    : null;
+
+  const totalWithDuration = useMemo(() => {
+    if (!selectedPackage) return 0;
+    const months = selectedDurationMonths ?? 1;
+    const discount = selectedDurationMeta?.discountPercent ?? 0;
+    return computeDiscountedTotal({ monthlyPrice: totalPrice, months, discountPercent: discount });
+  }, [selectedDurationMeta?.discountPercent, selectedDurationMonths, selectedPackage, totalPrice]);
 
   const handleContinue = async () => {
     if (!user || !selectedPackage) return;
+    const months = selectedDurationByPackageId[selectedPackage];
+    if (!months) {
+      toast({ variant: 'destructive', title: 'Duration required', description: 'Silakan pilih duration dulu.' });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       if (businessStage === 'new') {
         // Create user package for new business (from database)
+        const startedAt = new Date();
+        const expiresAt = new Date(startedAt);
+        expiresAt.setMonth(expiresAt.getMonth() + Number(months));
+
         const { error: packageError } = await supabase.from('user_packages').insert({
           user_id: user.id,
           package_id: selectedPackage,
           status: 'active',
+          expires_at: expiresAt.toISOString(),
         });
 
         if (packageError) throw packageError;
@@ -187,10 +276,15 @@ export default function SelectPackage() {
 
         if (selectedDbPkg) {
           // DB-driven: selectedPackage is already the package_id
+          const startedAt = new Date();
+          const expiresAt = new Date(startedAt);
+          expiresAt.setMonth(expiresAt.getMonth() + Number(months));
+
           const { error: userPkgError } = await supabase.from('user_packages').insert({
             user_id: user.id,
             package_id: selectedPackage,
             status: 'active',
+            expires_at: expiresAt.toISOString(),
           });
           if (userPkgError) throw userPkgError;
         } else {
@@ -226,10 +320,15 @@ export default function SelectPackage() {
 
             if (!packageId) throw new Error('Failed to get or create package');
 
+            const startedAt = new Date();
+            const expiresAt = new Date(startedAt);
+            expiresAt.setMonth(expiresAt.getMonth() + Number(months));
+
             const { error: userPkgError } = await supabase.from('user_packages').insert({
               user_id: user.id,
               package_id: packageId,
               status: 'active',
+              expires_at: expiresAt.toISOString(),
             });
 
             if (userPkgError) throw userPkgError;
@@ -296,6 +395,11 @@ export default function SelectPackage() {
     return fromDb && fromDb.length > 0 ? fromDb : [];
   };
 
+  const getDurations = (pkg: any) => {
+    const pkgId = String(pkg?.id ?? '');
+    return buildDurationOptionsFromDb(pkgId ? dbDurationsByPackageId[pkgId] : []);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 px-4 py-12">
       <Button
@@ -336,6 +440,12 @@ export default function SelectPackage() {
               basePrice={pkg.price}
               features={pkg.features}
               addOns={getAddOns(pkg)}
+              durationOptions={getDurations(pkg)}
+              selectedDurationMonths={selectedDurationByPackageId[String(pkg.id)] ?? null}
+              onDurationChange={(months) => {
+                const pid = String(pkg.id);
+                setSelectedDurationByPackageId((prev) => ({ ...prev, [pid]: months }));
+              }}
               isPopular={businessStage === 'new' ? pkg.type === 'growth' : pkg.type === 'scale'}
               isSelected={selectedPackage === pkg.id}
               onSelect={(price, addOns) => handlePackageSelect(pkg.id, price, addOns)}
@@ -347,10 +457,14 @@ export default function SelectPackage() {
           <Button
             size="lg"
             onClick={handleContinue}
-            disabled={isSubmitting || !selectedPackage}
+            disabled={isSubmitting || !selectedPackage || !selectedDurationMonths}
             className="px-8"
           >
-            {isSubmitting ? 'Setting up...' : selectedPackage ? `Continue with $${totalPrice}/month` : 'Select a package to continue'}
+            {isSubmitting
+              ? 'Setting up...'
+              : selectedPackage
+                ? `Continue with $${totalWithDuration} (${selectedDurationMeta?.label ?? '1 Month'})`
+                : 'Select a package to continue'}
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
