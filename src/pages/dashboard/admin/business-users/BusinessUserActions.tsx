@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CreditCard, Eye, KeyRound, Mail, Trash2 } from "lucide-react";
+import { CircleCheck, Clock, Eye, KeyRound, Mail, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,9 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
 
   const nextPaymentActive = !paymentActive;
 
+  const accountStatusLabel = paymentActive ? "Active" : "Pending";
+  const nextAccountStatusLabel = nextPaymentActive ? "Active" : "Pending";
+
   const onConfirmTogglePayment = async () => {
     if (!userId) return;
     setUpdatingPayment(true);
@@ -65,10 +68,10 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
       if ((data as any)?.error) throw new Error(String((data as any).error));
 
       toast({
-        title: `Payment Active: ${nextPaymentActive ? "YES" : "NO"}`,
+        title: `Business Account: ${nextAccountStatusLabel}`,
         description: nextPaymentActive
           ? "User now has full access to the dashboard."
-          : "User access is now limited to My Package.",
+          : "Business account is pending; user access is limited to My Package.",
       });
 
       setPaymentDialogOpen(false);
@@ -198,11 +201,15 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          title={paymentActive ? "Payment Active" : "Payment Nonactive"}
+          title={`Business Account ${accountStatusLabel}`}
           onClick={() => setPaymentDialogOpen(true)}
           disabled={!userId || updatingPayment}
         >
-          <CreditCard className={"h-4 w-4 " + (paymentActive ? "text-success" : "text-destructive")} />
+          {paymentActive ? (
+            <CircleCheck className="h-4 w-4 text-success" />
+          ) : (
+            <Clock className="h-4 w-4 text-destructive" />
+          )}
         </Button>
 
         <Button
@@ -282,13 +289,12 @@ export function BusinessUserActions({ userId, email, paymentActive, onView, onDe
       <AlertDialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Change Payment Active?</AlertDialogTitle>
+            <AlertDialogTitle>Change Business Account Status?</AlertDialogTitle>
             <AlertDialogDescription>
-              Set Payment Active to <span className="font-medium">{nextPaymentActive ? "YES" : "NO"}</span> for this user.
-              {" "}
+              Set Business Account to <span className="font-medium">{nextAccountStatusLabel}</span> for this user. {" "}
               {nextPaymentActive
-                ? "YES gives full access to all /dashboard/user menus."
-                : "NO limits access to My Package only."}
+                ? "Active gives full access to all /dashboard/user menus."
+                : "Pending limits access to My Package only."}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
