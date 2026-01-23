@@ -324,6 +324,44 @@ export type Database = {
         }
         Relationships: []
       }
+      business_report_links: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_report_links_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           bkb_content: string | null
@@ -665,6 +703,44 @@ export type Database = {
           used_count?: number
         }
         Relationships: []
+      }
+      downloadable_reports: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string
+          file_url: string
+          id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string
+          file_url?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "downloadable_reports_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       integration_secrets: {
         Row: {
