@@ -25,6 +25,31 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+async function getAccessToken() {
+  const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+  if (sessionErr) throw sessionErr;
+
+  // If session is missing/expired, attempt a refresh once.
+  if (!sessionData.session) {
+    const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+    if (refreshErr) throw refreshErr;
+    if (!refreshed.session?.access_token) throw new Error("Unauthorized: session not found");
+    return refreshed.session.access_token;
+  }
+
+  return sessionData.session.access_token;
+}
+
+async function invokeWithAuth<T>(fnName: string, body: unknown) {
+  const token = await getAccessToken();
+  return supabase.functions.invoke<T>(fnName, {
+    body,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 type Props = {
   userId: string;
   email: string;
@@ -68,8 +93,9 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
     if (!userId) return;
     setUpdatingPayment(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-set-payment-active", {
-        body: { user_id: userId, payment_active: nextPaymentActive },
+      const { data, error } = await invokeWithAuth("admin-set-payment-active", {
+        user_id: userId,
+        payment_active: nextPaymentActive,
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error(String((data as any).error));
@@ -77,8 +103,9 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
       // When toggling to Active, also set account_status=active.
       // When toggling back to Pending, keep it as approved (not pending), to match the workflow.
       const nextAccountStatus = nextPaymentActive ? "active" : "approved";
-      const { data: stData, error: stError } = await supabase.functions.invoke("admin-set-account-status", {
-        body: { user_id: userId, account_status: nextAccountStatus },
+      const { data: stData, error: stError } = await invokeWithAuth("admin-set-account-status", {
+        user_id: userId,
+        account_status: nextAccountStatus,
       });
       if (stError) throw stError;
       if ((stData as any)?.error) throw new Error(String((stData as any).error));
@@ -107,8 +134,9 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
     if (!userId) return;
     setUpdatingPayment(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-set-account-status", {
-        body: { user_id: userId, account_status: "approved" },
+      const { data, error } = await invokeWithAuth("admin-set-account-status", {
+        user_id: userId,
+        account_status: "approved",
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error(String((data as any).error));
@@ -136,8 +164,9 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
     if (!userId) return;
     setLoadingAuthEmail(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-account-actions", {
-        body: { action: "get_user_email", user_id: userId },
+      const { data, error } = await invokeWithAuth("admin-account-actions", {
+        action: "get_user_email",
+        user_id: userId,
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error(String((data as any).error));
@@ -157,8 +186,9 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
     if (!email || email === "—") return;
     setSendingReset(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-account-actions", {
-        body: { action: "reset_password", email },
+      const { data, error } = await invokeWithAuth("admin-account-actions", {
+        action: "reset_password",
+        email,
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error(String((data as any).error));
@@ -184,8 +214,10 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
 
     setSendingEmailChange(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-account-actions", {
-        body: { action: "change_email", user_id: userId, new_email: next },
+      const { data, error } = await invokeWithAuth("admin-account-actions", {
+        action: "change_email",
+        user_id: userId,
+        new_email: next,
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error(String((data as any).error));
@@ -213,8 +245,9 @@ export function BusinessUserActions({ userId, email, paymentActive, accountStatu
 
     setDeleting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-account-actions", {
-        body: { action: "delete_user", user_id: userId },
+      const { data, error } = await invokeWithAuth("admin-account-actions", {
+        action: "delete_user",
+        user_id: userId,
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error(String((data as any).error));
