@@ -25,6 +25,31 @@ import {
 
 import { BusinessUserActions } from "./business-users/BusinessUserActions";
 
+async function getAccessToken() {
+  const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+  if (sessionErr) throw sessionErr;
+
+  // If session is missing/expired, attempt a refresh once.
+  if (!sessionData.session) {
+    const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+    if (refreshErr) throw refreshErr;
+    if (!refreshed.session?.access_token) throw new Error("Unauthorized: session not found");
+    return refreshed.session.access_token;
+  }
+
+  return sessionData.session.access_token;
+}
+
+async function invokeWithAuth<T>(fnName: string, body: unknown) {
+  const token = await getAccessToken();
+  return supabase.functions.invoke<T>(fnName, {
+    body,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
  type BusinessStatus = "pending" | "approved" | "active" | "suspended" | "expired";
 
 type BusinessPackage =
@@ -100,6 +125,15 @@ export default function AdminBusinessUsers() {
   const fetchBusinessUsers = async () => {
     try {
       setLoading(true);
+
+      // Ensure account statuses are kept in sync with package expiry.
+      // This updates the database (profiles) when an Active account has passed expires_at.
+      // Non-blocking: if it fails, we still load the table.
+      try {
+        await invokeWithAuth("admin-expire-accounts", {});
+      } catch (e) {
+        console.warn("admin-expire-accounts failed:", e);
+      }
 
       // 1) get all user ids
       const { data: userRoles, error: rolesError } = await (supabase as any)
