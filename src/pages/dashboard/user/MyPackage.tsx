@@ -79,10 +79,22 @@ export default function MyPackage() {
   const [activePackage, setActivePackage] = useState<UserPackage | null>(null);
   const [availablePackages, setAvailablePackages] = useState<AvailablePackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accountStatus, setAccountStatus] = useState<string | null>(null);
+  const [paymentActive, setPaymentActive] = useState<boolean | null>(null);
 
   useEffect(() => {
     const fetchPackages = async () => {
       if (!user) return;
+
+      // Fetch admin-managed account status (source of truth for Pending/Approved/Active workflow)
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("account_status,payment_active")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setAccountStatus((profileRow as any)?.account_status ?? null);
+      setPaymentActive((profileRow as any)?.payment_active ?? null);
 
       // Fetch user's active package
       const { data: userPkg } = await supabase
@@ -171,8 +183,21 @@ export default function MyPackage() {
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
 
-  const statusLabel = formatPackageStatusLabel(activePackage?.status);
-  const isActiveStatus = String(activePackage?.status ?? "").toLowerCase().trim() === "active";
+   const rawPkgStatus = String(activePackage?.status ?? "").toLowerCase().trim();
+   const rawAccountStatus = String(accountStatus ?? "").toLowerCase().trim();
+
+   // If admin already approved/activated the account but the package row still hasn't been synced,
+   // prefer showing the account status on this screen.
+   const effectiveStatus = (() => {
+     if (rawAccountStatus === "approved" && rawPkgStatus === "pending") return "approved";
+     if (rawAccountStatus === "active" && rawPkgStatus !== "active") return "active";
+     // If payment is active, treat as active label-wise (dates still depend on user_packages dates).
+     if (paymentActive === true && rawPkgStatus !== "active") return "active";
+     return rawPkgStatus;
+   })();
+
+   const statusLabel = formatPackageStatusLabel(effectiveStatus);
+   const isActiveStatus = effectiveStatus === "active";
   const activeSinceLabel = isActiveStatus ? formatDMY(activePackage?.started_at) : "";
   const expiresOnLabel = isActiveStatus ? formatDMY(activePackage?.expires_at) : "";
   const statusDescription = !isActiveStatus
