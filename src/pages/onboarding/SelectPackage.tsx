@@ -269,16 +269,11 @@ export default function SelectPackage() {
     setIsSubmitting(true);
     try {
       if (businessStage === 'new') {
-        // Create user package for new business (from database)
-        const startedAt = new Date();
-        const expiresAt = new Date(startedAt);
-        expiresAt.setMonth(expiresAt.getMonth() + Number(months));
-
+        // Create user package request (awaiting admin approval/payment)
         const { error: packageError } = await supabase.from('user_packages').insert({
           user_id: user.id,
           package_id: selectedPackage,
-          status: 'active',
-          expires_at: expiresAt.toISOString(),
+          status: 'pending',
         });
 
         if (packageError) throw packageError;
@@ -288,15 +283,10 @@ export default function SelectPackage() {
 
         if (selectedDbPkg) {
           // DB-driven: selectedPackage is already the package_id
-          const startedAt = new Date();
-          const expiresAt = new Date(startedAt);
-          expiresAt.setMonth(expiresAt.getMonth() + Number(months));
-
           const { error: userPkgError } = await supabase.from('user_packages').insert({
             user_id: user.id,
             package_id: selectedPackage,
-            status: 'active',
-            expires_at: expiresAt.toISOString(),
+            status: 'pending',
           });
           if (userPkgError) throw userPkgError;
         } else {
@@ -332,15 +322,10 @@ export default function SelectPackage() {
 
             if (!packageId) throw new Error('Failed to get or create package');
 
-            const startedAt = new Date();
-            const expiresAt = new Date(startedAt);
-            expiresAt.setMonth(expiresAt.getMonth() + Number(months));
-
             const { error: userPkgError } = await supabase.from('user_packages').insert({
               user_id: user.id,
               package_id: packageId,
-              status: 'active',
-              expires_at: expiresAt.toISOString(),
+              status: 'pending',
             });
 
             if (userPkgError) throw userPkgError;
@@ -375,7 +360,7 @@ export default function SelectPackage() {
 
       toast({
         title: 'Welcome aboard!',
-        description: `Your ${packageName} package is now active.`,
+        description: `Your ${packageName} package request is awaiting approval.`,
       });
 
       navigate('/dashboard/user');
