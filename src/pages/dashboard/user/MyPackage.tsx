@@ -175,6 +175,11 @@ export default function MyPackage() {
   const isActiveStatus = String(activePackage?.status ?? "").toLowerCase().trim() === "active";
   const activeSinceLabel = isActiveStatus ? formatDMY(activePackage?.started_at) : "";
   const expiresOnLabel = isActiveStatus ? formatDMY(activePackage?.expires_at) : "";
+  const statusDescription = !isActiveStatus
+    ? statusLabel
+    : activeSinceLabel
+      ? `Active since ${activeSinceLabel}`
+      : "Active";
 
   const hasUpgradeToScale = upgradePackages.some(
     (pkg) => normalizeTier(pkg.type) === "scale" || normalizeTier(pkg.name) === "scale" || normalizeTier(pkg.name).includes("scale")
@@ -219,15 +224,13 @@ export default function MyPackage() {
                     <div>
                       <CardTitle>{activePackage.packages.name}</CardTitle>
                       <CardDescription>
-                        {isActiveStatus && activeSinceLabel ? (
-                          <span className="block">
-                            Active since {activeSinceLabel}
-                            {expiresOnLabel ? (
-                              <span className="block">Expires On {expiresOnLabel}</span>
-                            ) : null}
-                          </span>
+                        {!isActiveStatus ? (
+                          statusDescription
                         ) : (
-                          statusLabel
+                          <span className="block">
+                            {statusDescription}
+                            {expiresOnLabel ? <span className="block">Expires On {expiresOnLabel}</span> : null}
+                          </span>
                         )}
                       </CardDescription>
                     </div>
