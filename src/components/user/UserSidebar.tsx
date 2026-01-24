@@ -34,8 +34,10 @@ export function UserSidebar({
   const { open } = useSidebar();
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [readyForReviewCount, setReadyForReviewCount] = useState(0);
 
   const showMessagesBadge = useMemo(() => unreadCount > 0, [unreadCount]);
+  const showTasksBadge = useMemo(() => readyForReviewCount > 0, [readyForReviewCount]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -104,6 +106,51 @@ export function UserSidebar({
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let isMounted = true;
+
+    const refreshReadyForReview = async () => {
+      const { count, error } = await supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "ready_for_review");
+
+      // Prevent badge from incorrectly clearing on transient query errors
+      if (error) return;
+      if (!isMounted) return;
+      setReadyForReviewCount(count || 0);
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshReadyForReview();
+    };
+
+    refreshReadyForReview();
+    window.addEventListener("focus", refreshReadyForReview);
+    document.addEventListener("visibilitychange", onVisibility);
+    const intervalId = window.setInterval(refreshReadyForReview, 20000);
+
+    const channel = supabase
+      .channel(`sidebar-ready-for-review-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks", filter: `user_id=eq.${user.id}` },
+        () => refreshReadyForReview()
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", refreshReadyForReview);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(intervalId);
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   return (
     <Sidebar
       className={
@@ -136,6 +183,7 @@ export function UserSidebar({
             <SidebarMenu>
               {items.map((item) => {
                 const isMessages = item.url === "/dashboard/user/messages";
+                const isTasks = item.url === "/dashboard/user/tasks";
                 const isDisabled = Boolean(item.disabled);
                 const isRootEnd =
                   item.url === "/dashboard/user" || item.url === "/dashboard/user/overview";
@@ -172,6 +220,17 @@ export function UserSidebar({
                               <span className="ml-auto h-2 w-2 rounded-full bg-destructive" />
                             )
                           )}
+
+                            {/* Ready for review tasks badge */}
+                            {isTasks && showTasksBadge && (
+                              open ? (
+                                <span className="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs tabular-nums">
+                                  {readyForReviewCount > 99 ? "99+" : readyForReviewCount}
+                                </span>
+                              ) : (
+                                <span className="ml-auto h-2 w-2 rounded-full bg-primary" />
+                              )
+                            )}
                         </NavLink>
                       )}
                     </SidebarMenuButton>
