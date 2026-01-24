@@ -88,10 +88,14 @@ Deno.serve(async (req) => {
     // pending -> Awaiting Approval
     // approved -> Awaiting Payment
     // active -> Active since + Expires on
+    //
+    // IMPORTANT BUSINESS RULE:
+    // - We only set activation timestamps + calculate expiry when the account moves to ACTIVE.
+    // - APPROVED should NOT start the subscription clock.
     if (nextStatus === "approved" || nextStatus === "active") {
       const { data: latestPkg, error: pkgErr } = await admin
         .from("user_packages")
-        .select("id,status,duration_months")
+        .select("id,status,duration_months,started_at,activated_at")
         .eq("user_id", userId)
         .in("status", ["pending", "approved", "active"])
         .order("created_at", { ascending: false })
@@ -114,19 +118,31 @@ Deno.serve(async (req) => {
         }
 
         if (nextStatus === "active") {
-          // Activate latest request (pending/approved) and set dates
+          // Activate latest request (pending/approved) and set activation+expiry based on duration.
+          // Expiry is counted from the moment we activate (Approved -> Active).
           if (currentStatus !== "active") {
-            const startedAt = new Date();
-            const months = Number((latestPkg as any).duration_months ?? 1);
-            const expiresAt = addMonths(startedAt, months);
-            const { error: upErr } = await admin
-              .from("user_packages")
-              .update({
-                status: "active",
-                started_at: startedAt.toISOString(),
-                expires_at: expiresAt.toISOString(),
-              })
-              .eq("id", (latestPkg as any).id);
+            const now = new Date();
+
+            // If we ever re-activate a package (e.g., suspended -> active later),
+            // we keep historical activation timestamps if already present.
+            const activatedAt = (latestPkg as any).activated_at ? new Date(String((latestPkg as any).activated_at)) : now;
+            const startedAt = (latestPkg as any).started_at ? new Date(String((latestPkg as any).started_at)) : activatedAt;
+
+            const months = Math.max(1, Number((latestPkg as any).duration_months ?? 1));
+            const expiresAt = addMonths(activatedAt, months);
+
+            const updatePayload: Record<string, unknown> = {
+              status: "active",
+              // Only set these fields if they're missing, to preserve historical values.
+              activated_at: (latestPkg as any).activated_at ? undefined : activatedAt.toISOString(),
+              started_at: (latestPkg as any).started_at ? undefined : startedAt.toISOString(),
+              expires_at: expiresAt.toISOString(),
+            };
+
+            // Remove undefined keys so PostgREST doesn't complain.
+            Object.keys(updatePayload).forEach((k) => updatePayload[k] === undefined && delete updatePayload[k]);
+
+            const { error: upErr } = await admin.from("user_packages").update(updatePayload).eq("id", (latestPkg as any).id);
             if (upErr) throw upErr;
           }
         }
