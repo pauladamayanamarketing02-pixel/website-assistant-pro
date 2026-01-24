@@ -47,51 +47,32 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   try {
-    console.log("[admin-set-account-status] Request received");
-    
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error("[admin-set-account-status] Missing environment variables");
       return json(500, { error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" });
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
-    console.log("[admin-set-account-status] Auth header present:", !!authHeader);
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!token) {
-      console.error("[admin-set-account-status] No token found in Authorization header");
-      return json(401, { error: "Unauthorized - No token provided" });
-    }
+    if (!token) return json(401, { error: "Unauthorized" });
 
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
 
     const { data: requester, error: requesterErr } = await admin.auth.getUser(token);
-    if (requesterErr || !requester?.user) {
-      console.error("[admin-set-account-status] Token validation failed:", requesterErr?.message);
-      return json(401, { error: "Unauthorized - Invalid token" });
-    }
-    
-    console.log("[admin-set-account-status] User authenticated:", requester.user.id);
+    if (requesterErr || !requester?.user) return json(401, { error: "Unauthorized" });
 
     const { data: roleRows, error: roleErr } = await admin
       .from("user_roles")
       .select("role")
       .eq("user_id", requester.user.id);
-    if (roleErr) {
-      console.error("[admin-set-account-status] Role query failed:", roleErr.message);
-      throw roleErr;
-    }
+    if (roleErr) throw roleErr;
 
     const roles = (roleRows ?? []).map((r: any) => String(r.role));
-    console.log("[admin-set-account-status] User roles:", roles);
     const isAllowed = roles.includes("admin") || roles.includes("super_admin");
-    if (!isAllowed) {
-      console.error("[admin-set-account-status] User lacks required role");
-      return json(403, { error: "Forbidden - Admin role required" });
-    }
+    if (!isAllowed) return json(403, { error: "Forbidden" });
 
     const body = (await req.json()) as Payload;
     const userId = String(body?.user_id ?? "").trim();
