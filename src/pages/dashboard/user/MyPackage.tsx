@@ -214,8 +214,12 @@ export default function MyPackage() {
   const isActiveStatus = String(statusSource ?? "").toLowerCase().trim() === "active";
   const activeSinceLabel = isActiveStatus ? formatDMY(activePackage?.started_at) : "";
   const expiresOnLabel = isActiveStatus ? formatDMY(activePackage?.expires_at) : "";
-  // UI requirement: hide any "Active" and "Active since ..." wording on this page.
-  const statusDescription = !isActiveStatus ? statusLabel : "";
+  // Status wording should follow Admin Business Users table (show Active/Pending/Approved/etc.).
+  const statusDescription = !isActiveStatus
+    ? statusLabel
+    : activeSinceLabel
+      ? `Active since ${activeSinceLabel}`
+      : "Active";
 
   const hasUpgradeToScale = upgradePackages.some(
     (pkg) => normalizeTier(pkg.type) === "scale" || normalizeTier(pkg.name) === "scale" || normalizeTier(pkg.name).includes("scale")
@@ -259,20 +263,21 @@ export default function MyPackage() {
                     </div>
                     <div>
                       <CardTitle>{activePackage.packages.name}</CardTitle>
-                       <CardDescription>
-                         {!isActiveStatus ? (
-                           statusDescription
-                         ) : expiresOnLabel ? (
-                           <span className="block">Expires On {expiresOnLabel}</span>
-                         ) : null}
-                       </CardDescription>
+                      <CardDescription>
+                        {isActiveStatus ? (
+                          <span className="block">
+                            {statusDescription}
+                            {expiresOnLabel ? <span className="block">Expires On {expiresOnLabel}</span> : null}
+                          </span>
+                        ) : (
+                          statusDescription
+                        )}
+                      </CardDescription>
                     </div>
                   </div>
-                   {!isActiveStatus ? (
-                     <Badge variant="default" className="bg-primary/10 text-primary">
-                       {statusLabel}
-                     </Badge>
-                   ) : null}
+                  <Badge variant="default" className="bg-primary/10 text-primary">
+                    {statusLabel}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 min-w-0">
