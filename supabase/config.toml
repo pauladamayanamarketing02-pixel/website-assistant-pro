@@ -1,1 +1,49 @@
 project_id = "supiwygxypfqjzoqmlaq"
+
+[functions.admin-set-account-status]
+verify_jwt = false
+
+[functions.admin-account-actions]
+verify_jwt = false
+
+[functions.admin-create-assistant]
+verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = false
+
+[functions.admin-order-domain-pricing]
+verify_jwt = false
+
+[functions.admin-security-notify]
+verify_jwt = false
+
+[functions.admin-set-payment-active]
+verify_jwt = false
+
+[functions.domainduck-check]
+verify_jwt = false
+
+[functions.domainr-check]
+verify_jwt = false
+
+[functions.super-admin-domainduck-secret]
+verify_jwt = false
+
+[functions.super-admin-domainr-secret]
+verify_jwt = false
+
+[functions.super-admin-ga4-settings]
+verify_jwt = false
+
+[functions.super-admin-impersonation-verify]
+verify_jwt = false
+
+[functions.super-admin-login-link]
+verify_jwt = false
+
+[functions.super-admin-whoapi-secret]
+verify_jwt = false
+
+[functions.whoapi-check]
+verify_jwt = false
