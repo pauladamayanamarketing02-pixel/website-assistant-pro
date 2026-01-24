@@ -15,8 +15,8 @@ export default function AssistSupportLocked({ name, email, onLogout }: Props) {
         <header className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Support</h1>
           <p className="text-sm text-muted-foreground">
-            Akun kamu sedang <span className="font-medium">Nonactive</span>. Silakan kirim pesan ke admin untuk
-            aktivasi.
+            Your account is currently <span className="font-medium">Nonactive</span>. Please send a message to the
+            admin to request activation.
           </p>
         </header>
 
