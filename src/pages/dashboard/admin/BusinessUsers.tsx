@@ -45,7 +45,15 @@ type BusinessAccountRow = {
     status: BusinessStatus;
   package: BusinessPackage;
   paymentActive: boolean;
+  expiresAt: string | null;
 };
+
+function formatDMY(dateIso: string | null | undefined): string {
+  if (!dateIso) return "—";
+  const d = new Date(dateIso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB");
+}
 
 const statusLabel: Record<BusinessStatus, string> = {
   pending: "Pending",
@@ -126,8 +134,9 @@ export default function AdminBusinessUsers() {
       // 4) fetch active package per user (if any)
       const { data: userPackages, error: packagesError } = await (supabase as any)
         .from("user_packages")
-        .select("user_id, status, package:packages(type)")
-        .in("user_id", userIds);
+        .select("user_id, status, started_at, expires_at, duration_months, created_at, package:packages(type)")
+        .in("user_id", userIds)
+        .order("created_at", { ascending: false });
 
       if (packagesError) throw packagesError;
 
@@ -137,10 +146,20 @@ export default function AdminBusinessUsers() {
       });
 
       const packageByUserId = new Map<string, BusinessPackage>();
+      const expiresByUserId = new Map<string, string | null>();
       (userPackages as any[] | null)?.forEach((up) => {
         if (!up?.user_id) return;
-        const pkgType = up?.package?.type;
-        packageByUserId.set(up.user_id, mapDbPackageToUi(pkgType));
+
+        // since we order by created_at desc, first row per user is the latest
+        if (!packageByUserId.has(up.user_id)) {
+          const pkgType = up?.package?.type;
+          packageByUserId.set(up.user_id, mapDbPackageToUi(pkgType));
+
+          // only show expires date when active & exists
+          const status = String(up?.status ?? "").toLowerCase().trim();
+          const expiresAt = status === "active" ? (up?.expires_at ?? null) : null;
+          expiresByUserId.set(up.user_id, expiresAt);
+        }
       });
 
       const nextRows: BusinessAccountRow[] = ((profiles as any[]) ?? []).map((p) => {
@@ -162,6 +181,7 @@ export default function AdminBusinessUsers() {
           status: mapDbAccountStatusToUi(p?.account_status, paymentActive),
           package: packageByUserId.get(p.id) ?? "custom",
           paymentActive,
+          expiresAt: expiresByUserId.get(p.id) ?? null,
         };
       });
 
@@ -257,6 +277,7 @@ export default function AdminBusinessUsers() {
                       <TableHead className="min-w-[150px] lg:min-w-0">Business Name</TableHead>
                       <TableHead className="min-w-[120px] lg:min-w-0">Contact</TableHead>
                       <TableHead className="min-w-[180px] lg:min-w-0">Email</TableHead>
+                      <TableHead className="min-w-[130px] lg:min-w-0">Expired Date</TableHead>
                       <TableHead className="min-w-[100px] lg:min-w-0">Status</TableHead>
                       <TableHead className="text-center min-w-[220px] lg:min-w-0">Actions</TableHead>
                     </TableRow>
@@ -265,7 +286,7 @@ export default function AdminBusinessUsers() {
                   <TableBody>
                     {filteredRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
                           No businesses found.
                         </TableCell>
                       </TableRow>
@@ -276,6 +297,7 @@ export default function AdminBusinessUsers() {
                           <TableCell className="font-medium">{row.businessName}</TableCell>
                           <TableCell className="text-muted-foreground">{row.contactName}</TableCell>
                           <TableCell className="text-muted-foreground">{row.email}</TableCell>
+                          <TableCell className="text-muted-foreground">{row.expiresAt ? formatDMY(row.expiresAt) : "—"}</TableCell>
                           <TableCell>
                             <Badge variant="secondary">{statusLabel[row.status]}</Badge>
                           </TableCell>
