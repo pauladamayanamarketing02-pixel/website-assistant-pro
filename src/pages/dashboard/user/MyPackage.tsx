@@ -78,6 +78,7 @@ export default function MyPackage() {
   const { user } = useAuth();
   const [activePackage, setActivePackage] = useState<UserPackage | null>(null);
   const [accountStatus, setAccountStatus] = useState<string | null>(null);
+  const [paymentActive, setPaymentActive] = useState<boolean>(false);
   const [availablePackages, setAvailablePackages] = useState<AvailablePackage[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,12 +89,18 @@ export default function MyPackage() {
       // Fetch user's account status (source of truth for the UI status badge)
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("account_status")
+        .select("account_status, payment_active")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (!profileError) {
+      if (profileError) {
+        // Avoid showing an incorrect fallback status (e.g., Active) if profile fetch fails.
+        console.warn("Failed to fetch profile status:", profileError);
+        setAccountStatus(null);
+        setPaymentActive(false);
+      } else {
         setAccountStatus((profile as any)?.account_status ?? null);
+        setPaymentActive(Boolean((profile as any)?.payment_active ?? false));
       }
 
       // Fetch user's active package
@@ -183,7 +190,9 @@ export default function MyPackage() {
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
 
-  const statusSource = accountStatus ?? activePackage?.status;
+  // Match admin logic: payment_active=true always means Active.
+  // IMPORTANT: Do not fall back to user_packages.status; source of truth is profiles.
+  const statusSource = paymentActive ? "active" : accountStatus;
   const statusLabel = formatPackageStatusLabel(statusSource);
   const isActiveStatus = String(statusSource ?? "").toLowerCase().trim() === "active";
   const activeSinceLabel = isActiveStatus ? formatDMY(activePackage?.started_at) : "";
