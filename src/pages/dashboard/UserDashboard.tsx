@@ -222,10 +222,7 @@ export default function UserDashboard() {
           </header>
 
           <main
-            className={
-              "flex-1 p-6 bg-background overflow-auto " +
-              (location.pathname.endsWith('/dashboard/user/package') ? 'lg:overflow-hidden' : '')
-            }
+            className="flex-1 p-6 bg-background overflow-auto"
           >
             <Routes>
               <Route
