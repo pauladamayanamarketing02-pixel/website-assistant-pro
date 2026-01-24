@@ -17,6 +17,14 @@ type Payload = {
   account_status: AllowedStatus;
 };
 
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  const m = Number(months || 0);
+  if (!Number.isFinite(m) || m <= 0) return d;
+  d.setMonth(d.getMonth() + m);
+  return d;
+}
+
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -39,7 +47,6 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   try {
-    console.info("[admin-set-account-status] Request received");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
@@ -47,7 +54,6 @@ Deno.serve(async (req) => {
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
-    console.info("[admin-set-account-status] Auth header present:", Boolean(authHeader));
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) return json(401, { error: "Unauthorized" });
 
@@ -55,8 +61,6 @@ Deno.serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    // IMPORTANT: Always validate the caller's JWT.
-    // If we don't pass the token into getUser(), supabase-js will throw "Auth session missing!".
     const { data: requester, error: requesterErr } = await admin.auth.getUser(token);
     if (requesterErr || !requester?.user) return json(401, { error: "Unauthorized" });
 
@@ -79,6 +83,55 @@ Deno.serve(async (req) => {
 
     const { error } = await admin.from("profiles").update({ account_status: nextStatus }).eq("id", userId);
     if (error) throw error;
+
+    // Keep user_packages workflow in sync with account_status so the user dashboard can show:
+    // pending -> Awaiting Approval
+    // approved -> Awaiting Payment
+    // active -> Active since + Expires on
+    if (nextStatus === "approved" || nextStatus === "active") {
+      const { data: latestPkg, error: pkgErr } = await admin
+        .from("user_packages")
+        .select("id,status,duration_months")
+        .eq("user_id", userId)
+        .in("status", ["pending", "approved", "active"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (pkgErr) throw pkgErr;
+
+      if (latestPkg?.id) {
+        const currentStatus = String((latestPkg as any).status ?? "").toLowerCase().trim();
+
+        if (nextStatus === "approved") {
+          // Move pending -> approved (do not touch dates)
+          if (currentStatus === "pending") {
+            const { error: upErr } = await admin
+              .from("user_packages")
+              .update({ status: "approved" })
+              .eq("id", (latestPkg as any).id);
+            if (upErr) throw upErr;
+          }
+        }
+
+        if (nextStatus === "active") {
+          // Activate latest request (pending/approved) and set dates
+          if (currentStatus !== "active") {
+            const startedAt = new Date();
+            const months = Number((latestPkg as any).duration_months ?? 1);
+            const expiresAt = addMonths(startedAt, months);
+            const { error: upErr } = await admin
+              .from("user_packages")
+              .update({
+                status: "active",
+                started_at: startedAt.toISOString(),
+                expires_at: expiresAt.toISOString(),
+              })
+              .eq("id", (latestPkg as any).id);
+            if (upErr) throw upErr;
+          }
+        }
+      }
+    }
 
     return json(200, { ok: true, user_id: userId, account_status: nextStatus });
   } catch (e) {
