@@ -343,7 +343,7 @@ export default function Reports() {
             <Label>Business</Label>
             <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId} disabled={loadingBusinesses}>
               <SelectTrigger>
-                <SelectValue placeholder={loadingBusinesses ? "Loading businesses..." : "Select a business"} />
+                  <SelectValue placeholder={loadingBusinesses ? "Loading businesses..." : "Select client"} />
               </SelectTrigger>
               <SelectContent>
                 {businesses.map((b) => (
