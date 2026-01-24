@@ -103,9 +103,9 @@ export default function AssistDashboard() {
   const [profileStatus, setProfileStatus] = useState<string>('active');
   const [profileName, setProfileName] = useState<string>('');
   const [profileEmail, setProfileEmail] = useState<string>('');
-  const [pendingTasksCount, setPendingTasksCount] = useState(0);
+  const [assignedTasksCount, setAssignedTasksCount] = useState(0);
 
-  const fetchPendingTasksCount = async () => {
+  const fetchAssignedTasksCount = async () => {
     if (!user?.id) return;
 
     // Assist Task Manager is locked to the current assist account (assigned_to = assist)
@@ -113,23 +113,23 @@ export default function AssistDashboard() {
       .from("tasks")
       .select("id", { count: "exact", head: true })
       .eq("assigned_to", user.id)
-      .eq("status", "pending");
+      .eq("status", "assigned");
 
     if (error) return;
-    setPendingTasksCount(Number(count ?? 0));
+    setAssignedTasksCount(Number(count ?? 0));
   };
 
   useEffect(() => {
     if (!user?.id || role !== 'assist') return;
 
-    void fetchPendingTasksCount();
+    void fetchAssignedTasksCount();
 
     const channel = supabase
       .channel(`assist-tasks-badge-${user.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
-        () => void fetchPendingTasksCount()
+        () => void fetchAssignedTasksCount()
       )
       .subscribe();
 
@@ -144,12 +144,12 @@ export default function AssistDashboard() {
       if (item.url === '/dashboard/assist/tasks') {
         return {
           ...item,
-          badgeCount: pendingTasksCount > 0 ? pendingTasksCount : undefined,
+          badgeCount: assignedTasksCount > 0 ? assignedTasksCount : undefined,
         };
       }
       return item;
     });
-  }, [pendingTasksCount]);
+  }, [assignedTasksCount]);
 
   const welcomeName = useMemo(() => {
     if (!user) return '';
