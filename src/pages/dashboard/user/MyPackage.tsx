@@ -77,12 +77,24 @@ function formatDMY(dateIso: string | null | undefined): string {
 export default function MyPackage() {
   const { user } = useAuth();
   const [activePackage, setActivePackage] = useState<UserPackage | null>(null);
+  const [accountStatus, setAccountStatus] = useState<string | null>(null);
   const [availablePackages, setAvailablePackages] = useState<AvailablePackage[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPackages = async () => {
       if (!user) return;
+
+      // Fetch user's account status (source of truth for the UI status badge)
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("account_status")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profileError) {
+        setAccountStatus((profile as any)?.account_status ?? null);
+      }
 
       // Fetch user's active package
       const { data: userPkg } = await supabase
@@ -171,8 +183,9 @@ export default function MyPackage() {
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
 
-  const statusLabel = formatPackageStatusLabel(activePackage?.status);
-  const isActiveStatus = String(activePackage?.status ?? "").toLowerCase().trim() === "active";
+  const statusSource = accountStatus ?? activePackage?.status;
+  const statusLabel = formatPackageStatusLabel(statusSource);
+  const isActiveStatus = String(statusSource ?? "").toLowerCase().trim() === "active";
   const activeSinceLabel = isActiveStatus ? formatDMY(activePackage?.started_at) : "";
   const expiresOnLabel = isActiveStatus ? formatDMY(activePackage?.expires_at) : "";
   const statusDescription = !isActiveStatus
