@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { fetchActiveBusinesses } from '@/lib/activeBusinesses';
 
 interface Task {
   id: string;
@@ -222,10 +223,9 @@ export default function TaskManager() {
 
     const userIds = (userRoles as any[])?.map((r) => r.user_id) || [];
 
-    const { data: businesses } = await (supabase as any)
-      .from('businesses')
-      .select('user_id, business_name')
-      .in('user_id', userIds);
+    // Keep only Active clients (synced from user_packages -> profiles)
+    const activeBusinesses = await fetchActiveBusinesses({ select: 'user_id, business_name', orderByBusinessName: true });
+    const businesses = (activeBusinesses ?? []).filter((b) => userIds.includes((b as any).user_id));
 
     const filteredClients: Client[] = ((businesses as any[]) || [])
       .filter((b) => b.business_name)

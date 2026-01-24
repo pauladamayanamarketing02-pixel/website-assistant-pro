@@ -57,6 +57,7 @@ import { useSupabaseRealtimeReload } from "@/hooks/useSupabaseRealtimeReload";
 import type { ContentItemEditValues } from "@/pages/dashboard/assist/content-creation/ContentItemEditDialog";
 import ContentItemInlineEditor from "@/pages/dashboard/assist/content-creation/ContentItemInlineEditor";
 import ContentItemForm from "@/pages/dashboard/assist/content-creation/ContentItemForm";
+import { fetchActiveBusinesses } from "@/lib/activeBusinesses";
 
 type SortDirection = "asc" | "desc";
 
@@ -282,12 +283,9 @@ export default function ContentCreation() {
   React.useEffect(() => {
     let cancelled = false;
 
-      const loadBusinesses = async () => {
-      const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData, error: typeError }] = await Promise.all([
-        supabase
-          .from("businesses")
-          .select("id, business_name, business_number, user_id")
-          .order("business_name", { ascending: true, nullsFirst: false }),
+    const loadBusinesses = async () => {
+      const [bizData, { data: catData }, { data: typeData, error: typeError }] = await Promise.all([
+        fetchActiveBusinesses({ select: "id, business_name, business_number, user_id", orderByBusinessName: true }),
         supabase.from("content_categories").select("name, is_locked").order("name", { ascending: true }),
         // Column order follows database order (created_at). UI can reverse it.
         supabase.from("content_types").select("name, is_locked").order("created_at", { ascending: true }),
@@ -295,18 +293,13 @@ export default function ContentCreation() {
 
       if (cancelled) return;
 
-      if (bizError) {
-        // Jangan blok UI — fallback ke list kosong
-        setBusinesses([]);
-      } else {
-        const list: BusinessOption[] = (bizData ?? []).map((b: any) => ({
-          id: b.id as string,
-          name: safeName(b.business_name as string | null | undefined),
-          publicId: formatBusinessId((b as any).business_number as number | null),
-          userId: (b.user_id ?? undefined) as string | undefined,
-        }));
-        setBusinesses(list);
-      }
+      const list: BusinessOption[] = (bizData ?? []).map((b: any) => ({
+        id: b.id as string,
+        name: safeName(b.business_name as string | null | undefined),
+        publicId: formatBusinessId((b as any).business_number as number | null),
+        userId: (b.user_id ?? undefined) as string | undefined,
+      }));
+      setBusinesses(list);
 
       const catRows = (catData ?? []) as Array<{ name: string; is_locked?: boolean }>;
       const typeRows = (typeData ?? []) as Array<{ name: string; is_locked?: boolean }>;

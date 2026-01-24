@@ -50,6 +50,7 @@ import MediaDetailsView from "@/pages/dashboard/assist/media-library/MediaDetail
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabaseRealtimeReload } from "@/hooks/useSupabaseRealtimeReload";
+import { fetchActiveBusinesses } from "@/lib/activeBusinesses";
 
 type ImportType = "Gambar" | "Video";
 
@@ -281,29 +282,22 @@ export default function AssistMediaLibrary() {
     let cancelled = false;
 
     const load = async () => {
-      const [{ data: bizData, error: bizError }, { data: catData }, { data: typeData }] = await Promise.all([
-        supabase
-          .from("businesses")
-          .select("id, business_name, user_id, business_number")
-          .order("business_name", { ascending: true, nullsFirst: false }),
+      const [bizResult, { data: catData }, { data: typeData }] = await Promise.all([
+        fetchActiveBusinesses({ select: "id, business_name, user_id, business_number", orderByBusinessName: true }),
         supabase.from("media_categories").select("id, name, is_locked").order("name", { ascending: true }),
         supabase.from("media_types").select("id, name, is_locked").order("name", { ascending: true }),
       ]);
 
       if (cancelled) return;
 
-      if (bizError) {
-        setBusinesses([]);
-      } else {
-        setBusinesses(
-          (bizData ?? []).map((b: any) => ({
-            id: b.id,
-            name: safeName(b.business_name),
-            userId: b.user_id,
-            publicId: formatBusinessId((b as any).business_number as number | null) || b.id,
-          }))
-        );
-      }
+      setBusinesses(
+        (bizResult ?? []).map((b: any) => ({
+          id: b.id,
+          name: safeName(b.business_name),
+          userId: b.user_id,
+          publicId: formatBusinessId((b as any).business_number as number | null) || b.id,
+        }))
+      );
 
       const catRows = (catData ?? []) as Array<{ id: string; name: string; is_locked?: boolean }>;
       setCategories(uniqueNonEmpty(catRows.map((c) => c.name)));

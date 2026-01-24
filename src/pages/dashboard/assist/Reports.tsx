@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchActiveBusinesses } from "@/lib/activeBusinesses";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,12 +105,7 @@ export default function Reports() {
     const run = async () => {
       setLoadingBusinesses(true);
       try {
-        const { data, error } = await supabase
-          .from("businesses")
-          .select("id,business_name,user_id")
-          .order("business_name", { ascending: true });
-
-        if (error) throw error;
+        const data = await fetchActiveBusinesses({ select: "id,business_name,user_id", orderByBusinessName: true });
         const list = (data as any as BusinessOption[]) ?? [];
         if (!cancelled) {
           setBusinesses(list);

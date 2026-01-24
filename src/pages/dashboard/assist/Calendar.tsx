@@ -34,6 +34,7 @@ import PlatformDropdown from "@/pages/dashboard/assist/content-creation/Platform
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseRealtimeReload } from "@/hooks/useSupabaseRealtimeReload";
+import { fetchActiveBusinesses } from "@/lib/activeBusinesses";
 
 type BusinessOption = {
   id: string;
@@ -136,13 +137,8 @@ export default function AssistCalendar() {
 
     const loadBusinesses = async () => {
       try {
-        const { data, error } = await supabase
-          .from("businesses")
-          .select("id, business_name")
-          .order("business_name", { ascending: true });
-
         if (cancelled) return;
-        if (error) throw error;
+        const data = await fetchActiveBusinesses({ select: "id, business_name", orderByBusinessName: true });
 
         const mapped: BusinessOption[] = (data ?? []).map((b: any) => ({
           id: b.id as string,
