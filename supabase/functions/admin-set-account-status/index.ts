@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   try {
+    console.info("[admin-set-account-status] Request received");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
@@ -46,6 +47,7 @@ Deno.serve(async (req) => {
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
+    console.info("[admin-set-account-status] Auth header present:", Boolean(authHeader));
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) return json(401, { error: "Unauthorized" });
 
@@ -53,6 +55,8 @@ Deno.serve(async (req) => {
       auth: { persistSession: false },
     });
 
+    // IMPORTANT: Always validate the caller's JWT.
+    // If we don't pass the token into getUser(), supabase-js will throw "Auth session missing!".
     const { data: requester, error: requesterErr } = await admin.auth.getUser(token);
     if (requesterErr || !requester?.user) return json(401, { error: "Unauthorized" });
 
