@@ -10,6 +10,7 @@ interface UserPackage {
   id: string;
   status: string;
   started_at: string;
+  expires_at: string | null;
   packages: {
     name: string;
     type: string;
@@ -56,6 +57,23 @@ function sortByTier(aNameOrType: string, bNameOrType: string): number {
   return a.localeCompare(b);
 }
 
+function formatPackageStatusLabel(status: string | null | undefined): string {
+  const s = String(status ?? "").toLowerCase().trim();
+  if (s === "pending") return "Awaiting Approval";
+  if (s === "approved") return "Awaiting Payment";
+  if (s === "active") return "Active";
+  if (!s) return "—";
+  // fallback for any legacy/custom status
+  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDMY(dateIso: string | null | undefined): string {
+  if (!dateIso) return "";
+  const d = new Date(dateIso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-GB");
+}
+
 export default function MyPackage() {
   const { user } = useAuth();
   const [activePackage, setActivePackage] = useState<UserPackage | null>(null);
@@ -71,12 +89,14 @@ export default function MyPackage() {
         .from("user_packages")
         .select(
           `
-          id, status, started_at,
+          id, status, started_at, expires_at,
           packages (name, type, description, features, price)
         `
         )
         .eq("user_id", user.id)
-        .eq("status", "active")
+        // Show the latest package record even if not active yet.
+        .in("status", ["pending", "approved", "active"])
+        .order("created_at", { ascending: false })
         .maybeSingle();
 
       if (userPkg) {
@@ -151,6 +171,11 @@ export default function MyPackage() {
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
 
+  const statusLabel = formatPackageStatusLabel(activePackage?.status);
+  const isActiveStatus = String(activePackage?.status ?? "").toLowerCase().trim() === "active";
+  const activeSinceLabel = isActiveStatus ? formatDMY(activePackage?.started_at) : "";
+  const expiresOnLabel = isActiveStatus ? formatDMY(activePackage?.expires_at) : "";
+
   const hasUpgradeToScale = upgradePackages.some(
     (pkg) => normalizeTier(pkg.type) === "scale" || normalizeTier(pkg.name) === "scale" || normalizeTier(pkg.name).includes("scale")
   );
@@ -194,12 +219,21 @@ export default function MyPackage() {
                     <div>
                       <CardTitle>{activePackage.packages.name}</CardTitle>
                       <CardDescription>
-                        Active since {new Date(activePackage.started_at).toLocaleDateString()}
+                        {isActiveStatus && activeSinceLabel ? (
+                          <span className="block">
+                            Active since {activeSinceLabel}
+                            {expiresOnLabel ? (
+                              <span className="block">Expires On {expiresOnLabel}</span>
+                            ) : null}
+                          </span>
+                        ) : (
+                          statusLabel
+                        )}
                       </CardDescription>
                     </div>
                   </div>
                   <Badge variant="default" className="bg-primary/10 text-primary">
-                    Active
+                    {statusLabel}
                   </Badge>
                 </div>
               </CardHeader>
