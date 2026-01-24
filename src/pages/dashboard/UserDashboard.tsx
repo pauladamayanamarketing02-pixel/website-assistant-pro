@@ -19,6 +19,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { UserSidebar, type UserNavItem } from '@/components/user/UserSidebar';
 import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
+import { useBusinessInfo } from '@/hooks/useBusinessInfo';
 
 import DashboardOverview from './user/Overview';
 import MyBusiness from './user/MyBusiness';
@@ -61,6 +62,7 @@ export default function UserDashboard() {
   const [paymentActive, setPaymentActive] = useState<boolean | null>(null);
 
   const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
+  const { data: businessInfo } = useBusinessInfo(user?.id);
 
   const visibleMenuItems = useMemo(() => {
     const hideWhenDisabledByUrl: Record<string, any> = {
@@ -78,13 +80,21 @@ export default function UserDashboard() {
 
   const welcomeName = useMemo(() => {
     if (!user) return '';
+
+    const dbCombined = [businessInfo?.first_name, businessInfo?.last_name]
+      .map((v) => (v ?? '').trim())
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    if (dbCombined) return dbCombined;
+
     const meta: any = (user as any)?.user_metadata ?? {};
     const fromMeta = (meta?.name as string | undefined)?.trim();
     const first = (meta?.first_name as string | undefined)?.trim();
     const last = (meta?.last_name as string | undefined)?.trim();
     const combined = [first, last].filter(Boolean).join(' ').trim();
     return (fromMeta || combined || user.email?.split('@')[0] || '');
-  }, [user]);
+  }, [user, businessInfo?.first_name, businessInfo?.last_name]);
 
   useEffect(() => {
     if (!loading && (!user || role !== 'user')) {
