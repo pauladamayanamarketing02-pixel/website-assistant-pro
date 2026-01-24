@@ -10,6 +10,7 @@ interface UserPackage {
   id: string;
   status: string;
   started_at: string;
+  activated_at?: string | null;
   expires_at: string | null;
   packages: {
     name: string;
@@ -126,13 +127,13 @@ export default function MyPackage() {
         .from("user_packages")
         .select(
           `
-          id, status, started_at, expires_at,
+          id, status, started_at, activated_at, expires_at,
           packages (name, type, description, features, price)
         `
         )
         .eq("user_id", user.id)
         // Show the latest package record even if not active yet.
-        .in("status", ["pending", "approved", "active"])
+        .in("status", ["pending", "approved", "active", "expired"])
         .order("created_at", { ascending: false })
         .maybeSingle();
 
@@ -212,14 +213,25 @@ export default function MyPackage() {
   const statusSource = mapDbAccountStatusToUi(accountStatus, paymentActive);
   const statusLabel = formatPackageStatusLabel(statusSource);
   const isActiveStatus = String(statusSource ?? "").toLowerCase().trim() === "active";
-  const activeSinceLabel = isActiveStatus ? formatDMY(activePackage?.started_at) : "";
-  const expiresOnLabel = isActiveStatus ? formatDMY(activePackage?.expires_at) : "";
-  // Status wording should follow Admin Business Users table (show Active/Pending/Approved/etc.).
-  const statusDescription = !isActiveStatus
-    ? statusLabel
-    : activeSinceLabel
-      ? `Active since ${activeSinceLabel}`
-      : "Active";
+  const isExpiredStatus = String(statusSource ?? "").toLowerCase().trim() === "expired";
+  const activatedAtLabel = isActiveStatus
+    ? formatDMY(activePackage?.activated_at ?? activePackage?.started_at)
+    : "";
+  const expiresLabel = formatDMY(activePackage?.expires_at);
+
+  const statusPrimaryLine = (() => {
+    if (statusSource === "pending") return "Awaiting Approval";
+    if (statusSource === "approved") return "Awaiting Payment";
+    if (statusSource === "active") return activatedAtLabel ? `Active since ${activatedAtLabel}` : "Active";
+    if (statusSource === "expired") return expiresLabel ? `Expired on ${expiresLabel}` : "Expired";
+    return statusLabel;
+  })();
+
+  const statusSecondaryLine = (() => {
+    // Only Active shows an Expires line (as requested)
+    if (statusSource === "active" && expiresLabel) return `Expires on ${expiresLabel}`;
+    return "";
+  })();
 
   const hasUpgradeToScale = upgradePackages.some(
     (pkg) => normalizeTier(pkg.type) === "scale" || normalizeTier(pkg.name) === "scale" || normalizeTier(pkg.name).includes("scale")
@@ -264,13 +276,13 @@ export default function MyPackage() {
                     <div>
                       <CardTitle>{activePackage.packages.name}</CardTitle>
                       <CardDescription>
-                        {isActiveStatus ? (
+                        {statusSecondaryLine ? (
                           <span className="block">
-                            {statusDescription}
-                            {expiresOnLabel ? <span className="block">Expires On {expiresOnLabel}</span> : null}
+                            {statusPrimaryLine}
+                            <span className="block">{statusSecondaryLine}</span>
                           </span>
                         ) : (
-                          statusDescription
+                          statusPrimaryLine
                         )}
                       </CardDescription>
                     </div>
