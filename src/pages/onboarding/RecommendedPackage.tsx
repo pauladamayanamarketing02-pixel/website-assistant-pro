@@ -77,11 +77,10 @@ export default function RecommendedPackage() {
     setIsSubmitting(true);
     try {
       // Create user package
-      const { error: packageError } = await (supabase as any).from('user_packages').insert({
+      const { error: packageError } = await supabase.from('user_packages').insert({
         user_id: user.id,
         package_id: recommendedPackage.id,
-        status: 'pending',
-        duration_months: 1,
+        status: 'active',
       });
 
       if (packageError) throw packageError;
@@ -96,7 +95,7 @@ export default function RecommendedPackage() {
 
       toast({
         title: 'Welcome aboard!',
-        description: 'Your package request is awaiting approval.',
+        description: 'Your marketing journey begins now.',
       });
 
       navigate('/dashboard/user');

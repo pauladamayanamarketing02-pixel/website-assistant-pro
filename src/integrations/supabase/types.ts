@@ -1508,7 +1508,6 @@ export type Database = {
       user_packages: {
         Row: {
           created_at: string
-          duration_months: number
           expires_at: string | null
           id: string
           package_id: string
@@ -1518,7 +1517,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          duration_months?: number
           expires_at?: string | null
           id?: string
           package_id: string
@@ -1528,7 +1526,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          duration_months?: number
           expires_at?: string | null
           id?: string
           package_id?: string

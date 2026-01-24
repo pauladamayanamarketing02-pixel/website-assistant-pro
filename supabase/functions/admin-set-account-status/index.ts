@@ -17,14 +17,6 @@ type Payload = {
   account_status: AllowedStatus;
 };
 
-function addMonths(date: Date, months: number): Date {
-  const d = new Date(date);
-  const m = Number(months || 0);
-  if (!Number.isFinite(m) || m <= 0) return d;
-  d.setMonth(d.getMonth() + m);
-  return d;
-}
-
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -49,38 +41,20 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
       return json(500, { error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" });
     }
 
-    console.log("[admin-set-account-status] Request received");
-
-    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "";
-    console.log(`[admin-set-account-status] Auth header present: ${Boolean(authHeader)}`);
-    if (!authHeader.toLowerCase().startsWith("bearer ")) return json(401, { error: "Unauthorized" });
-    const token = authHeader.slice(7).trim();
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) return json(401, { error: "Unauthorized" });
-
-    if (!anonKey) {
-      return json(500, { error: "Missing SUPABASE_ANON_KEY" });
-    }
-
-    // Validate JWT using anon client + forwarded Authorization header.
-    // This is more reliable than passing the token string into service-role auth helpers.
-    const authClient = createClient(supabaseUrl, anonKey, {
-      auth: { persistSession: false },
-    });
-
-    const { data: requester, error: requesterErr } = await authClient.auth.getUser(token);
-    if (requesterErr || !requester?.user) {
-      console.error("[admin-set-account-status] Token validation failed:", requesterErr?.message ?? requesterErr);
-      return json(401, { error: "Unauthorized" });
-    }
 
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
+
+    const { data: requester, error: requesterErr } = await admin.auth.getUser(token);
+    if (requesterErr || !requester?.user) return json(401, { error: "Unauthorized" });
 
     const { data: roleRows, error: roleErr } = await admin
       .from("user_roles")
@@ -101,55 +75,6 @@ Deno.serve(async (req) => {
 
     const { error } = await admin.from("profiles").update({ account_status: nextStatus }).eq("id", userId);
     if (error) throw error;
-
-    // Keep user_packages workflow in sync with account_status so the user dashboard can show:
-    // pending -> Awaiting Approval
-    // approved -> Awaiting Payment
-    // active -> Active since + Expires on
-    if (nextStatus === "approved" || nextStatus === "active") {
-      const { data: latestPkg, error: pkgErr } = await admin
-        .from("user_packages")
-        .select("id,status,duration_months")
-        .eq("user_id", userId)
-        .in("status", ["pending", "approved", "active"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (pkgErr) throw pkgErr;
-
-      if (latestPkg?.id) {
-        const currentStatus = String((latestPkg as any).status ?? "").toLowerCase().trim();
-
-        if (nextStatus === "approved") {
-          // Move pending -> approved (do not touch dates)
-          if (currentStatus === "pending") {
-            const { error: upErr } = await admin
-              .from("user_packages")
-              .update({ status: "approved" })
-              .eq("id", (latestPkg as any).id);
-            if (upErr) throw upErr;
-          }
-        }
-
-        if (nextStatus === "active") {
-          // Activate latest request (pending/approved) and set dates
-          if (currentStatus !== "active") {
-            const startedAt = new Date();
-            const months = Number((latestPkg as any).duration_months ?? 1);
-            const expiresAt = addMonths(startedAt, months);
-            const { error: upErr } = await admin
-              .from("user_packages")
-              .update({
-                status: "active",
-                started_at: startedAt.toISOString(),
-                expires_at: expiresAt.toISOString(),
-              })
-              .eq("id", (latestPkg as any).id);
-            if (upErr) throw upErr;
-          }
-        }
-      }
-    }
 
     return json(200, { ok: true, user_id: userId, account_status: nextStatus });
   } catch (e) {
