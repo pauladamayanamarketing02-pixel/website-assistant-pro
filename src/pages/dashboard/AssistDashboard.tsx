@@ -253,7 +253,13 @@ export default function AssistDashboard() {
 
   const isActive = String(profileStatus ?? 'active').toLowerCase() === 'active';
   if (!isActive) {
-    return <AssistSupportLocked name={profileName || (welcomeName || 'Assistant')} email={profileEmail || ''} />;
+    return (
+      <AssistSupportLocked
+        name={profileName || (welcomeName || 'Assistant')}
+        email={profileEmail || ''}
+        onLogout={signOut}
+      />
+    );
   }
 
 
