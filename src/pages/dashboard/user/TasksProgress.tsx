@@ -1387,6 +1387,7 @@ export default function TasksProgress() {
           const config = statusConfig[status];
           const count = tasks.filter((t) => t.status === status).length;
           const isActive = statusFilters.includes(status);
+          const showReadyForReviewBadge = status === 'ready_for_review' && count > 0;
 
           return (
             <button
@@ -1403,10 +1404,19 @@ export default function TasksProgress() {
             >
               <Card
                 className={cn(
-                  "transition-colors",
+                  "relative transition-colors",
                   isActive ? "border-primary bg-primary/10" : "hover:bg-muted/20",
                 )}
               >
+                {showReadyForReviewBadge && (
+                  <Badge
+                    variant="warning"
+                    className="absolute right-2 top-2 min-w-5 justify-center tabular-nums"
+                    aria-label={`Ready for Review: ${count}`}
+                  >
+                    {count > 99 ? '99+' : count}
+                  </Badge>
+                )}
                 <CardContent className="py-4 text-center">
                   <config.icon
                     className={cn(
