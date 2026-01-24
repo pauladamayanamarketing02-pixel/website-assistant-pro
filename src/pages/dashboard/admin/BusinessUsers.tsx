@@ -39,7 +39,6 @@ type BusinessAccountRow = {
   userId: string;
   businessId: string;
   businessName: string;
-  contactName: string;
   email: string;
   phone: string;
     status: BusinessStatus;
@@ -156,7 +155,6 @@ export default function AdminBusinessUsers() {
           userId: p.id,
           businessId,
           businessName: b?.business_name || "—",
-          contactName: p?.name || "—",
           email: p?.email || "—",
           phone: p?.phone || "—",
           status: mapDbAccountStatusToUi(p?.account_status, paymentActive),
@@ -255,7 +253,6 @@ export default function AdminBusinessUsers() {
                     <TableRow>
                       <TableHead className="min-w-[100px] lg:min-w-0">Business ID</TableHead>
                       <TableHead className="min-w-[150px] lg:min-w-0">Business Name</TableHead>
-                      <TableHead className="min-w-[120px] lg:min-w-0">Contact</TableHead>
                       <TableHead className="min-w-[180px] lg:min-w-0">Email</TableHead>
                       <TableHead className="min-w-[100px] lg:min-w-0">Status</TableHead>
                       <TableHead className="text-center min-w-[220px] lg:min-w-0">Actions</TableHead>
@@ -265,7 +262,7 @@ export default function AdminBusinessUsers() {
                   <TableBody>
                     {filteredRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground">
                           No businesses found.
                         </TableCell>
                       </TableRow>
@@ -274,7 +271,6 @@ export default function AdminBusinessUsers() {
                         <TableRow key={`${row.businessId}-${row.email}`}>
                           <TableCell className="font-medium">{row.businessId}</TableCell>
                           <TableCell className="font-medium">{row.businessName}</TableCell>
-                          <TableCell className="text-muted-foreground">{row.contactName}</TableCell>
                           <TableCell className="text-muted-foreground">{row.email}</TableCell>
                           <TableCell>
                             <Badge variant="secondary">{statusLabel[row.status]}</Badge>
