@@ -368,12 +368,14 @@ export default function TaskManager() {
   };
 
   const initWorkLogForTask = (task: Task) => {
-    if (task.status === 'pending') {
+    // Requirement: when a task is Assigned, auto-fill the work log (30 minutes + review text)
+    // and lock the inputs until the assist clicks "Start Now".
+    if (task.status === 'assigned') {
       setWorkLogLocked(true);
       setWorkLogForm({
         hours: '',
         minutes: '30',
-        workDescription: 'Review Task',
+        workDescription: 'review Tasks',
         sharedUrl: '',
         status: 'in_progress',
       });
