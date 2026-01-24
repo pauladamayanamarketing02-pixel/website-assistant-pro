@@ -1507,6 +1507,7 @@ export type Database = {
       }
       user_packages: {
         Row: {
+          activated_at: string | null
           created_at: string
           duration_months: number
           expires_at: string | null
@@ -1517,6 +1518,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activated_at?: string | null
           created_at?: string
           duration_months?: number
           expires_at?: string | null
@@ -1527,6 +1529,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activated_at?: string | null
           created_at?: string
           duration_months?: number
           expires_at?: string | null
