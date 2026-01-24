@@ -35,9 +35,11 @@ export function UserSidebar({
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [readyForReviewCount, setReadyForReviewCount] = useState(0);
+  const [showPackageExpiring, setShowPackageExpiring] = useState(false);
 
   const showMessagesBadge = useMemo(() => unreadCount > 0, [unreadCount]);
   const showTasksBadge = useMemo(() => readyForReviewCount > 0, [readyForReviewCount]);
+  const showPackageBadge = useMemo(() => showPackageExpiring, [showPackageExpiring]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -101,6 +103,71 @@ export function UserSidebar({
       window.removeEventListener("focus", refreshUnread);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("messages:refresh-unread", onMessagesUnreadRefresh as EventListener);
+      window.clearInterval(intervalId);
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let isMounted = true;
+
+    const refreshPackageExpiring = async () => {
+      const { data, error } = await supabase
+        .from("user_packages")
+        .select("activated_at, expires_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Don't clear the badge on transient errors.
+      if (error) return;
+      if (!isMounted) return;
+
+      const activatedAt = (data as any)?.activated_at as string | null | undefined;
+      const expiresAtIso = (data as any)?.expires_at as string | null | undefined;
+
+      if (!activatedAt || !expiresAtIso) {
+        setShowPackageExpiring(false);
+        return;
+      }
+
+      const expiresAt = new Date(expiresAtIso);
+      if (Number.isNaN(expiresAt.getTime())) {
+        setShowPackageExpiring(false);
+        return;
+      }
+
+      const diffMs = expiresAt.getTime() - Date.now();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      // Show when expiring within 30 days OR already expired. Hide when renewed/extended (diffDays > 30).
+      setShowPackageExpiring(diffDays <= 30);
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshPackageExpiring();
+    };
+
+    refreshPackageExpiring();
+    window.addEventListener("focus", refreshPackageExpiring);
+    document.addEventListener("visibilitychange", onVisibility);
+    const intervalId = window.setInterval(refreshPackageExpiring, 60000);
+
+    const channel = supabase
+      .channel(`sidebar-package-expiring-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_packages", filter: `user_id=eq.${user.id}` },
+        () => refreshPackageExpiring()
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", refreshPackageExpiring);
+      document.removeEventListener("visibilitychange", onVisibility);
       window.clearInterval(intervalId);
       supabase.removeChannel(channel);
     };
@@ -184,6 +251,7 @@ export function UserSidebar({
               {items.map((item) => {
                 const isMessages = item.url === "/dashboard/user/messages";
                 const isTasks = item.url === "/dashboard/user/tasks";
+                const isPackage = item.url === "/dashboard/user/package";
                 const isDisabled = Boolean(item.disabled);
                 const isRootEnd =
                   item.url === "/dashboard/user" || item.url === "/dashboard/user/overview";
@@ -221,16 +289,27 @@ export function UserSidebar({
                             )
                           )}
 
-                            {/* Ready for review tasks badge */}
-                            {isTasks && showTasksBadge && (
-                              open ? (
-                                <span className="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs tabular-nums">
-                                  {readyForReviewCount > 99 ? "99+" : readyForReviewCount}
-                                </span>
-                              ) : (
-                                <span className="ml-auto h-2 w-2 rounded-full bg-primary" />
-                              )
-                            )}
+                          {/* Ready for review tasks badge */}
+                          {isTasks && showTasksBadge && (
+                            open ? (
+                              <span className="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs tabular-nums">
+                                {readyForReviewCount > 99 ? "99+" : readyForReviewCount}
+                              </span>
+                            ) : (
+                              <span className="ml-auto h-2 w-2 rounded-full bg-primary" />
+                            )
+                          )}
+
+                          {/* Package expiring badge */}
+                          {isPackage && showPackageBadge && (
+                            open ? (
+                              <span className="ml-auto h-5 px-2 inline-flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-semibold tracking-wide">
+                                Expiring
+                              </span>
+                            ) : (
+                              <span className="ml-auto h-2 w-2 rounded-full bg-accent" />
+                            )
+                          )}
                         </NavLink>
                       )}
                     </SidebarMenuButton>
