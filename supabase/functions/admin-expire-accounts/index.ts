@@ -2,7 +2,7 @@
 // Admin-only action to mark accounts as expired when their active package has passed expires_at.
 //
 // Rules:
-// - Find user_packages where status='active' and expires_at < now()
+// - Find user_packages where activated_at IS NOT NULL and expires_at < now()
 // - For those users, set profiles.account_status='expired' and payment_active=false
 // - Do not modify package rows here to avoid enum/status mismatch across environments
 
@@ -59,11 +59,11 @@ Deno.serve(async (req) => {
 
     const nowIso = new Date().toISOString();
 
-    // Find packages that are active but already expired.
+    // Find packages that were activated but are already expired.
     const { data: expiredPkgs, error: pkErr } = await admin
       .from("user_packages")
       .select("id,user_id,expires_at")
-      .eq("status", "active")
+      .not("activated_at", "is", null)
       .not("expires_at", "is", null)
       .lt("expires_at", nowIso)
       .limit(1000);

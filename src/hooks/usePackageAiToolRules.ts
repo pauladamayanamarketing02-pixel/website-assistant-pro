@@ -24,11 +24,16 @@ export function usePackageAiToolRules(userId?: string) {
     const run = async () => {
       setLoading(true);
       try {
+        const nowIso = new Date().toISOString();
         const { data: activePkg } = await (supabase as any)
           .from("user_packages")
           .select("package_id")
           .eq("user_id", userId)
-          .eq("status", "active")
+          // Single source of truth: profiles.account_status.
+          // Package "current" is determined by timestamps, not user_packages.status.
+          .not("activated_at", "is", null)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+          .order("activated_at", { ascending: false })
           .order("started_at", { ascending: false })
           .limit(1)
           .maybeSingle();

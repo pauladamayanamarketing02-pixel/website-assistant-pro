@@ -27,11 +27,17 @@ export default function DashboardOverview() {
 
       try {
         // Fetch active package
+        const nowIso = new Date().toISOString();
         const { data: userPackage } = await supabase
           .from('user_packages')
           .select('packages(name)')
           .eq('user_id', user.id)
-          .eq('status', 'active')
+          // Package "current" is determined by timestamps, not user_packages.status.
+          .not('activated_at', 'is', null)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+          .order('activated_at', { ascending: false })
+          .order('started_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         // Fetch task stats
