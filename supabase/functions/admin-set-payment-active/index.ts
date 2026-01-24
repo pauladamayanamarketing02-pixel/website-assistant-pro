@@ -26,6 +26,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   try {
+    console.info("[admin-set-payment-active] Request received");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
@@ -33,6 +34,7 @@ Deno.serve(async (req) => {
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
+    console.info("[admin-set-payment-active] Auth header present:", Boolean(authHeader));
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) return json(401, { error: "Unauthorized" });
 
@@ -43,15 +45,16 @@ Deno.serve(async (req) => {
     const { data: requester, error: requesterErr } = await admin.auth.getUser(token);
     if (requesterErr || !requester?.user) return json(401, { error: "Unauthorized" });
 
-    // Authorize requester: admin only
-    const { data: roleRow, error: roleErr } = await admin
+    // Authorize requester: admin OR super_admin
+    const { data: roleRows, error: roleErr } = await admin
       .from("user_roles")
       .select("role")
-      .eq("user_id", requester.user.id)
-      .maybeSingle();
+      .eq("user_id", requester.user.id);
 
     if (roleErr) throw roleErr;
-    if (roleRow?.role !== "admin") return json(403, { error: "Forbidden" });
+    const roles = (roleRows ?? []).map((r: any) => String(r.role));
+    const isAllowed = roles.includes("admin") || roles.includes("super_admin");
+    if (!isAllowed) return json(403, { error: "Forbidden" });
 
     const body = (await req.json()) as Payload;
     const userId = String(body.user_id ?? "").trim();
