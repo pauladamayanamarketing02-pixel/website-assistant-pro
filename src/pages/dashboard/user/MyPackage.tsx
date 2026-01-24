@@ -270,123 +270,120 @@ export default function MyPackage() {
         <p className="text-muted-foreground">View your active package and available upgrades</p>
       </div>
 
-      <div className="flex-1 min-h-0 grid gap-6 xl:grid-cols-2 items-stretch">
+      <div className="flex-1 min-h-0 grid gap-6 lg:grid-cols-2 items-start">
         {/* LEFT: Active Package */}
-        <section className="min-h-0 flex flex-col gap-4">
-          <h2 className="text-xl font-semibold text-foreground shrink-0">Current Package</h2>
+        <div className="min-h-0 space-y-4">
+          <h2 className="text-xl font-semibold text-foreground">Current Package</h2>
 
-          <div className="min-h-0 xl:flex-1 xl:overflow-auto">
-            {activePackage ? (
-              <Card className="border-primary/30">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Package className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle>{activePackage.packages.name}</CardTitle>
-                        <CardDescription>
-                          {statusSecondaryLine ? (
-                            <span className="block">
-                              {statusPrimaryLine}
-                              <span className="block">{statusSecondaryLine}</span>
-                            </span>
-                          ) : (
-                            statusPrimaryLine
-                          )}
-                        </CardDescription>
-                      </div>
+          {activePackage ? (
+            <Card className="border-primary/30">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Package className="h-5 w-5 text-primary" />
                     </div>
-                    <Badge variant="default" className="bg-primary/10 text-primary">
-                      {statusLabel}
-                    </Badge>
+                    <div>
+                      <CardTitle>{activePackage.packages.name}</CardTitle>
+                      <CardDescription>
+                        {statusSecondaryLine ? (
+                          <span className="block">
+                            {statusPrimaryLine}
+                            <span className="block">{statusSecondaryLine}</span>
+                          </span>
+                        ) : (
+                          statusPrimaryLine
+                        )}
+                      </CardDescription>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4 min-w-0">
-                  <p className="text-muted-foreground">{activePackage.packages.description}</p>
+                  <Badge variant="default" className="bg-primary/10 text-primary">
+                    {statusLabel}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 min-w-0">
+                <p className="text-muted-foreground">{activePackage.packages.description}</p>
 
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">What’s included:</p>
-                    {/* Mobile: show full list (page can scroll) */}
-                    <ul className="space-y-2 lg:hidden">
-                      {activePackage.packages.features.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2 min-w-0">
-                          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
-                            <Check className="h-3 w-3 text-primary" />
-                          </div>
-                          <span className="text-sm text-foreground break-words whitespace-normal">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
+                <div className="space-y-2">
+                  <p className="font-medium text-foreground">What’s included:</p>
+                  {/* Mobile: show full list (page can scroll) */}
+                  <ul className="space-y-2 lg:hidden">
+                    {activePackage.packages.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2 min-w-0">
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
+                          <Check className="h-3 w-3 text-primary" />
+                        </div>
+                        <span className="text-sm text-foreground break-words whitespace-normal">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
 
-                    {/* Desktop: limited list so the column fits better */}
-                    <ul className="hidden lg:block space-y-2">
-                      {currentFeaturesDesktop.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2 min-w-0">
-                          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
-                            <Check className="h-3 w-3 text-primary" />
-                          </div>
-                          <span className="text-sm text-foreground break-words whitespace-normal">{feature}</span>
-                        </li>
-                      ))}
-                      {currentFeaturesOverflow > 0 && (
-                        <li className="text-xs text-muted-foreground pl-7">+{currentFeaturesOverflow} more…</li>
-                      )}
-                    </ul>
-                  </div>
+                  {/* Desktop: limit list so the page fits 1 screen */}
+                  <ul className="hidden lg:block space-y-2">
+                    {currentFeaturesDesktop.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2 min-w-0">
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
+                          <Check className="h-3 w-3 text-primary" />
+                        </div>
+                        <span className="text-sm text-foreground break-words whitespace-normal">{feature}</span>
+                      </li>
+                    ))}
+                    {currentFeaturesOverflow > 0 && (
+                      <li className="text-xs text-muted-foreground pl-7">+{currentFeaturesOverflow} more…</li>
+                    )}
+                  </ul>
+                </div>
 
+                <div className="pt-2">
+                  <p className="text-2xl font-bold text-foreground">
+                    ${activePackage.packages.price}
+                    <span className="text-sm font-normal text-muted-foreground"> /month</span>
+                  </p>
+                </div>
+
+                {/* Action button (changes by status) */}
+                {statusSource === "approved" ? (
                   <div className="pt-2">
-                    <p className="text-2xl font-bold text-foreground">
-                      ${activePackage.packages.price}
-                      <span className="text-sm font-normal text-muted-foreground"> /month</span>
-                    </p>
+                    <Button className="w-full" onClick={() => navigate("/order/choose-domain")}>
+                      Pay Now
+                    </Button>
                   </div>
-
-                  {/* Action button (changes by status) */}
-                  {statusSource === "approved" ? (
-                    <div className="pt-2">
-                      <Button className="w-full" onClick={() => navigate("/order/choose-domain")}>
-                        Pay Now
-                      </Button>
-                    </div>
-                  ) : statusSource === "active" && isActiveExpiringWithinOneMonth ? (
-                    <div className="pt-2">
-                      <Button className="w-full" variant="outline" onClick={() => navigate("/order/choose-domain")}>
-                        Extend Duration
-                      </Button>
-                    </div>
-                  ) : statusSource === "expired" ? (
-                    <div className="pt-2">
-                      <Button className="w-full" variant="outline" onClick={() => navigate("/order/choose-domain")}>
-                        Renew Plan
-                      </Button>
-                    </div>
-                  ) : null}
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground">No active package</h3>
-                  <p className="text-muted-foreground">Choose a package on the right to get started</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </section>
+                ) : statusSource === "active" && isActiveExpiringWithinOneMonth ? (
+                  <div className="pt-2">
+                    <Button className="w-full" variant="outline" onClick={() => navigate("/order/choose-domain")}>
+                      Extend Duration
+                    </Button>
+                  </div>
+                ) : statusSource === "expired" ? (
+                  <div className="pt-2">
+                    <Button className="w-full" variant="outline" onClick={() => navigate("/order/choose-domain")}>
+                      Renew Plan
+                    </Button>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground">No active package</h3>
+                <p className="text-muted-foreground">Choose a package on the right to get started</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* RIGHT: Upgrade Options */}
-        <section className="min-h-0 flex flex-col gap-4">
-          <h2 className="text-xl font-semibold text-foreground shrink-0">
+        <div className="min-h-0 space-y-4">
+          <h2 className="text-xl font-semibold text-foreground">
             {activePackage ? "Upgrade Options" : "Available Packages"}
           </h2>
 
-          <div className="min-h-0 xl:flex-1 xl:overflow-auto">
-            {upgradePackages.length > 0 ? (
-              <div className="grid gap-4">
-                {upgradePackages.map((pkg) => {
+          {upgradePackages.length > 0 ? (
+            <div className="grid gap-4">
+              {upgradePackages.map((pkg) => {
                 const isRecommended = normalizeTier(pkg.type) === normalizeTier(recommendedType);
                 const desktopFeatures = pkg.features.slice(0, 6);
                 const overflowCount = Math.max(0, pkg.features.length - desktopFeatures.length);
@@ -482,25 +479,24 @@ export default function MyPackage() {
                     </CardContent>
                   </Card>
                 );
-                })}
-              </div>
-            ) : activePackage ? (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <Check className="h-12 w-12 text-primary mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground">You have the best package!</h3>
-                  <p className="text-muted-foreground">You’re already on our highest tier package</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <p className="text-muted-foreground">No packages available right now.</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </section>
+              })}
+            </div>
+          ) : activePackage ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Check className="h-12 w-12 text-primary mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground">You have the best package!</h3>
+                <p className="text-muted-foreground">You’re already on our highest tier package</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-muted-foreground">No packages available right now.</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
     </div>
