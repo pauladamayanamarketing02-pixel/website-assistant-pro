@@ -59,12 +59,29 @@ function sortByTier(aNameOrType: string, bNameOrType: string): number {
 
 function formatPackageStatusLabel(status: string | null | undefined): string {
   const s = String(status ?? "").toLowerCase().trim();
-  if (s === "pending") return "Awaiting Approval";
-  if (s === "approved") return "Awaiting Payment";
+  // Keep wording consistent with Admin Business Users table.
+  if (s === "pending") return "Pending";
+  if (s === "approved") return "Approved";
   if (s === "active") return "Active";
+  if (s === "expired") return "Expired";
+  if (s === "suspended" || s === "nonactive" || s === "blacklisted") return "Suspended";
   if (!s) return "—";
   // fallback for any legacy/custom status
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+type BusinessStatus = "pending" | "approved" | "active" | "suspended" | "expired";
+
+function mapDbAccountStatusToUi(status: unknown, paymentActive: boolean): BusinessStatus {
+  // Match admin logic exactly.
+  if (paymentActive) return "active";
+  const s = String(status ?? "pending").toLowerCase().trim();
+  if (s === "pending") return "pending";
+  if (s === "approved") return "approved";
+  if (s === "expired") return "expired";
+  if (s === "nonactive" || s === "blacklisted" || s === "suspended") return "suspended";
+  if (s === "active") return "active";
+  return "pending";
 }
 
 function formatDMY(dateIso: string | null | undefined): string {
@@ -100,7 +117,8 @@ export default function MyPackage() {
         setPaymentActive(false);
       } else {
         setAccountStatus((profile as any)?.account_status ?? null);
-        setPaymentActive(Boolean((profile as any)?.payment_active ?? false));
+        // IMPORTANT: avoid Boolean("false") === true if any policy/cast returns a string.
+        setPaymentActive((profile as any)?.payment_active === true);
       }
 
       // Fetch user's active package
@@ -190,9 +208,8 @@ export default function MyPackage() {
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
 
-  // Match admin logic: payment_active=true always means Active.
-  // IMPORTANT: Do not fall back to user_packages.status; source of truth is profiles.
-  const statusSource = paymentActive ? "active" : accountStatus;
+  // Source of truth: profiles.account_status + profiles.payment_active (same mapping as Admin page)
+  const statusSource = mapDbAccountStatusToUi(accountStatus, paymentActive);
   const statusLabel = formatPackageStatusLabel(statusSource);
   const isActiveStatus = String(statusSource ?? "").toLowerCase().trim() === "active";
   const activeSinceLabel = isActiveStatus ? formatDMY(activePackage?.started_at) : "";
