@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
+import { format } from "date-fns";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ type BusinessAccountRow = {
     status: BusinessStatus;
   package: BusinessPackage;
   paymentActive: boolean;
+  expiresAt: string | null;
 };
 
 const statusLabel: Record<BusinessStatus, string> = {
@@ -74,6 +76,13 @@ const mapDbPackageToUi = (pkgType: unknown): BusinessPackage => {
   if (p === "pro") return "pro";
   // DB also has: website, monthly
   return "custom";
+};
+
+const formatDateSafe = (value: unknown): string | null => {
+  if (!value) return null;
+  const d = new Date(String(value));
+  if (Number.isNaN(d.getTime())) return null;
+  return format(d, "dd MMM yyyy");
 };
 
 export default function AdminBusinessUsers() {
@@ -125,7 +134,7 @@ export default function AdminBusinessUsers() {
       // 4) fetch active package per user (if any)
       const { data: userPackages, error: packagesError } = await (supabase as any)
         .from("user_packages")
-        .select("user_id, status, package:packages(type)")
+        .select("user_id, status, expires_at, created_at, package:packages(type)")
         .in("user_id", userIds);
 
       if (packagesError) throw packagesError;
@@ -136,10 +145,24 @@ export default function AdminBusinessUsers() {
       });
 
       const packageByUserId = new Map<string, BusinessPackage>();
+      const expiresAtByUserId = new Map<string, string | null>();
+      const latestPkgCreatedAtByUserId = new Map<string, number>();
+
       (userPackages as any[] | null)?.forEach((up) => {
         if (!up?.user_id) return;
-        const pkgType = up?.package?.type;
-        packageByUserId.set(up.user_id, mapDbPackageToUi(pkgType));
+
+        // Choose the latest package row per user (by created_at when available).
+        const userId = String(up.user_id);
+        const nextCreatedAt = up?.created_at ? new Date(String(up.created_at)).getTime() : 0;
+        const prevCreatedAt = latestPkgCreatedAtByUserId.get(userId) ?? 0;
+        const shouldReplace = nextCreatedAt >= prevCreatedAt;
+
+        if (shouldReplace) {
+          const pkgType = up?.package?.type;
+          packageByUserId.set(userId, mapDbPackageToUi(pkgType));
+          expiresAtByUserId.set(userId, formatDateSafe(up?.expires_at));
+          latestPkgCreatedAtByUserId.set(userId, nextCreatedAt);
+        }
       });
 
       const nextRows: BusinessAccountRow[] = ((profiles as any[]) ?? []).map((p) => {
@@ -160,6 +183,7 @@ export default function AdminBusinessUsers() {
           status: mapDbAccountStatusToUi(p?.account_status, paymentActive),
           package: packageByUserId.get(p.id) ?? "custom",
           paymentActive,
+          expiresAt: expiresAtByUserId.get(p.id) ?? null,
         };
       });
 
@@ -255,6 +279,7 @@ export default function AdminBusinessUsers() {
                       <TableHead className="min-w-[150px] lg:min-w-0">Business Name</TableHead>
                       <TableHead className="min-w-[180px] lg:min-w-0">Email</TableHead>
                       <TableHead className="min-w-[100px] lg:min-w-0">Status</TableHead>
+                      <TableHead className="min-w-[140px] lg:min-w-0">Expired</TableHead>
                       <TableHead className="text-center min-w-[220px] lg:min-w-0">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -262,7 +287,7 @@ export default function AdminBusinessUsers() {
                   <TableBody>
                     {filteredRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
                           No businesses found.
                         </TableCell>
                       </TableRow>
@@ -275,6 +300,7 @@ export default function AdminBusinessUsers() {
                           <TableCell>
                             <Badge variant="secondary">{statusLabel[row.status]}</Badge>
                           </TableCell>
+                          <TableCell className="text-muted-foreground">{row.expiresAt ?? "—"}</TableCell>
                           <TableCell className="text-center">
                             <BusinessUserActions
                               userId={row.userId}
