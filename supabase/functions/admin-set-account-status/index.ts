@@ -49,20 +49,38 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
       return json(500, { error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" });
     }
 
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    console.log("[admin-set-account-status] Request received");
+
+    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "";
+    console.log(`[admin-set-account-status] Auth header present: ${Boolean(authHeader)}`);
+    if (!authHeader.toLowerCase().startsWith("bearer ")) return json(401, { error: "Unauthorized" });
+    const token = authHeader.slice(7).trim();
     if (!token) return json(401, { error: "Unauthorized" });
+
+    if (!anonKey) {
+      return json(500, { error: "Missing SUPABASE_ANON_KEY" });
+    }
+
+    // Validate JWT using anon client + forwarded Authorization header.
+    // This is more reliable than passing the token string into service-role auth helpers.
+    const authClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false },
+    });
+
+    const { data: requester, error: requesterErr } = await authClient.auth.getUser(token);
+    if (requesterErr || !requester?.user) {
+      console.error("[admin-set-account-status] Token validation failed:", requesterErr?.message ?? requesterErr);
+      return json(401, { error: "Unauthorized" });
+    }
 
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
-
-    const { data: requester, error: requesterErr } = await admin.auth.getUser(token);
-    if (requesterErr || !requester?.user) return json(401, { error: "Unauthorized" });
 
     const { data: roleRows, error: roleErr } = await admin
       .from("user_roles")
