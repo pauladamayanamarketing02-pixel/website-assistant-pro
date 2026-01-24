@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Package, Check, ArrowUpRight, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface UserPackage {
   id: string;
@@ -94,6 +95,7 @@ function formatDMY(dateIso: string | null | undefined): string {
 
 export default function MyPackage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activePackage, setActivePackage] = useState<UserPackage | null>(null);
   const [accountStatus, setAccountStatus] = useState<string | null>(null);
   const [paymentActive, setPaymentActive] = useState<boolean>(false);
@@ -213,7 +215,6 @@ export default function MyPackage() {
   const statusSource = mapDbAccountStatusToUi(accountStatus, paymentActive);
   const statusLabel = formatPackageStatusLabel(statusSource);
   const isActiveStatus = String(statusSource ?? "").toLowerCase().trim() === "active";
-  const isExpiredStatus = String(statusSource ?? "").toLowerCase().trim() === "expired";
   const activatedAtLabel = isActiveStatus
     ? formatDMY(activePackage?.activated_at ?? activePackage?.started_at)
     : "";
@@ -233,9 +234,18 @@ export default function MyPackage() {
     return "";
   })();
 
-  const hasUpgradeToScale = upgradePackages.some(
-    (pkg) => normalizeTier(pkg.type) === "scale" || normalizeTier(pkg.name) === "scale" || normalizeTier(pkg.name).includes("scale")
-  );
+  const isActiveExpiringWithinOneMonth = useMemo(() => {
+    if (statusSource !== "active") return false;
+    const iso = activePackage?.expires_at;
+    if (!iso) return false;
+    const expiresAt = new Date(iso);
+    if (Number.isNaN(expiresAt.getTime())) return false;
+
+    const now = Date.now();
+    const diffMs = expiresAt.getTime() - now;
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 30;
+  }, [activePackage?.expires_at, statusSource]);
 
   if (loading) {
     return (
@@ -332,13 +342,26 @@ export default function MyPackage() {
                   </p>
                 </div>
 
-                {hasUpgradeToScale && (
+                {/* Action button (changes by status) */}
+                {statusSource === "approved" ? (
                   <div className="pt-2">
-                    <Button className="w-full" variant="outline">
+                    <Button className="w-full" onClick={() => navigate("/order/choose-domain")}>
+                      Pay Now
+                    </Button>
+                  </div>
+                ) : statusSource === "active" && isActiveExpiringWithinOneMonth ? (
+                  <div className="pt-2">
+                    <Button className="w-full" variant="outline" onClick={() => navigate("/order/choose-domain")}>
+                      Extend Duration
+                    </Button>
+                  </div>
+                ) : statusSource === "expired" ? (
+                  <div className="pt-2">
+                    <Button className="w-full" variant="outline" onClick={() => navigate("/order/choose-domain")}>
                       Renew Plan
                     </Button>
                   </div>
-                )}
+                ) : null}
               </CardContent>
             </Card>
           ) : (
