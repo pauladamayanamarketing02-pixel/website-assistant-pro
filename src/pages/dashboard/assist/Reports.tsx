@@ -109,7 +109,7 @@ export default function Reports() {
         const list = (data as any as BusinessOption[]) ?? [];
         if (!cancelled) {
           setBusinesses(list);
-          if (!selectedBusinessId && list.length > 0) setSelectedBusinessId(list[0].id);
+          // Do not auto-select a client; keep placeholder until user selects.
         }
       } catch (e) {
         console.error("Failed to load businesses", e);
@@ -343,7 +343,7 @@ export default function Reports() {
             <Label>Business</Label>
             <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId} disabled={loadingBusinesses}>
               <SelectTrigger>
-                <SelectValue placeholder={loadingBusinesses ? "Loading businesses..." : "Select a business"} />
+                <SelectValue placeholder={loadingBusinesses ? "Loading businesses..." : "Select client"} />
               </SelectTrigger>
               <SelectContent>
                 {businesses.map((b) => (
