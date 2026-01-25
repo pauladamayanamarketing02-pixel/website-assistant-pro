@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { formatAssistStatusLabel } from "@/lib/assistStatus";
 
 type AssistRow = {
   id: string;
@@ -117,9 +118,8 @@ export default function AdminMessageMonitor() {
 
         const { data: profiles, error: profilesError } = await (supabase as any)
           .from("profiles")
-          .select("id,name,email,avatar_url,account_status")
-          .in("id", assistIds)
-          .eq("account_status", "active");
+          .select("id,name,email,avatar_url,status")
+          .in("id", assistIds);
 
         if (profilesError) throw profilesError;
 
@@ -129,7 +129,7 @@ export default function AdminMessageMonitor() {
             name: String(p.name ?? ""),
             email: String(p.email ?? ""),
             avatar_url: (p.avatar_url ?? null) as string | null,
-            status: p.account_status ? String(p.account_status) : undefined,
+            status: p.status != null ? String(p.status) : undefined,
           }))
           .sort((a: AssistRow, b: AssistRow) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "en-US"))) as AssistRow[];
 
@@ -317,7 +317,7 @@ export default function AdminMessageMonitor() {
                     value={a.id}
                     className="data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
                   >
-                    {(a.name || a.email || a.id) + (a.status ? ` (${a.status})` : "")}
+                    {(a.name || a.email || a.id) + ` (${formatAssistStatusLabel(a.status)})`}
                   </SelectItem>
                 ))}
               </SelectContent>
