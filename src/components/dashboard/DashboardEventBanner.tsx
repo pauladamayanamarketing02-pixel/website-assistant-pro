@@ -69,15 +69,44 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
 
   if (loading || !activeBanner) return null;
 
+  const marqueeText = [activeBanner.title, activeBanner.subtitle].filter(Boolean).join(" — ");
+
   return (
     <div className={cn(className)}>
       <Card className="border border-border bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-foreground truncate">{activeBanner.title}</div>
-            {activeBanner.subtitle ? (
-              <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{activeBanner.subtitle}</div>
-            ) : null}
+          <div className="min-w-0 flex-1">
+            {/* Marquee text: scrolls without shifting the overall page layout */}
+            <div className="relative overflow-hidden whitespace-nowrap">
+              <div className="dashboard-banner-marquee motion-reduce:animate-none">
+                <span className="text-sm font-semibold text-foreground">{marqueeText}</span>
+                <span className="px-8 text-muted-foreground">•</span>
+                <span className="text-sm font-semibold text-foreground">{marqueeText}</span>
+                <span className="px-8 text-muted-foreground">•</span>
+                <span className="text-sm font-semibold text-foreground">{marqueeText}</span>
+              </div>
+            </div>
+
+            <style>
+              {`
+                .dashboard-banner-marquee {
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 0;
+                  will-change: transform;
+                  animation: dashboard-banner-marquee 18s linear infinite;
+                }
+
+                @keyframes dashboard-banner-marquee {
+                  0% { transform: translateX(0); }
+                  100% { transform: translateX(-33.333%); }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                  .dashboard-banner-marquee { animation: none; }
+                }
+              `}
+            </style>
           </div>
 
           {activeBanner.ctaLabel && activeBanner.ctaHref ? (
