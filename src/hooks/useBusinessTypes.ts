@@ -26,6 +26,15 @@ export function useBusinessTypes(options?: Options) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const isOthers = (value: unknown) => String(value ?? "").trim().toLowerCase() === "others";
+  const compareWithOthersLast = (a: unknown, b: unknown) => {
+    const ao = isOthers(a);
+    const bo = isOthers(b);
+    if (ao && !bo) return 1;
+    if (!ao && bo) return -1;
+    return String(a ?? "").localeCompare(String(b ?? ""));
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -70,10 +79,16 @@ export function useBusinessTypes(options?: Options) {
       map.set(cat, arr);
     }
 
-    const result = Array.from(map.entries()).map(([category, types]) => ({
-      category,
-      types: Array.from(new Set(types)),
-    }));
+    const result = Array.from(map.entries())
+      .map(([category, types]) => {
+        const uniqueTypes = Array.from(new Set(types));
+        uniqueTypes.sort(compareWithOthersLast);
+        return {
+          category,
+          types: uniqueTypes,
+        };
+      })
+      .sort((a, b) => compareWithOthersLast(a.category, b.category));
 
     if (result.length === 0 && !options?.noFallback) {
       return options?.fallback ?? [];
