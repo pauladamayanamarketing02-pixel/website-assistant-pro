@@ -9,7 +9,13 @@ import { useSupabaseRealtimeReload } from '@/hooks/useSupabaseRealtimeReload';
 
 interface DashboardData {
   activePackage: string | null;
-  taskStats: { pending: number; inProgress: number; completed: number };
+  taskStats: {
+    pending: number;
+    assigned: number;
+    inProgress: number;
+    readyForReview: number;
+    completed: number;
+  };
   unreadMessages: number;
 }
 
@@ -17,7 +23,7 @@ export default function DashboardOverview() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData>({
     activePackage: null,
-    taskStats: { pending: 0, inProgress: 0, completed: 0 },
+    taskStats: { pending: 0, assigned: 0, inProgress: 0, readyForReview: 0, completed: 0 },
     unreadMessages: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -51,7 +57,9 @@ export default function DashboardOverview() {
 
       const taskStats = {
         pending: tasks?.filter((t) => t.status === 'pending').length || 0,
+        assigned: tasks?.filter((t) => t.status === 'assigned').length || 0,
         inProgress: tasks?.filter((t) => t.status === 'in_progress').length || 0,
+        readyForReview: tasks?.filter((t) => t.status === 'ready_for_review').length || 0,
         completed: tasks?.filter((t) => t.status === 'completed').length || 0,
       };
 
@@ -97,7 +105,12 @@ export default function DashboardOverview() {
     onChange: fetchDashboardData,
   });
 
-  const totalTasks = data.taskStats.pending + data.taskStats.inProgress + data.taskStats.completed;
+  const totalTasks =
+    data.taskStats.pending +
+    data.taskStats.assigned +
+    data.taskStats.inProgress +
+    data.taskStats.readyForReview +
+    data.taskStats.completed;
   const progressPercent = totalTasks > 0 ? (data.taskStats.completed / totalTasks) * 100 : 0;
 
   if (loading) {
@@ -200,18 +213,22 @@ export default function DashboardOverview() {
             </div>
             <Progress value={progressPercent} className="h-2" />
           </div>
-          <div className="grid grid-cols-3 gap-4 pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
             <div className="text-center p-3 rounded-lg bg-muted/50">
               <p className="text-2xl font-bold text-foreground">{data.taskStats.pending}</p>
               <p className="text-xs text-muted-foreground">Pending</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-secondary">
+              <p className="text-2xl font-bold text-secondary-foreground">{data.taskStats.assigned}</p>
+              <p className="text-xs text-secondary-foreground/80">Assigned</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-primary/10">
               <p className="text-2xl font-bold text-primary">{data.taskStats.inProgress}</p>
               <p className="text-xs text-muted-foreground">In Progress</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-accent/10">
-              <p className="text-2xl font-bold text-accent">{data.taskStats.completed}</p>
-              <p className="text-xs text-muted-foreground">Completed</p>
+              <p className="text-2xl font-bold text-accent">{data.taskStats.readyForReview}</p>
+              <p className="text-xs text-muted-foreground">Ready for Review</p>
             </div>
           </div>
         </CardContent>
