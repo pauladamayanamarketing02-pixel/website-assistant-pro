@@ -6,6 +6,21 @@ export type HomepagePromo = {
   ctaHref?: string | null;
   imageUrl?: string | null;
   imageAlt?: string | null;
+  // Presentation
+  textEffect?:
+    | "none"
+    | "blink"
+    | "pulse"
+    | "glow"
+    | "shake"
+    | "bounce"
+    | "slide"
+    | "fade"
+    | "typewriter"
+    | "flip"
+    | "marquee";
+  titleAlign?: "left" | "center" | "right";
+  subtitleAlign?: "left" | "center" | "right";
   startsAt?: string | null; // ISO
   endsAt?: string | null; // ISO
   isPublished?: boolean;
@@ -34,6 +49,21 @@ export function sanitizeHomepagePromoSettings(value: unknown): HomepagePromoSett
           ctaHref: p.ctaHref == null ? null : String(p.ctaHref),
           imageUrl: p.imageUrl == null ? null : String(p.imageUrl),
           imageAlt: p.imageAlt == null ? null : String(p.imageAlt),
+          textEffect:
+            p.textEffect === "blink" ||
+            p.textEffect === "pulse" ||
+            p.textEffect === "glow" ||
+            p.textEffect === "shake" ||
+            p.textEffect === "bounce" ||
+            p.textEffect === "slide" ||
+            p.textEffect === "fade" ||
+            p.textEffect === "typewriter" ||
+            p.textEffect === "flip" ||
+            p.textEffect === "marquee"
+              ? p.textEffect
+              : "none",
+          titleAlign: p.titleAlign === "center" || p.titleAlign === "right" ? p.titleAlign : "left",
+          subtitleAlign: p.subtitleAlign === "center" || p.subtitleAlign === "right" ? p.subtitleAlign : "left",
           startsAt: p.startsAt == null ? null : String(p.startsAt),
           endsAt: p.endsAt == null ? null : String(p.endsAt),
           isPublished: p.isPublished === false ? false : true,

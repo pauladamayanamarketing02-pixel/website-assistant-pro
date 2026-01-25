@@ -65,14 +65,16 @@ export default function Home() {
 
   return (
     <PublicLayout>
-      <div className="pt-6">
-        <HomePromoBanner />
-      </div>
-
       {/* Hero Section */}
       <section className="relative overflow-hidden gradient-hero py-20 md:py-32 min-h-[calc(100vh-5rem)] flex items-center">
+        {/* Promo banner overlays the hero (does not push content down) */}
+        <div className="absolute inset-x-0 top-6 z-20">
+          <HomePromoBanner />
+        </div>
+
         <div className="container relative z-10">
-          <div className="mx-auto max-w-3xl text-center">
+          {/* Lower the hero content position */}
+          <div className="mx-auto max-w-3xl text-center pt-10 md:pt-14">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground animate-fade-in">
               Easy Digital Marketing for{' '}
               <span className="text-gradient">Busy Business Owners</span>

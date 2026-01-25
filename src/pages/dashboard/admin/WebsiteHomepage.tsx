@@ -9,6 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 import {
@@ -19,6 +26,26 @@ import {
 } from "./website-homepage/types";
 
 const SETTINGS_KEY = "homepage_promos";
+
+const TEXT_EFFECT_OPTIONS: Array<{ value: HomepagePromo["textEffect"]; label: string }> = [
+  { value: "none", label: "None" },
+  { value: "blink", label: "Blink" },
+  { value: "pulse", label: "Pulse" },
+  { value: "glow", label: "Glow" },
+  { value: "shake", label: "Shake" },
+  { value: "bounce", label: "Bounce" },
+  { value: "slide", label: "Slide" },
+  { value: "fade", label: "Fade" },
+  { value: "typewriter", label: "Typewriter" },
+  { value: "flip", label: "Flip" },
+  { value: "marquee", label: "Marquee" },
+];
+
+const ALIGN_OPTIONS: Array<{ value: NonNullable<HomepagePromo["titleAlign"]>; label: string }> = [
+  { value: "left", label: "Left" },
+  { value: "center", label: "Center" },
+  { value: "right", label: "Right" },
+];
 
 function toLocalInputValue(iso: string | null | undefined) {
   if (!iso) return "";
@@ -115,6 +142,9 @@ export default function WebsiteHomepage() {
       subtitle: "",
       ctaLabel: "View",
       ctaHref: "/packages",
+      textEffect: "none",
+      titleAlign: "left",
+      subtitleAlign: "left",
       startsAt: new Date().toISOString(),
       endsAt: null,
       isPublished: true,
@@ -234,6 +264,66 @@ export default function WebsiteHomepage() {
                       disabled={!canSave}
                       rows={2}
                     />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Text effect</Label>
+                    <Select
+                      value={(promo.textEffect ?? "none") as any}
+                      onValueChange={(v) => updatePromo(promo.id, { textEffect: v as any })}
+                      disabled={!canSave}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select effect" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TEXT_EFFECT_OPTIONS.map((opt) => (
+                          <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Title alignment</Label>
+                    <Select
+                      value={(promo.titleAlign ?? "left") as any}
+                      onValueChange={(v) => updatePromo(promo.id, { titleAlign: v as any })}
+                      disabled={!canSave}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select alignment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ALIGN_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Subtitle alignment</Label>
+                    <Select
+                      value={(promo.subtitleAlign ?? "left") as any}
+                      onValueChange={(v) => updatePromo(promo.id, { subtitleAlign: v as any })}
+                      disabled={!canSave}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select alignment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ALIGN_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid gap-2">
