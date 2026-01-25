@@ -296,9 +296,6 @@ export default function MyPackage() {
   const upgradePackages = getUpgradePackages();
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
-  const isDominatePackage =
-    normalizeTier(activePackage?.packages.type) === "dominate" ||
-    normalizeTier(activePackage?.packages.name) === "dominate";
 
   // Initialize upgrade duration selection per package (default: first non-1-month option)
   useEffect(() => {
@@ -612,13 +609,7 @@ export default function MyPackage() {
             {activePackage ? "Upgrade Options" : "Available Packages"}
           </h2>
 
-          {activePackage && isDominatePackage ? (
-            <Card>
-              <CardContent className="py-8">
-                <p className="text-sm text-muted-foreground">Contact support for custom.</p>
-              </CardContent>
-            </Card>
-          ) : upgradePackages.length > 0 ? (
+          {upgradePackages.length > 0 ? (
             <div className="grid gap-4">
               {upgradePackages.map((pkg) => {
                 const isRecommended = normalizeTier(pkg.type) === normalizeTier(recommendedType);
