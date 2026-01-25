@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { businessTypeCategories } from '@/data/businessTypes';
-import { countries, type Country } from '@/data/countries';
+import { findCountryByName, findStateByName, getAllCountries, getCitiesOfState, getStatesOfCountry } from '@/lib/locations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -16,15 +16,18 @@ export default function BusinessBasics() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const allCountries = getAllCountries();
   const [formData, setFormData] = useState({
     businessName: '',
     businessType: '',
     country: '',
+    state: '',
     city: '',
     phoneCode: '',
     phoneNumber: '',
   });
   const [businessId, setBusinessId] = useState('');
+  const [availableStates, setAvailableStates] = useState<string[]>([]);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,6 +41,7 @@ export default function BusinessBasics() {
     const businessName = sessionStorage.getItem('onboarding_businessName') ?? '';
     const businessType = sessionStorage.getItem('onboarding_businessType') ?? '';
     const country = sessionStorage.getItem('onboarding_country') ?? '';
+    const state = sessionStorage.getItem('onboarding_state') ?? '';
     const city = sessionStorage.getItem('onboarding_city') ?? '';
     const phoneStored = sessionStorage.getItem('onboarding_phoneNumber') ?? '';
 
@@ -56,6 +60,7 @@ export default function BusinessBasics() {
       businessName,
       businessType,
       country,
+      state,
       city,
       phoneCode: phoneCode || prev.phoneCode,
       phoneNumber,
@@ -64,21 +69,42 @@ export default function BusinessBasics() {
 
   useEffect(() => {
     if (formData.country) {
-      const countryData = countries.find((c: Country) => c.name === formData.country);
-      setAvailableCities(countryData?.cities || []);
+      const country = findCountryByName(formData.country);
+      const states = country ? getStatesOfCountry(country.isoCode).map((s) => s.name) : [];
+      setAvailableStates(states);
+      setAvailableCities([]);
+
       // Auto-set phone code when country changes
-      if (countryData?.phoneCode && !formData.phoneCode) {
-        setFormData(prev => ({ ...prev, phoneCode: countryData.phoneCode, city: '' }));
-      } else {
-        setFormData(prev => ({ ...prev, city: '' }));
-      }
+      const nextPhoneCode = country?.phoneCode;
+      setFormData((prev) => ({
+        ...prev,
+        state: '',
+        city: '',
+        phoneCode: prev.phoneCode || nextPhoneCode || '',
+      }));
     }
   }, [formData.country]);
+
+  useEffect(() => {
+    if (!formData.country || !formData.state) {
+      setAvailableCities([]);
+      return;
+    }
+    const country = findCountryByName(formData.country);
+    if (!country) {
+      setAvailableCities([]);
+      return;
+    }
+    const st = findStateByName(country.isoCode, formData.state);
+    const cities = st ? getCitiesOfState(country.isoCode, st.isoCode).map((c) => c.name) : [];
+    setAvailableCities(cities);
+  }, [formData.country, formData.state]);
 
   const isFormValid = 
     formData.businessName.trim() && 
     formData.businessType && 
     formData.country && 
+    formData.state &&
     formData.city && 
     formData.phoneNumber.trim();
 
@@ -102,6 +128,7 @@ export default function BusinessBasics() {
       sessionStorage.setItem('onboarding_businessName', formData.businessName.trim());
       sessionStorage.setItem('onboarding_businessType', formData.businessType);
       sessionStorage.setItem('onboarding_country', formData.country);
+      sessionStorage.setItem('onboarding_state', formData.state);
       sessionStorage.setItem('onboarding_city', formData.city);
       sessionStorage.setItem('onboarding_phoneNumber', fullPhoneNumber);
 
@@ -124,6 +151,7 @@ export default function BusinessBasics() {
         business_name: formData.businessName.trim() || null,
         business_type: formData.businessType || null,
         country: formData.country || null,
+        state: formData.state || null,
         city: formData.city || null,
         phone_number: fullPhoneNumber || null,
         email: user.email || null,
@@ -191,7 +219,7 @@ export default function BusinessBasics() {
   };
 
   // Get unique phone codes for dropdown
-  const phoneCodes = [...new Set(countries.map((c) => c.phoneCode).filter(Boolean))].sort() as string[];
+  const phoneCodes = [...new Set(allCountries.map((c) => c.phoneCode).filter(Boolean))].sort() as string[];
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4 py-12">
@@ -275,9 +303,29 @@ export default function BusinessBasics() {
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                  {countries.map((country: Country) => (
-                    <SelectItem key={country.code} value={country.name}>
+                  {allCountries.map((country) => (
+                    <SelectItem key={country.isoCode} value={country.name}>
                       {country.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>State <span className="text-destructive">*</span></Label>
+              <Select
+                value={formData.state}
+                onValueChange={(value) => setFormData({ ...formData, state: value, city: '' })}
+                disabled={!formData.country}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder={formData.country ? 'Select state' : 'Select country first'} />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border z-50 max-h-[300px]">
+                  {availableStates.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -289,10 +337,10 @@ export default function BusinessBasics() {
               <Select
                 value={formData.city}
                 onValueChange={(value) => setFormData({ ...formData, city: value })}
-                disabled={!formData.country}
+                disabled={!formData.country || !formData.state}
               >
                 <SelectTrigger className="bg-background">
-                  <SelectValue placeholder={formData.country ? "Select city" : "Select country first"} />
+                  <SelectValue placeholder={formData.state ? 'Select city' : 'Select state first'} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border z-50 max-h-[300px]">
                   {availableCities.map((city) => (

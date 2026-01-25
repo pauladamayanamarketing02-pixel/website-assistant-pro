@@ -15,13 +15,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { RichTextEditor } from '@/components/dashboard/RichTextEditor';
 import { SocialMediaInput, SocialMediaLink } from '@/components/dashboard/SocialMediaInput';
-import { countries } from '@/data/countries';
+import { findCountryByName, findStateByName, getAllCountries, getCitiesOfState, getStatesOfCountry } from '@/lib/locations';
 import { businessTypeCategories } from '@/data/businessTypes';
 
 interface BusinessData {
   name: string;
   business_type: string;
   country: string;
+  state: string;
   city: string;
   zip_code: string;
   business_address: string;
@@ -98,6 +99,7 @@ export default function MyBusiness() {
     name: '',
     business_type: '',
     country: '',
+    state: '',
     city: '',
     zip_code: '',
     business_address: '',
@@ -137,9 +139,12 @@ export default function MyBusiness() {
     persona3: true,
   });
 
-  const selectedCountry = countries.find(c => c.name === formData.country);
-  const cities = selectedCountry?.cities || [];
-  const phoneCodes = [...new Set(countries.map(c => c.phoneCode))].sort();
+  const allCountries = getAllCountries();
+  const selectedCountry = findCountryByName(formData.country);
+  const states = selectedCountry ? getStatesOfCountry(selectedCountry.isoCode) : [];
+  const selectedState = selectedCountry ? findStateByName(selectedCountry.isoCode, formData.state) : undefined;
+  const cities = selectedCountry && selectedState ? getCitiesOfState(selectedCountry.isoCode, selectedState.isoCode) : [];
+  const phoneCodes = [...new Set(allCountries.map((c) => c.phoneCode).filter(Boolean))].sort();
 
   // Keep secondary field visibility in sync with loaded data (but don't override while editing)
   useEffect(() => {
@@ -223,6 +228,7 @@ export default function MyBusiness() {
         // Use country and city directly
         const city = (data as any).city || '';
         const country = (data as any).country || '';
+        const state = (data as any).state || '';
 
         // Parse phone into code and number
         const fullPhone = profileData?.phone || '';
@@ -271,6 +277,7 @@ export default function MyBusiness() {
           name: (data as any).business_name || '',
           business_type: (data as any).business_type || '',
           country: country,
+          state: state,
           city: city,
           zip_code: (data as any).zip_code || '',
           business_address: (data as any).business_address || '',
@@ -590,6 +597,7 @@ export default function MyBusiness() {
           business_name: formData.name || null,
           business_type: formData.business_type || null,
           country: formData.country || null,
+          state: formData.state || null,
           city: formData.city || null,
           zip_code: formData.zip_code || null,
           business_address: formData.business_address || null,
@@ -769,12 +777,21 @@ export default function MyBusiness() {
   };
 
   const handleCountryChange = (country: string) => {
-    const countryData = countries.find(c => c.name === country);
-    setFormData(prev => ({
+    const countryData = findCountryByName(country);
+    setFormData((prev) => ({
       ...prev,
       country,
-      city: '', // Reset city when country changes
-      phoneCode: countryData?.phoneCode || prev.phoneCode, // Auto-set phone code
+      state: '',
+      city: '',
+      phoneCode: countryData?.phoneCode || prev.phoneCode,
+    }));
+  };
+
+  const handleStateChange = (state: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      state,
+      city: '',
     }));
   };
 
@@ -1076,8 +1093,8 @@ export default function MyBusiness() {
               </div>
             </div>
 
-            {/* Country and City */}
-            <div className="grid gap-4 md:grid-cols-2">
+            {/* Country, State and City */}
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
                 <Select 
@@ -1089,9 +1106,28 @@ export default function MyBusiness() {
                     <SelectValue placeholder="Select a country" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-border max-h-60 z-50">
-                    {countries.map((country) => (
-                      <SelectItem key={country.code} value={country.name}>
+                    {allCountries.map((country) => (
+                      <SelectItem key={country.isoCode} value={country.name}>
                         {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Select
+                  value={formData.state}
+                  onValueChange={handleStateChange}
+                  disabled={!formData.country || !isEditing}
+                >
+                  <SelectTrigger id="state">
+                    <SelectValue placeholder={formData.country ? 'Select a state' : 'Select a country first'} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border border-border max-h-60 z-50">
+                    {states.map((s) => (
+                      <SelectItem key={s.isoCode} value={s.name}>
+                        {s.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1102,15 +1138,15 @@ export default function MyBusiness() {
                 <Select 
                   value={formData.city} 
                   onValueChange={(city) => setFormData({ ...formData, city })}
-                  disabled={!formData.country || !isEditing}
+                  disabled={!formData.country || !formData.state || !isEditing}
                 >
                   <SelectTrigger id="city">
-                    <SelectValue placeholder={formData.country ? "Select a city" : "Select a country first"} />
+                    <SelectValue placeholder={formData.state ? 'Select a city' : 'Select a state first'} />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-border max-h-60 z-50">
                     {cities.map((city) => (
-                      <SelectItem key={city} value={city}>
-                        {city}
+                      <SelectItem key={city.name} value={city.name}>
+                        {city.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
