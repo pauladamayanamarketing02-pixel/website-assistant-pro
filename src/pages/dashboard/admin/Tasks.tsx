@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type TaskStatus = "pending" | "assigned" | "in_progress" | "ready_for_review" | "completed";
+type TaskStatus = "pending" | "assigned" | "in_progress" | "ready_for_review" | "completed" | "cancelled";
 
 type TaskRow = {
   id: string;
@@ -39,6 +39,7 @@ const statusLabel: Record<TaskStatus, string> = {
   in_progress: "In Progress",
   ready_for_review: "Ready for Review",
   completed: "Completed",
+  cancelled: "Cancelled",
 };
 
 const toTaskStatus = (status: unknown): TaskStatus => {
@@ -48,6 +49,7 @@ const toTaskStatus = (status: unknown): TaskStatus => {
   if (s === "in_progress") return "in_progress";
   if (s === "ready_for_review") return "ready_for_review";
   if (s === "completed") return "completed";
+  if (s === "cancelled") return "cancelled";
   return "pending";
 };
 
@@ -163,6 +165,7 @@ export default function AdminTasks() {
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="ready_for_review">Ready for Review</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>

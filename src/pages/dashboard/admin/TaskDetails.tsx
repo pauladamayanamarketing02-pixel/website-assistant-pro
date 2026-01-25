@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Pencil, Save, Upload, X } from "lucide-react";
+import { ArrowLeft, Pencil, Save, Upload, X, XCircle } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -18,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
-type TaskStatus = "pending" | "assigned" | "in_progress" | "ready_for_review" | "completed";
+type TaskStatus = "pending" | "assigned" | "in_progress" | "ready_for_review" | "completed" | "cancelled";
 
 type TaskType = "blog" | "social_media" | "email_marketing" | "ads" | "others" | "";
 type TaskPlatform = "facebook" | "instagram" | "x" | "threads" | "linkedin" | "";
@@ -39,6 +49,7 @@ const statusLabel: Record<TaskStatus, string> = {
   in_progress: "In Progress",
   ready_for_review: "Ready for Review",
   completed: "Completed",
+  cancelled: "Cancelled",
 };
 
 const toTaskStatus = (status: unknown): TaskStatus => {
@@ -48,6 +59,7 @@ const toTaskStatus = (status: unknown): TaskStatus => {
   if (s === "in_progress") return "in_progress";
   if (s === "ready_for_review") return "ready_for_review";
   if (s === "completed") return "completed";
+  if (s === "cancelled") return "cancelled";
   return "pending";
 };
 
@@ -93,6 +105,8 @@ export default function AdminTaskDetails() {
 
   const [workLogsLoading, setWorkLogsLoading] = useState(false);
   const [workLogs, setWorkLogs] = useState<any[]>([]);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -288,6 +302,39 @@ export default function AdminTaskDetails() {
     }
   };
 
+  const handleCancel = async () => {
+    if (!task) return;
+
+    try {
+      setCancelling(true);
+
+      const { data: updated, error: updErr } = await (supabase as any)
+        .from("tasks")
+        .update({ status: "cancelled" as any })
+        .eq("id", task.id)
+        .select(
+          "id, task_number, user_id, assigned_to, title, description, deadline, status, created_at, type, platform, file_url, notes",
+        )
+        .maybeSingle();
+
+      if (updErr) throw updErr;
+
+      setTask(updated);
+      setShowCancelDialog(false);
+
+      toast({ title: "Task Cancelled", description: "Task status has been updated to cancelled." });
+    } catch (e: any) {
+      console.error("Error cancelling task:", e);
+      toast({
+        title: "Failed",
+        description: e?.message ?? "Failed to cancel task.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const formatMinutes = (minutes: number | null | undefined) => {
     const m = typeof minutes === "number" && Number.isFinite(minutes) ? minutes : 0;
     const h = Math.floor(m / 60);
@@ -319,15 +366,28 @@ export default function AdminTaskDetails() {
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{statusLabel[status]}</Badge>
             {!loading && !error && task && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing((v) => !v)}
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                {isEditing ? "Cancel" : "Edit"}
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing((v) => !v)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  {isEditing ? "Cancel" : "Edit"}
+                </Button>
+                {status !== "cancelled" && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowCancelDialog(true)}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Cancel Task
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </CardHeader>
@@ -538,6 +598,7 @@ export default function AdminTaskDetails() {
                       <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="ready_for_review">Ready for Review</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -621,6 +682,23 @@ export default function AdminTaskDetails() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this task? This will change the task status to "Cancelled".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>No</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancel} disabled={cancelling}>
+              {cancelling ? "Cancelling..." : "Yes"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader>
