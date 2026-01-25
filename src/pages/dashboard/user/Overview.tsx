@@ -9,6 +9,8 @@ import { useSupabaseRealtimeReload } from '@/hooks/useSupabaseRealtimeReload';
 
 interface DashboardData {
   activePackage: string | null;
+  activePackageActivatedAt: string | null;
+  activePackageExpiresAt: string | null;
   taskStats: {
     pending: number;
     assigned: number;
@@ -19,10 +21,19 @@ interface DashboardData {
   unreadMessages: number;
 }
 
+function formatDMY(dateIso: string | null | undefined): string {
+  if (!dateIso) return '';
+  const d = new Date(dateIso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-GB');
+}
+
 export default function DashboardOverview() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData>({
     activePackage: null,
+    activePackageActivatedAt: null,
+    activePackageExpiresAt: null,
     taskStats: { pending: 0, assigned: 0, inProgress: 0, readyForReview: 0, completed: 0 },
     unreadMessages: 0,
   });
@@ -39,7 +50,7 @@ export default function DashboardOverview() {
       const nowIso = new Date().toISOString();
       const { data: userPackage } = await supabase
         .from('user_packages')
-        .select('packages(name)')
+        .select('activated_at,started_at,expires_at,packages(name)')
         .eq('user_id', user.id)
         // Package "current" is determined by timestamps, not user_packages.status.
         .not('activated_at', 'is', null)
@@ -74,8 +85,15 @@ export default function DashboardOverview() {
         ? (userPackage as any).packages[0]
         : (userPackage as any)?.packages;
 
+      const activatedAtIso =
+        (userPackage as any)?.activated_at ??
+        (userPackage as any)?.started_at ??
+        null;
+
       setData({
         activePackage: (pkgObj as any)?.name || null,
+        activePackageActivatedAt: activatedAtIso,
+        activePackageExpiresAt: (userPackage as any)?.expires_at ?? null,
         taskStats,
         unreadMessages: count || 0,
       });
@@ -162,9 +180,21 @@ export default function DashboardOverview() {
             <div className="text-2xl font-bold text-foreground">
               {data.activePackage || 'None'}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Your current marketing package
-            </p>
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+              <p>Your current marketing package</p>
+              {data.activePackage ? (
+                <>
+                  <p>
+                    Active since{' '}
+                    {formatDMY(data.activePackageActivatedAt) || '-'}
+                  </p>
+                  <p>
+                    Expires on{' '}
+                    {formatDMY(data.activePackageExpiresAt) || '-'}
+                  </p>
+                </>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 
