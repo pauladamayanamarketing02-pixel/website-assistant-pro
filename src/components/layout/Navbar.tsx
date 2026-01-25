@@ -33,8 +33,8 @@ export function Navbar() {
           <span className="text-xl font-bold text-foreground">{settings.header.brandName}</span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <div className="hidden items-center gap-1 md:flex">
+        {/* Desktop Navigation (show from lg so tablet still uses the mobile menu) */}
+        <div className="hidden items-center gap-1 lg:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -51,7 +51,7 @@ export function Navbar() {
           ))}
         </div>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           <Button variant="ghost" asChild>
             <Link to={settings.header.secondaryCtaHref}>{settings.header.secondaryCtaLabel}</Link>
           </Button>
@@ -60,9 +60,9 @@ export function Navbar() {
           </Button>
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Button (kept for tablet) */}
         <button
-          className="flex h-10 w-10 items-center justify-center rounded-md md:hidden hover:bg-muted"
+          className="flex h-10 w-10 items-center justify-center rounded-md lg:hidden hover:bg-muted"
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Toggle menu"
         >
@@ -70,9 +70,9 @@ export function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation (used for phone + tablet) */}
       {isOpen && (
-        <div className="border-t border-border bg-background md:hidden animate-fade-in">
+        <div className="border-t border-border bg-background lg:hidden animate-fade-in">
           <div className="container py-4 space-y-2">
             {navLinks.map((link) => (
               <Link
