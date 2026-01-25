@@ -15,10 +15,11 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { AssistSidebar, type AssistNavItem } from '@/components/assist/AssistSidebar';
+
+import AssistOverview from './assist/overview/AssistOverview';
 
 // Import components
 import ClientList from './assist/ClientList';
@@ -50,51 +51,6 @@ const mainMenuItemsBase: AssistNavItem[] = [
   { title: 'Settings', url: '/dashboard/assist/settings', icon: Settings },
 ];
 
-function DashboardOverview() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Assist Dashboard</h1>
-        <p className="text-muted-foreground">Manage your clients and tasks.</p>
-      </div>
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Active Clients</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-primary">8</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Pending Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-accent">15</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Posts This Week</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">24</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Unread Messages</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">5</p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
 export default function AssistDashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -104,6 +60,8 @@ export default function AssistDashboard() {
   const [profileName, setProfileName] = useState<string>('');
   const [profileEmail, setProfileEmail] = useState<string>('');
   const [assignedTasksCount, setAssignedTasksCount] = useState(0);
+  const [activeClientsCount, setActiveClientsCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   // Prevent the document body from becoming the scroll container on mobile.
   // Keep scrolling inside the dashboard <main> (and hide its scrollbar indicator).
@@ -134,10 +92,56 @@ export default function AssistDashboard() {
     setAssignedTasksCount(Number(count ?? 0));
   };
 
+  const fetchActiveClientsCount = async () => {
+    try {
+      const { data: userRoles, error: rolesErr } = await (supabase as any)
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'user');
+      if (rolesErr) throw rolesErr;
+
+      const userIds = (userRoles as any[])?.map((r) => r.user_id).filter(Boolean) ?? [];
+      if (userIds.length === 0) {
+        setActiveClientsCount(0);
+        return;
+      }
+
+      // Align with Client List definition: active == payment_active
+      const { count, error } = await (supabase as any)
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('payment_active', true)
+        .in('id', userIds);
+
+      if (error) throw error;
+      setActiveClientsCount(Number(count ?? 0));
+    } catch (e) {
+      console.error('Error fetching active clients count:', e);
+    }
+  };
+
+  const fetchUnreadMessagesCount = async () => {
+    if (!user?.id) return;
+    try {
+      const { count, error } = await (supabase as any)
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .or('is_read.is.null,is_read.eq.false');
+
+      if (error) throw error;
+      setUnreadMessagesCount(Number(count ?? 0));
+    } catch (e) {
+      console.error('Error fetching unread messages count:', e);
+    }
+  };
+
   useEffect(() => {
     if (!user?.id || role !== 'assist') return;
 
     void fetchAssignedTasksCount();
+    void fetchActiveClientsCount();
+    void fetchUnreadMessagesCount();
 
     const channel = supabase
       .channel(`assist-tasks-badge-${user.id}`)
@@ -145,6 +149,26 @@ export default function AssistDashboard() {
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
         () => void fetchAssignedTasksCount()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => void fetchActiveClientsCount()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_roles' },
+        () => void fetchActiveClientsCount()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        (payload) => {
+          const row = (payload as any)?.new ?? (payload as any)?.old;
+          // Only refresh if this message impacts this assist's inbox
+          if (row?.receiver_id !== user.id) return;
+          void fetchUnreadMessagesCount();
+        }
       )
       .subscribe();
 
@@ -294,7 +318,17 @@ export default function AssistDashboard() {
 
           <main className="flex-1 min-h-0 p-3 sm:p-4 lg:p-6 bg-background overflow-y-auto overflow-x-hidden overscroll-y-contain no-scrollbar">
             <Routes>
-              <Route index element={<DashboardOverview />} />
+              <Route
+                index
+                element={
+                  <AssistOverview
+                    accountStatus={profileStatus}
+                    activeClients={activeClientsCount}
+                    assignedTasks={assignedTasksCount}
+                    unreadMessages={unreadMessagesCount}
+                  />
+                }
+              />
               <Route path="profile" element={<AssistProfile />} />
               <Route path="clients" element={<ClientList />} />
               <Route path="tasks" element={<TaskManager />} />
