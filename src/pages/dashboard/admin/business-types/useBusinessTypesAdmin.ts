@@ -258,8 +258,12 @@ export function useBusinessTypesAdmin() {
           sort_order: isOthers(t.type) ? 999999 : i * 10,
         }));
 
-        const { error } = await (supabase as any).from("business_types").upsert(updates, { onConflict: "id" });
-        if (error) throw error;
+        // Use UPDATE (not UPSERT) to avoid accidental inserts with missing NOT NULL columns.
+        const results = await Promise.all(
+          updates.map((u) => (supabase as any).from("business_types").update({ sort_order: u.sort_order }).eq("id", u.id)),
+        );
+        const firstErr = results.find((r: any) => r?.error)?.error;
+        if (firstErr) throw firstErr;
 
         const nextMap = new Map(updates.map((u) => [u.id, u.sort_order]));
         setRows((prev) => prev.map((r) => (nextMap.has(r.id) ? { ...r, sort_order: nextMap.get(r.id)! } : r)));
@@ -293,10 +297,17 @@ export function useBusinessTypesAdmin() {
         next[swapWith] = tmp;
 
         const updates = next.map((g, i) => ({ name: g.category, sort_order: i * 10 }));
-        const { error } = await (supabase as any)
-          .from("business_type_categories")
-          .upsert(updates, { onConflict: "name" });
-        if (error) throw error;
+
+        const results = await Promise.all(
+          updates.map((u) =>
+            (supabase as any)
+              .from("business_type_categories")
+              .update({ sort_order: u.sort_order })
+              .eq("name", u.name),
+          ),
+        );
+        const firstErr = results.find((r: any) => r?.error)?.error;
+        if (firstErr) throw firstErr;
 
         // Keep Others always last
         const merged = new Map<string, number>(updates.map((u) => [u.name, u.sort_order]));
