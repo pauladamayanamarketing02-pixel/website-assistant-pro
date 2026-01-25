@@ -97,32 +97,56 @@ export default function AdminMessageMonitor() {
     let mounted = true;
     (async () => {
       setLoadingAssists(true);
-      const { data, error } = await supabase.functions.invoke("admin-message-monitor", {
-        body: { action: "list_assists" },
-      });
+      try {
+        // Keep the dropdown source consistent with /dashboard/admin/assistants:
+        // user_roles(role=assist) -> profiles(full name)
+        const { data: assistRoles, error: rolesError } = await (supabase as any)
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "assist");
 
-      if (!mounted) return;
-      if (error || data?.error) {
-        console.error("Failed to load assists", error ?? data?.error);
-        setAssists([]);
-        setSelectedAssistId("");
-      } else {
-        const normalized = ((data?.assists ?? []) as any[])
-          .map((a) => ({
-          id: String(a.id),
-          name: String(a.name ?? ""),
-          email: String(a.email ?? ""),
-          avatar_url: (a.avatar_url ?? null) as string | null,
-          status: String(a.status ?? "active"),
+        if (rolesError) throw rolesError;
+
+        const assistIds = ((assistRoles as any[]) ?? []).map((r) => r.user_id).filter(Boolean);
+        if (assistIds.length === 0) {
+          if (!mounted) return;
+          setAssists([]);
+          setSelectedAssistId("");
+          return;
+        }
+
+        const { data: profiles, error: profilesError } = await (supabase as any)
+          .from("profiles")
+          .select("id,name,email,avatar_url,status")
+          .in("id", assistIds);
+
+        if (profilesError) throw profilesError;
+
+        const normalized = (((profiles as any[]) ?? [])
+          .map((p) => ({
+            id: String(p.id),
+            name: String(p.name ?? ""),
+            email: String(p.email ?? ""),
+            avatar_url: (p.avatar_url ?? null) as string | null,
+            status: p.status ? String(p.status) : undefined,
           }))
-          .sort((a: AssistRow, b: AssistRow) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "en-US")) as AssistRow[];
+          .sort((a: AssistRow, b: AssistRow) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "en-US"))) as AssistRow[];
+
+        if (!mounted) return;
         setAssists(normalized);
-        setSelectedAssistId(normalized[0]?.id ?? "");
+        setSelectedAssistId((prev) => prev || normalized[0]?.id || "");
 
         // On mobile start on list view (don't auto-open chat)
         if (isMobile) setMobileView("list");
+      } catch (e) {
+        if (!mounted) return;
+        console.error("Failed to load assists", e);
+        setAssists([]);
+        setSelectedAssistId("");
+      } finally {
+        if (!mounted) return;
+        setLoadingAssists(false);
       }
-      setLoadingAssists(false);
     })();
 
     return () => {
@@ -287,7 +311,11 @@ export default function AdminMessageMonitor() {
               </SelectTrigger>
               <SelectContent>
                 {assists.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
+                  <SelectItem
+                    key={a.id}
+                    value={a.id}
+                    className="data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
+                  >
                     {(a.name || a.email || a.id) + (a.status ? ` (${a.status})` : "")}
                   </SelectItem>
                 ))}
