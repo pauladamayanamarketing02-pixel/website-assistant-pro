@@ -3,16 +3,32 @@ import { Package, Check, ArrowUpRight, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import {
+  buildDurationOptionsFromDb,
+  computeDiscountedTotal,
+  formatDurationLabel,
+  type PackageDurationRow,
+} from "@/lib/packageDurations";
+import { toast } from "sonner";
 
 interface UserPackage {
   id: string;
+  package_id?: string;
   status: string;
   started_at: string;
   activated_at?: string | null;
   expires_at: string | null;
+  duration_months?: number | null;
   packages: {
     name: string;
     type: string;
@@ -102,6 +118,9 @@ export default function MyPackage() {
   const [availablePackages, setAvailablePackages] = useState<AvailablePackage[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [durationRowsByPackageId, setDurationRowsByPackageId] = useState<Record<string, PackageDurationRow[]>>({});
+  const [savingDuration, setSavingDuration] = useState(false);
+
   useEffect(() => {
     const fetchPackages = async () => {
       if (!user) return;
@@ -129,7 +148,7 @@ export default function MyPackage() {
         .from("user_packages")
         .select(
           `
-          id, status, started_at, activated_at, expires_at,
+          id, package_id, status, started_at, activated_at, expires_at, duration_months,
           packages (name, type, description, features, price)
         `
         )
@@ -144,7 +163,7 @@ export default function MyPackage() {
           ? (userPkg as any).packages[0]
           : (userPkg as any).packages;
 
-        setActivePackage({
+        const normalized: UserPackage = {
           ...(userPkg as any),
           packages: {
             ...(pkgObj as any),
@@ -152,7 +171,36 @@ export default function MyPackage() {
               ? (pkgObj as any).features
               : JSON.parse(((pkgObj as any)?.features as string) || "[]"),
           },
-        } as UserPackage);
+        } as UserPackage;
+
+        setActivePackage(normalized);
+
+        // Load duration rules for this package so Duration+Discount matches onboarding.
+        const packageId = String((userPkg as any).package_id || "");
+        if (packageId) {
+          const { data: durationRows, error: durationError } = await (supabase as any)
+            .from("package_durations")
+            .select("id,package_id,duration_months,discount_percent,is_active,sort_order")
+            .eq("package_id", packageId)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+            .order("duration_months", { ascending: true });
+
+          if (durationError) {
+            console.warn("Failed to load package durations:", durationError);
+          }
+
+          const mapped: PackageDurationRow[] = ((durationRows as any[]) || []).map((r) => ({
+            id: String(r.id),
+            package_id: String(r.package_id),
+            duration_months: Number(r.duration_months ?? 1),
+            discount_percent: Number(r.discount_percent ?? 0),
+            is_active: Boolean(r.is_active ?? true),
+            sort_order: Number(r.sort_order ?? 0),
+          }));
+
+          setDurationRowsByPackageId((prev) => ({ ...prev, [packageId]: mapped }));
+        }
       }
 
       // Fetch all available packages
@@ -247,6 +295,75 @@ export default function MyPackage() {
     return diffDays >= 0 && diffDays <= 30;
   }, [activePackage?.expires_at, statusSource]);
 
+  const activePackageId = String(activePackage?.package_id ?? "");
+  const durationOptions = useMemo(() => {
+    if (!activePackageId) return [];
+    return buildDurationOptionsFromDb(durationRowsByPackageId[activePackageId]);
+  }, [activePackageId, durationRowsByPackageId]);
+
+  const visibleDurationOptions = useMemo(
+    () => durationOptions.filter((d) => d.months !== 1),
+    [durationOptions]
+  );
+
+  const selectedDurationMonths = useMemo(() => {
+    const m = Number(activePackage?.duration_months ?? 1);
+    return Number.isFinite(m) && m > 0 ? m : 1;
+  }, [activePackage?.duration_months]);
+
+  const selectedDurationMeta = useMemo(() => {
+    return durationOptions.find((d) => d.months === selectedDurationMonths) ?? {
+      months: 1,
+      label: formatDurationLabel(1),
+      discountPercent: 0,
+      isFromDb: false,
+    };
+  }, [durationOptions, selectedDurationMonths]);
+
+  const discountedTotalForDuration = useMemo(() => {
+    if (!activePackage) return 0;
+    return computeDiscountedTotal({
+      monthlyPrice: Number(activePackage.packages.price || 0),
+      months: selectedDurationMeta.months,
+      discountPercent: selectedDurationMeta.discountPercent,
+    });
+  }, [activePackage, selectedDurationMeta.discountPercent, selectedDurationMeta.months]);
+
+  const handleChangeDuration = async (monthsStr: string) => {
+    if (!user || !activePackage) return;
+    const months = Number(monthsStr);
+    if (!Number.isFinite(months) || months <= 0) {
+      toast.error("Duration tidak valid");
+      return;
+    }
+
+    // Only allow selecting durations that exist in options (keeps it consistent with onboarding rules).
+    const allowed = durationOptions.some((d) => d.months === months);
+    if (!allowed) {
+      toast.error("Duration tidak tersedia untuk package ini");
+      return;
+    }
+
+    setSavingDuration(true);
+    try {
+      const { error } = await supabase
+        .from("user_packages")
+        .update({ duration_months: months })
+        .eq("id", activePackage.id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setActivePackage((prev) => (prev ? { ...prev, duration_months: months } : prev));
+      toast.success("Duration berhasil diubah");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Gagal mengubah duration");
+    } finally {
+      setSavingDuration(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -336,10 +453,54 @@ export default function MyPackage() {
                 </div>
 
                 <div className="pt-2">
-                  <p className="text-2xl font-bold text-foreground">
-                    ${activePackage.packages.price}
-                    <span className="text-sm font-normal text-muted-foreground"> /month</span>
-                  </p>
+                  <div className="flex flex-col gap-3">
+                    <p className="text-2xl font-bold text-foreground">
+                      ${activePackage.packages.price}
+                      <span className="text-sm font-normal text-muted-foreground"> /month</span>
+                    </p>
+
+                    <div className="grid gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Duration:</span>
+                        <div className="min-w-[180px]">
+                          <Select
+                            value={String(selectedDurationMonths)}
+                            onValueChange={handleChangeDuration}
+                            disabled={!activePackageId || savingDuration || visibleDurationOptions.length === 0}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Pilih duration" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover z-50">
+                              {durationOptions.map((opt) => (
+                                <SelectItem key={opt.months} value={String(opt.months)}>
+                                  {opt.label}
+                                  {opt.discountPercent > 0 ? ` — ${opt.discountPercent}% off` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {selectedDurationMeta.discountPercent > 0 && (
+                          <Badge variant="secondary" className="bg-primary/10 text-primary">
+                            {selectedDurationMeta.discountPercent}% OFF
+                          </Badge>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-muted-foreground">
+                        Total ({selectedDurationMeta.label}):{" "}
+                        <span className="font-medium text-foreground">${discountedTotalForDuration}</span>
+                      </p>
+
+                      {visibleDurationOptions.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Package ini belum punya opsi duration selain 1 bulan.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Action button (changes by status) */}

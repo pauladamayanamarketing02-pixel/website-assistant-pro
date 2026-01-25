@@ -25,9 +25,16 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
 
-import type { Database } from "@/integrations/supabase/types";
-
-type FaqRow = Database["public"]["Tables"]["website_faqs"]["Row"];
+type FaqRow = {
+  id: string;
+  page: string;
+  question: string;
+  answer: string;
+  sort_order: number | null;
+  is_published: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 
 const TARGET_PAGE = "packages" as const;
 

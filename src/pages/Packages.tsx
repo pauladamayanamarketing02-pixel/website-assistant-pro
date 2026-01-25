@@ -9,10 +9,30 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
-import type { Database } from "@/integrations/supabase/types";
+type FaqRow = {
+  id: string;
+  page: string;
+  question: string;
+  answer: string;
+  sort_order: number | null;
+  is_published: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 
-type FaqRow = Database["public"]["Tables"]["website_faqs"]["Row"];
-type PackageRow = Database["public"]["Tables"]["packages"]["Row"];
+type PackageRow = {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  price: number | null;
+  features: any;
+  is_active?: boolean | null;
+  show_on_public?: boolean | null;
+  is_recommended?: boolean | null;
+  created_at?: string | null;
+};
+
 type PublicPackageRow = PackageRow & { is_recommended?: boolean };
 
 const PUBLIC_PACKAGE_NAME_ORDER = [
