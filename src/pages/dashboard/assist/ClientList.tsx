@@ -1020,7 +1020,9 @@ export default function ClientList({ initialClientId, backTo, hideClientList, al
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-foreground">{selectedClient.business_name || selectedClient.name}</h1>
-            <p className="text-muted-foreground">{selectedClient.email}</p>
+            <p className="text-muted-foreground break-words max-w-full">
+              {selectedClient.email}
+            </p>
           </div>
         </div>
 
