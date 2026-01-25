@@ -126,12 +126,16 @@ export default function AdminDashboard() {
     () => [
       { title: "Dashboard", url: "/dashboard/admin", icon: LayoutDashboard },
       {
-        title: "Business Accounts",
+        title: "Business",
         url: "/dashboard/admin/business-users",
         icon: Users,
-        badgeCount: businessPendingCount > 0 ? businessPendingCount : undefined,
         children: [
-          { title: "Accounts", url: "/dashboard/admin/business-users", icon: Users },
+          {
+            title: "Accounts",
+            url: "/dashboard/admin/business-users",
+            icon: Users,
+            badgeCount: businessPendingCount > 0 ? businessPendingCount : undefined,
+          },
           { title: "Business Types", url: "/dashboard/admin/business-users/types", icon: Tags },
         ],
       },
