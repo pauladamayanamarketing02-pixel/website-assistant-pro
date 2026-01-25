@@ -307,7 +307,7 @@ export default function AdminMessageMonitor() {
   }
 
   return (
-    <div className="flex flex-col gap-6" style={{ minHeight: 'calc(100vh - 160px)' }}>
+    <div className="flex flex-col gap-6 h-[calc(100vh-120px)]">
       <div className="shrink-0 space-y-2">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Message Monitor</h1>
@@ -338,9 +338,9 @@ export default function AdminMessageMonitor() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
         {/* Contacts List */}
-        <Card className={cn("md:col-span-1 flex flex-col", isMobile && mobileView === "chat" ? "hidden md:flex" : "", "min-h-[calc(100vh-280px)] md:min-h-0")}>
+        <Card className={cn("md:col-span-1 flex flex-col h-full", isMobile && mobileView === "chat" ? "hidden md:flex" : "")}>
           <CardHeader className="border-b py-3 space-y-3">
             <CardTitle className="text-base">Conversations</CardTitle>
             <div className="relative">
@@ -400,7 +400,7 @@ export default function AdminMessageMonitor() {
         </Card>
 
         {/* Chat Area */}
-        <Card className={cn("md:col-span-2 flex flex-col", isMobile && mobileView === "list" ? "hidden md:flex" : "", "min-h-[calc(100vh-280px)] md:min-h-0")}>
+        <Card className={cn("md:col-span-2 flex flex-col h-full", isMobile && mobileView === "list" ? "hidden md:flex" : "")}>
           {selectedPeer ? (
             <>
               <CardHeader className="border-b py-3">
