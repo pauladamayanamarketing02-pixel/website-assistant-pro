@@ -73,8 +73,11 @@ export default function Home() {
         </div>
 
         <div className="container relative z-10">
-          {/* Lower the hero content position */}
-          <div className="mx-auto max-w-3xl text-center pt-10 md:pt-14">
+          {/* Offset hero content by banner height so nothing is covered on any breakpoint */}
+          <div
+            className="mx-auto max-w-3xl text-center"
+            style={{ paddingTop: "calc(var(--homepage-promo-height, 0px) + clamp(3rem, 8vh, 5rem))" }}
+          >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground animate-fade-in">
               Easy Digital Marketing for{' '}
               <span className="text-gradient">Busy Business Owners</span>
