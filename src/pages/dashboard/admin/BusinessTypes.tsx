@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { ArrowUpDown, Pencil, Plus } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,6 +48,9 @@ type BusinessTypeRow = {
   created_at: string;
 };
 
+type SortKey = "category" | "type" | "sort_order" | "is_active";
+type SortDir = "asc" | "desc";
+
 const createSchema = z.object({
   category: z.string().trim().min(1, "Category is required").max(80),
   type: z.string().trim().min(1, "Type is required").max(80),
@@ -62,6 +65,7 @@ export default function AdminBusinessTypes() {
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<BusinessTypeRow | null>(null);
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "category", dir: "asc" });
 
   const form = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -104,6 +108,42 @@ export default function AdminBusinessTypes() {
   }, []);
 
   const groupedCount = useMemo(() => new Set(rows.map((r) => r.category)).size, [rows]);
+
+  const sortedRows = useMemo(() => {
+    const dirMult = sort.dir === "asc" ? 1 : -1;
+    const copy = [...rows];
+
+    copy.sort((a, b) => {
+      switch (sort.key) {
+        case "sort_order":
+          return dirMult * ((a.sort_order ?? 0) - (b.sort_order ?? 0));
+        case "is_active": {
+          const av = a.is_active ? 1 : 0;
+          const bv = b.is_active ? 1 : 0;
+          return dirMult * (av - bv);
+        }
+        case "type":
+          return dirMult * String(a.type ?? "").localeCompare(String(b.type ?? ""));
+        case "category":
+        default:
+          return dirMult * String(a.category ?? "").localeCompare(String(b.category ?? ""));
+      }
+    });
+
+    return copy;
+  }, [rows, sort.dir, sort.key]);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) => {
+      if (prev.key !== key) return { key, dir: "asc" };
+      return { key, dir: prev.dir === "asc" ? "desc" : "asc" };
+    });
+  };
+
+  const sortLabel = (key: SortKey) => {
+    if (sort.key !== key) return "Sort";
+    return sort.dir === "asc" ? "Sorted ascending" : "Sorted descending";
+  };
 
   const onCreate = async (values: z.infer<typeof createSchema>) => {
     try {
@@ -392,15 +432,55 @@ export default function AdminBusinessTypes() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[180px]">Category</TableHead>
-                    <TableHead className="min-w-[200px]">Type</TableHead>
-                    <TableHead className="min-w-[110px]">Order</TableHead>
-                    <TableHead className="min-w-[110px]">Active</TableHead>
+                    <TableHead className="min-w-[180px]">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 text-left"
+                        onClick={() => toggleSort("category")}
+                        title={sortLabel("category")}
+                      >
+                        Category
+                        <ArrowUpDown className="h-4 w-4" />
+                      </button>
+                    </TableHead>
+                    <TableHead className="min-w-[200px]">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 text-left"
+                        onClick={() => toggleSort("type")}
+                        title={sortLabel("type")}
+                      >
+                        Type
+                        <ArrowUpDown className="h-4 w-4" />
+                      </button>
+                    </TableHead>
+                    <TableHead className="min-w-[110px]">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 text-left"
+                        onClick={() => toggleSort("sort_order")}
+                        title={sortLabel("sort_order")}
+                      >
+                        Order
+                        <ArrowUpDown className="h-4 w-4" />
+                      </button>
+                    </TableHead>
+                    <TableHead className="min-w-[110px]">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 text-left"
+                        onClick={() => toggleSort("is_active")}
+                        title={sortLabel("is_active")}
+                      >
+                        Active
+                        <ArrowUpDown className="h-4 w-4" />
+                      </button>
+                    </TableHead>
                     <TableHead className="text-right min-w-[110px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((r) => (
+                  {sortedRows.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.category}</TableCell>
                       <TableCell>{r.type}</TableCell>
