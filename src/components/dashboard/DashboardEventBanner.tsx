@@ -16,6 +16,17 @@ import {
 
 const SETTINGS_KEY = "dashboard_banners";
 
+function normalizeCtaHref(raw: string) {
+  const href = String(raw ?? "").trim();
+  if (!href) return null;
+  // Allow internal routes (/dashboard/...) and anchors (#section)
+  if (href.startsWith("/") || href.startsWith("#")) return href;
+  // If already absolute, keep it.
+  if (/^https?:\/\//i.test(href)) return href;
+  // Otherwise treat as a domain and default to https.
+  return `https://${href}`;
+}
+
 function isBannerActive(banner: DashboardBanner, now: Date, audience: DashboardBannerAudience) {
   if (banner.isPublished === false) return false;
 
@@ -83,6 +94,8 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
 
   const marqueeText = [activeBanner.title, activeBanner.subtitle].filter(Boolean).join(" — ");
   const textEffect = (activeBanner as any).textEffect ?? "marquee";
+
+  const ctaHref = activeBanner.ctaHref ? normalizeCtaHref(activeBanner.ctaHref) : null;
 
   const titleAlign = (activeBanner as any).titleAlign ?? "left";
   const subtitleAlign = (activeBanner as any).subtitleAlign ?? "left";
@@ -325,9 +338,9 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
             )}
           </div>
 
-          {activeBanner.ctaLabel && activeBanner.ctaHref ? (
+          {activeBanner.ctaLabel && ctaHref ? (
             <Button asChild size="sm">
-              <a href={activeBanner.ctaHref} target="_blank" rel="noopener noreferrer">
+              <a href={ctaHref} target="_blank" rel="noopener noreferrer">
                 {activeBanner.ctaLabel}
               </a>
             </Button>
