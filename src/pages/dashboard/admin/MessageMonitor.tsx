@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -117,8 +117,9 @@ export default function AdminMessageMonitor() {
 
         const { data: profiles, error: profilesError } = await (supabase as any)
           .from("profiles")
-          .select("id,name,email,avatar_url,status")
-          .in("id", assistIds);
+          .select("id,name,email,avatar_url,account_status")
+          .in("id", assistIds)
+          .eq("account_status", "active");
 
         if (profilesError) throw profilesError;
 
@@ -128,7 +129,7 @@ export default function AdminMessageMonitor() {
             name: String(p.name ?? ""),
             email: String(p.email ?? ""),
             avatar_url: (p.avatar_url ?? null) as string | null,
-            status: p.status ? String(p.status) : undefined,
+            status: p.account_status ? String(p.account_status) : undefined,
           }))
           .sort((a: AssistRow, b: AssistRow) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "en-US"))) as AssistRow[];
 
@@ -368,6 +369,9 @@ export default function AdminMessageMonitor() {
                     )}
                   >
                     <Avatar className="h-10 w-10">
+                      {peer.avatar_url ? (
+                        <AvatarImage src={peer.avatar_url} alt={peer.name || "Contact avatar"} />
+                      ) : null}
                       <AvatarFallback className="bg-primary/10 text-primary">{initials(peer.name || "Client")}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
@@ -403,6 +407,9 @@ export default function AdminMessageMonitor() {
                     ) : null}
 
                     <Avatar className="h-10 w-10">
+                      {selectedPeer.avatar_url ? (
+                        <AvatarImage src={selectedPeer.avatar_url} alt={selectedPeer.name || "Contact avatar"} />
+                      ) : null}
                       <AvatarFallback className="bg-primary/10 text-primary">{initials(selectedPeer.name || "Client")}</AvatarFallback>
                     </Avatar>
 
