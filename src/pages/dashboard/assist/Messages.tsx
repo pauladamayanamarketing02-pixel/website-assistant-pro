@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Send, MessageCircle, User, Search, Trash2, Download, Paperclip, X, Check, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle, User, Search, Trash2, Download, Paperclip, X, Check, CheckCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeContactActivity } from '@/hooks/useRealtimeContactActivity';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -43,6 +44,7 @@ interface UserContact {
 export default function AssistMessages() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<UserContact[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserContact | null>(null);
@@ -53,6 +55,9 @@ export default function AssistMessages() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Mobile UX: show either contact list OR chat (prevents chat being pushed below the fold)
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Per-user clear chat marker (do NOT delete from DB)
   const [clearedAt, setClearedAt] = useState<string | null>(null);
@@ -100,16 +105,25 @@ export default function AssistMessages() {
           });
 
           setUsers(usersWithBusiness as UserContact[]);
-          if (usersWithBusiness.length > 0) {
-            setSelectedUser(usersWithBusiness[0] as UserContact);
-          }
+           if (usersWithBusiness.length > 0) {
+             setSelectedUser(usersWithBusiness[0] as UserContact);
+           }
+
+           // On mobile start on list view (don't auto-open chat)
+           if (isMobile) setMobileView('list');
         }
       }
       setLoading(false);
     };
 
     fetchUsers();
-  }, []);
+   }, [isMobile]);
+
+  // If assist taps a client on mobile, open chat view.
+  useEffect(() => {
+    if (!isMobile) return;
+    if (selectedUser) setMobileView('chat');
+  }, [isMobile, selectedUser]);
 
   // Unread notifications per contact (for contacts list badge)
   useEffect(() => {
@@ -530,7 +544,12 @@ export default function AssistMessages() {
 
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Contacts List */}
-        <Card className="md:col-span-1 flex flex-col min-h-0">
+        <Card
+          className={cn(
+            'md:col-span-1 flex flex-col min-h-0',
+            isMobile && mobileView === 'chat' ? 'hidden md:flex' : ''
+          )}
+        >
           <CardHeader className="border-b py-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -543,7 +562,7 @@ export default function AssistMessages() {
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 min-h-0">
-            <ScrollArea className="h-full">
+            <ScrollArea className="h-[60vh] md:h-full">
               {filteredUsers.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <User className="h-8 w-8 mx-auto mb-2" />
@@ -559,6 +578,7 @@ export default function AssistMessages() {
                       onClick={() => {
                         setSelectedUser(client);
                         setUnreadByUserId((prev) => ({ ...prev, [client.id]: 0 }));
+                        if (isMobile) setMobileView('chat');
                       }}
                       className={cn(
                         "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
@@ -591,12 +611,28 @@ export default function AssistMessages() {
         </Card>
 
         {/* Chat Area */}
-        <Card className="md:col-span-2 flex flex-col min-h-0">
+        <Card
+          className={cn(
+            'md:col-span-2 flex flex-col min-h-0',
+            isMobile && mobileView === 'list' ? 'hidden md:flex' : ''
+          )}
+        >
           {selectedUser ? (
             <>
               <CardHeader className="border-b py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
+                    {isMobile ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setMobileView('list')}
+                        aria-label="Back to clients"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    ) : null}
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-primary/10 text-primary">
                         {selectedUser.name?.charAt(0)?.toUpperCase() || 'C'}

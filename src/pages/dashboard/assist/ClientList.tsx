@@ -1025,36 +1025,39 @@ export default function ClientList({ initialClientId, backTo, hideClientList, al
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)}>
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="business" className="flex items-center gap-2">
+          {/* Mobile/tablet: make the tab menu readable via horizontal scroll (no overlap) */}
+          <div className="w-full overflow-x-auto no-scrollbar">
+            <TabsList className="w-max min-w-full justify-start">
+              <TabsTrigger value="business" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               Business Details
-            </TabsTrigger>
-            <TabsTrigger value="marketing" className="flex items-center gap-2">
+              </TabsTrigger>
+              <TabsTrigger value="marketing" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
               <Megaphone className="h-4 w-4" />
               Marketing Setup
-            </TabsTrigger>
-            <TabsTrigger value="knowledge" className="flex items-center gap-2">
+              </TabsTrigger>
+              <TabsTrigger value="knowledge" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
               <BookOpen className="h-4 w-4" />
               Knowledge
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="flex items-center gap-2">
+              </TabsTrigger>
+              <TabsTrigger value="gallery" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
               <Image className="h-4 w-4" />
               Gallery
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2">
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
               <FileText className="h-4 w-4" />
               Reports
-            </TabsTrigger>
-            <TabsTrigger value="packages" className="flex items-center gap-2">
+              </TabsTrigger>
+              <TabsTrigger value="packages" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
               <Package className="h-4 w-4" />
               Packages
-            </TabsTrigger>
-            <TabsTrigger value="config" className="flex items-center gap-2">
+              </TabsTrigger>
+              <TabsTrigger value="config" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
               <Settings className="h-4 w-4" />
               Config
-            </TabsTrigger>
-          </TabsList>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {loadingBusiness ? (
             <div className="mt-6 animate-pulse space-y-4">
