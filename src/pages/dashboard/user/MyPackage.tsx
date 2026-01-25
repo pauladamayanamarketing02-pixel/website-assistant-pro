@@ -453,7 +453,8 @@ export default function MyPackage() {
         <p className="text-muted-foreground">View your active package and available upgrades</p>
       </div>
 
-      <div className="flex-1 min-h-0 grid gap-6 lg:grid-cols-2 items-start">
+      {/* Tablet & mobile: stack (1 column) so cards are full width; Desktop: 2 columns */}
+      <div className="flex-1 min-h-0 grid gap-8 xl:grid-cols-2 items-start">
         {/* LEFT: Active Package */}
         <div className="min-h-0 space-y-4">
           <h2 className="text-lg sm:text-xl font-semibold text-foreground">Current Package</h2>
