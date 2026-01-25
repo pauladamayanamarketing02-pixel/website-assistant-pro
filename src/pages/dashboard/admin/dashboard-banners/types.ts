@@ -1,9 +1,12 @@
 export type DashboardBannerAudience = "user" | "assist";
 
+export type DashboardBannerTextEffect = "marquee" | "blink" | "pulse" | "none";
+
 export type DashboardBanner = {
   id: string;
   title: string;
   subtitle?: string | null;
+  textEffect?: DashboardBannerTextEffect | null;
   ctaLabel?: string | null;
   ctaHref?: string | null;
   startsAt?: string | null; // ISO
@@ -32,6 +35,10 @@ export function sanitizeDashboardBannerSettings(value: unknown): DashboardBanner
           id: String(b.id ?? crypto.randomUUID()),
           title: String(b.title ?? ""),
           subtitle: b.subtitle == null ? null : String(b.subtitle),
+          textEffect:
+            b.textEffect === "blink" || b.textEffect === "pulse" || b.textEffect === "none" || b.textEffect === "marquee"
+              ? b.textEffect
+              : "marquee",
           ctaLabel: b.ctaLabel == null ? null : String(b.ctaLabel),
           ctaHref: b.ctaHref == null ? null : String(b.ctaHref),
           startsAt: b.startsAt == null ? null : String(b.startsAt),
