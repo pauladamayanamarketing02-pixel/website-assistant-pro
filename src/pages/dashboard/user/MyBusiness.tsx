@@ -1532,7 +1532,7 @@ export default function MyBusiness() {
                               serviceArea: e.target.value,
                             }))
                           }
-                          placeholder="e.g., South Jakarta"
+                          placeholder="e.g., Orange County, CA"
                           disabled={!isEditingMarketingSetup}
                           className={missingFieldClass(isBlank(marketingSetup.serviceArea))}
                         />
