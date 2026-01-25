@@ -13,6 +13,7 @@ import {
   Copy,
   Link,
   FileText,
+  X,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -439,15 +440,25 @@ export default function MyGallery() {
       </Tabs>
 
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
-        <DialogContent className="w-[95vw] max-w-6xl h-[90vh] p-0 overflow-hidden">
-          <div className="flex items-center justify-between gap-3 px-6 py-4 border-b">
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold truncate">{previewItem?.name}</h2>
-              <p className="text-sm text-muted-foreground truncate">
-                {previewItem ? formatSize(previewItem.size) : ''}
-              </p>
+        <DialogContent className="w-[95vw] max-w-6xl h-[90vh] p-0 overflow-hidden [&>button:last-child]:hidden">
+          <div className="px-6 py-4 border-b">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold truncate">{previewItem?.name}</h2>
+                <p className="text-sm text-muted-foreground truncate">
+                  {previewItem ? formatSize(previewItem.size) : ''}
+                </p>
+              </div>
+
+              <DialogClose asChild>
+                <Button variant="ghost" size="icon" className="shrink-0">
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </DialogClose>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 variant="outline"
                 size="sm"
