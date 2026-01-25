@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useSupabaseRealtimeReload } from "@/hooks/useSupabaseRealtimeReload";
 
 import {
   defaultDashboardBannerSettings,
@@ -33,31 +34,42 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<DashboardBannerSettings>(defaultDashboardBannerSettings);
 
+  const loadSettings = useCallback(async () => {
+    const { data, error } = await (supabase as any)
+      .from("website_settings")
+      .select("value")
+      .eq("key", SETTINGS_KEY)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to load dashboard banners", error);
+      setSettings(defaultDashboardBannerSettings);
+    } else {
+      setSettings(sanitizeDashboardBannerSettings(data?.value));
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
-      const { data, error } = await (supabase as any)
-        .from("website_settings")
-        .select("value")
-        .eq("key", SETTINGS_KEY)
-        .maybeSingle();
-
+      await loadSettings();
       if (!mounted) return;
-
-      if (error) {
-        console.error("Failed to load dashboard banners", error);
-        setSettings(defaultDashboardBannerSettings);
-      } else {
-        setSettings(sanitizeDashboardBannerSettings(data?.value));
-      }
       setLoading(false);
     })();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadSettings]);
+
+  // Auto-refresh when admin updates banner settings (alignment, schedule, etc.).
+  useSupabaseRealtimeReload({
+    channelName: `dashboard-banners:${audience}`,
+    targets: [{ table: "website_settings", filter: `key=eq.${SETTINGS_KEY}` }],
+    debounceMs: 300,
+    onChange: loadSettings,
+  });
 
   const activeBanner = useMemo(() => {
     const now = new Date();
