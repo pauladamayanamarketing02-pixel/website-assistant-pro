@@ -308,8 +308,8 @@ export default function AdminMessageMonitor() {
           <div className="w-full sm:max-w-md">
             <Select value={selectedAssistId} onValueChange={(v) => setSelectedAssistId(v)}>
               <SelectTrigger>
-                {/* Keep trigger label stable; show full names only when dropdown is opened */}
-                <span className="text-sm text-foreground">Select Assistant</span>
+                {/* Placeholder shown before selection; once selected, trigger shows the selected assistant name */}
+                <SelectValue placeholder="Select Assistant" />
               </SelectTrigger>
               <SelectContent>
                 {assists.map((a) => (
