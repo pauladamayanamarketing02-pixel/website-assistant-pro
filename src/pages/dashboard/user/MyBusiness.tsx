@@ -23,6 +23,7 @@ interface BusinessData {
   business_type: string;
   country: string;
   city: string;
+  zip_code: string;
   business_address: string;
   website_url: string;
   gmb_link: string;
@@ -98,6 +99,7 @@ export default function MyBusiness() {
     business_type: '',
     country: '',
     city: '',
+    zip_code: '',
     business_address: '',
     website_url: '',
     gmb_link: '',
@@ -270,6 +272,7 @@ export default function MyBusiness() {
           business_type: (data as any).business_type || '',
           country: country,
           city: city,
+          zip_code: (data as any).zip_code || '',
           business_address: (data as any).business_address || '',
           website_url: (data as any).website_url || '',
           gmb_link: (data as any).gmb_link || '',
@@ -588,6 +591,7 @@ export default function MyBusiness() {
           business_type: formData.business_type || null,
           country: formData.country || null,
           city: formData.city || null,
+          zip_code: formData.zip_code || null,
           business_address: formData.business_address || null,
           website_url: formData.website_url, // Allow empty string
           gmb_link: formData.gmb_link || null,
@@ -1219,6 +1223,18 @@ export default function MyBusiness() {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="zip_code">ZIP Code</Label>
+              <Input
+                id="zip_code"
+                inputMode="numeric"
+                value={formData.zip_code}
+                onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                placeholder="e.g., 10210"
+                disabled={!isEditing}
+              />
             </div>
 
             <div className="space-y-2">
