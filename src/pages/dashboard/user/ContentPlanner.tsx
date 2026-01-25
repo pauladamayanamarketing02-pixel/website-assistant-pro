@@ -774,7 +774,7 @@ export default function ContentPlanner() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <header className="space-y-1">
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
           <CalendarDays className="h-8 w-8 text-primary" />
@@ -792,8 +792,8 @@ export default function ContentPlanner() {
         ) : null}
       </header>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <section className="grid gap-4 lg:grid-cols-3 min-w-0">
+        <Card className="lg:col-span-2 min-w-0">
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="flex items-center justify-between gap-3">
@@ -821,7 +821,7 @@ export default function ContentPlanner() {
           </CardHeader>
 
           <CardContent>
-            <div className="w-full">
+            <div className="w-full min-w-0">
               <Calendar
                 mode="single"
                 selected={month}
@@ -840,17 +840,16 @@ export default function ContentPlanner() {
                 }}
                 className="w-full p-2 sm:p-3 pointer-events-auto"
                 classNames={{
-                  months: "w-full",
-                  month: "w-full space-y-6",
+                  months: "w-full min-w-0",
+                  month: "w-full min-w-0 space-y-6",
                   caption: "flex justify-center pt-1 relative items-center",
                   caption_label: "text-sm sm:text-base font-semibold",
-                  table: "w-full border-collapse",
-                  head_row: "flex w-full",
-                  head_cell:
-                    "text-muted-foreground rounded-md w-full font-medium text-[11px] sm:text-sm flex-1 text-center",
-                  row: "flex w-full mt-3",
-                  // mobile/tablet: keep the whole month visible without horizontal scrolling
-                  cell: "h-12 sm:h-14 md:h-16 flex-1 text-center text-sm sm:text-base p-0 relative focus-within:relative focus-within:z-20",
+                  table: "w-full border-collapse table-fixed",
+                  // Grid keeps 7 columns visible on mobile without horizontal scrolling.
+                  head_row: "grid grid-cols-7 w-full",
+                  head_cell: "text-muted-foreground rounded-md font-medium text-[11px] sm:text-sm text-center",
+                  row: "grid grid-cols-7 w-full mt-3",
+                  cell: "h-12 sm:h-14 md:h-16 w-full text-center text-sm sm:text-base p-0 relative focus-within:relative focus-within:z-20",
                   day: "h-12 sm:h-14 md:h-16 w-full p-0 font-normal aria-selected:opacity-100",
                 }}
                 components={{
@@ -877,7 +876,7 @@ export default function ContentPlanner() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5" />
@@ -914,7 +913,7 @@ export default function ContentPlanner() {
                   const Icon = getTypeIcon(iconLabel);
 
                     return (
-                     <div key={`${rec.kind}-${rec.id}`} className="rounded-lg border border-border p-3">
+                     <div key={`${rec.kind}-${rec.id}`} className="rounded-lg border border-border p-3 min-w-0">
                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex items-start gap-2 min-w-0">
                           <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
@@ -937,7 +936,7 @@ export default function ContentPlanner() {
                           </div>
                         </div>
 
-                         <div className="flex items-center gap-2 sm:shrink-0">
+                          <div className="flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap sm:shrink-0">
                           <Button
                             type="button"
                             variant="outline"
