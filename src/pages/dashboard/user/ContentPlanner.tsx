@@ -774,7 +774,10 @@ export default function ContentPlanner() {
   };
 
   return (
-    <div className="space-y-6 min-w-0 overflow-x-hidden">
+    // Match /dashboard/user/tasks scrolling behavior:
+    // - let the parent <main> be the only scroll container
+    // - prevent accidental page-level overflow on small screens
+    <div className="space-y-6 min-w-0 min-h-0 max-w-full overflow-x-hidden">
       <header className="space-y-1">
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
           <CalendarDays className="h-8 w-8 text-primary" />
