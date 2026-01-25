@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
 function formatStatus(status: string | null | undefined) {
@@ -27,12 +26,9 @@ export default function AssistOverview(props: {
 }) {
   const status = formatStatus(props.accountStatus);
 
+  // Progress stats on this page intentionally exclude `pending` per request.
   const totalTasks =
-    props.taskStats.pending +
-    props.taskStats.assigned +
-    props.taskStats.inProgress +
-    props.taskStats.readyForReview +
-    props.taskStats.completed;
+    props.taskStats.assigned + props.taskStats.inProgress + props.taskStats.readyForReview + props.taskStats.completed;
   const completionPercent = totalTasks > 0 ? (props.taskStats.completed / totalTasks) * 100 : 0;
 
   return (
@@ -42,91 +38,76 @@ export default function AssistOverview(props: {
         <p className="text-muted-foreground">Manage your clients and tasks.</p>
       </div>
 
-      <Tabs defaultValue="summary" className="w-full">
-        <TabsList className="w-full flex flex-wrap justify-start">
-          <TabsTrigger value="summary">Overview</TabsTrigger>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Account Status</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-3">
+            <div className="text-sm text-muted-foreground">Current</div>
+            <Badge variant={status.variant}>{status.label}</Badge>
+          </CardContent>
+        </Card>
 
-        <TabsContent value="summary" className="mt-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Account Status</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between gap-3">
-                <div className="text-sm text-muted-foreground">Current</div>
-                <Badge variant={status.variant}>{status.label}</Badge>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Active Clients</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-primary">{props.activeClients}</p>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Active Clients</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-primary">{props.activeClients}</p>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Assigned Tasks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-accent">{props.assignedTasks}</p>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Assigned Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-accent">{props.assignedTasks}</p>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Unread Messages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{props.unreadMessages}</p>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Unread Messages</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{props.unreadMessages}</p>
-              </CardContent>
-            </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Overall Completion</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm text-muted-foreground">Completed</div>
+            <div className="text-sm font-semibold text-foreground">{Math.round(completionPercent)}%</div>
           </div>
-        </TabsContent>
+          <Progress value={completionPercent} className="h-2" />
 
-        <TabsContent value="progress" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Overall Completion</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm text-muted-foreground">Completed</div>
-                <div className="text-sm font-semibold text-foreground">{Math.round(completionPercent)}%</div>
-              </div>
-              <Progress value={completionPercent} className="h-2" />
-
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <div className="rounded-lg border border-border bg-card p-3 text-center">
-                  <div className="text-2xl font-bold text-foreground">{props.taskStats.pending}</div>
-                  <div className="text-xs text-muted-foreground">Pending</div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-3 text-center">
-                  <div className="text-2xl font-bold text-foreground">{props.taskStats.assigned}</div>
-                  <div className="text-xs text-muted-foreground">Assigned</div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-3 text-center">
-                  <div className="text-2xl font-bold text-foreground">{props.taskStats.inProgress}</div>
-                  <div className="text-xs text-muted-foreground">In Progress</div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-3 text-center">
-                  <div className="text-2xl font-bold text-foreground">{props.taskStats.readyForReview}</div>
-                  <div className="text-xs text-muted-foreground">Ready for Review</div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-3 text-center">
-                  <div className="text-2xl font-bold text-foreground">{props.taskStats.completed}</div>
-                  <div className="text-xs text-muted-foreground">Completed</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-lg border border-border bg-card p-3 text-center">
+              <div className="text-2xl font-bold text-foreground">{props.taskStats.assigned}</div>
+              <div className="text-xs text-muted-foreground">Assigned</div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 text-center">
+              <div className="text-2xl font-bold text-foreground">{props.taskStats.inProgress}</div>
+              <div className="text-xs text-muted-foreground">In Progress</div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 text-center">
+              <div className="text-2xl font-bold text-foreground">{props.taskStats.readyForReview}</div>
+              <div className="text-xs text-muted-foreground">Ready for Review</div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 text-center">
+              <div className="text-2xl font-bold text-foreground">{props.taskStats.completed}</div>
+              <div className="text-xs text-muted-foreground">Completed</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
