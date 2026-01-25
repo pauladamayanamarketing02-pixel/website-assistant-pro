@@ -262,9 +262,9 @@ export default function AdminMessageMonitor() {
 
   // If admin taps a contact on mobile, open chat view.
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile && !isTabletOrSmaller) return;
     if (selectedPeer) setMobileView("chat");
-  }, [isMobile, selectedPeer]);
+  }, [isMobile, isTabletOrSmaller, selectedPeer]);
 
   const scrollToBottom = () => {
     const root = scrollRef.current;
@@ -373,7 +373,7 @@ export default function AdminMessageMonitor() {
                     key={peer.id}
                     onClick={() => {
                       setSelectedPeer(peer);
-                      if (isMobile) setMobileView("chat");
+                      if (isMobile || isTabletOrSmaller) setMobileView("chat");
                     }}
                     className={cn(
                       "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
