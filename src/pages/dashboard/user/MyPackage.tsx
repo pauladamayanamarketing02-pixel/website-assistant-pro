@@ -615,12 +615,7 @@ export default function MyPackage() {
           {activePackage && isDominatePackage ? (
             <Card>
               <CardContent className="py-8">
-                <div className="space-y-2">
-                  <div className="text-base font-semibold text-foreground">Custom untuk big project</div>
-                  <p className="text-sm text-muted-foreground">
-                    Contact support untuk custom.
-                  </p>
-                </div>
+                <p className="text-sm text-muted-foreground">Contact support for custom.</p>
               </CardContent>
             </Card>
           ) : upgradePackages.length > 0 ? (
