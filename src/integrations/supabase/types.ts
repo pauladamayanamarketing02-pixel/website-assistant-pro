@@ -397,6 +397,7 @@ export type Database = {
           service_short_description: string | null
           social_links: Json | null
           stage: string | null
+          state: string | null
           updated_at: string
           user_id: string
           website_url: string | null
@@ -435,6 +436,7 @@ export type Database = {
           service_short_description?: string | null
           social_links?: Json | null
           stage?: string | null
+          state?: string | null
           updated_at?: string
           user_id: string
           website_url?: string | null
@@ -473,6 +475,7 @@ export type Database = {
           service_short_description?: string | null
           social_links?: Json | null
           stage?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string
           website_url?: string | null
