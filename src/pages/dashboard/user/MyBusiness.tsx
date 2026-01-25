@@ -796,7 +796,7 @@ export default function MyBusiness() {
         <>
           <Card>
             <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Building2 className="h-5 w-5 text-primary" />
@@ -806,7 +806,7 @@ export default function MyBusiness() {
                   <CardDescription>Update your business information anytime</CardDescription>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {isEditing ? (
                   <Button 
                     variant="outline" 

@@ -916,9 +916,9 @@ export default function ContentPlanner() {
                   const iconLabel = rec.kind === "scheduled" ? rec.contentTypeName : rec.type;
                   const Icon = getTypeIcon(iconLabel);
 
-                  return (
-                    <div key={`${rec.kind}-${rec.id}`} className="rounded-lg border border-border p-3">
-                      <div className="flex items-start justify-between gap-3">
+                    return (
+                     <div key={`${rec.kind}-${rec.id}`} className="rounded-lg border border-border p-3">
+                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex items-start gap-2 min-w-0">
                           <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                           <div className="min-w-0">
@@ -940,7 +940,7 @@ export default function ContentPlanner() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                         <div className="flex items-center gap-2 sm:shrink-0">
                           <Button
                             type="button"
                             variant="outline"
@@ -975,7 +975,7 @@ export default function ContentPlanner() {
                             <span className="sr-only">Post</span>
                           </Button>
                         </div>
-                      </div>
+                       </div>
                     </div>
                   );
                 })
