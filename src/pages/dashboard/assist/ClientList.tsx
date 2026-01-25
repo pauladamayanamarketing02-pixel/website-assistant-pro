@@ -1108,7 +1108,7 @@ export default function ClientList({ initialClientId, backTo, hideClientList, al
 
                     {/* First Name + Last Name */}
                     <div className="grid gap-6 md:grid-cols-2">
-                      <div className="space-y-2">
+                      <div className="space-y-2 min-w-0">
                         <Label>First Name</Label>
                         {isEditingBusiness ? (
                           <Input
@@ -1181,16 +1181,16 @@ export default function ClientList({ initialClientId, backTo, hideClientList, al
                             )}
                           </>
                         ) : (
-                          <div className="space-y-1 py-2">
-                            <p className="font-medium">{formData.email || '-'}</p>
+                          <div className="space-y-1 py-2 min-w-0">
+                            <p className="font-medium break-words">{formData.email || '-'}</p>
                             {formData.email_secondary ? (
-                              <p className="text-sm text-muted-foreground">{formData.email_secondary}</p>
+                              <p className="text-sm text-muted-foreground break-words">{formData.email_secondary}</p>
                             ) : null}
                           </div>
                         )}
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-2 min-w-0">
                         <div className="flex items-center justify-between">
                           <Label>Phone Number</Label>
                           {isEditingBusiness && (
