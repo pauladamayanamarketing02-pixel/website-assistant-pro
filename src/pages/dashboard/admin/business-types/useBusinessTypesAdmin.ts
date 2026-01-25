@@ -246,27 +246,23 @@ export function useBusinessTypesAdmin() {
       if (swapWith < 0 || swapWith >= types.length) return;
       if (isOthers(types[swapWith]?.type)) return;
 
-      const a = types[idx];
-      const b = types[swapWith];
-
       try {
-        const updates = [
-          { id: a.id, sort_order: b.sort_order ?? 0 },
-          { id: b.id, sort_order: a.sort_order ?? 0 },
-        ];
+        // Reindex within category so reorder works even if sort_order values are equal.
+        const next = [...types];
+        const tmp = next[idx];
+        next[idx] = next[swapWith];
+        next[swapWith] = tmp;
+
+        const updates = next.map((t, i) => ({
+          id: t.id,
+          sort_order: isOthers(t.type) ? 999999 : i * 10,
+        }));
 
         const { error } = await (supabase as any).from("business_types").upsert(updates, { onConflict: "id" });
         if (error) throw error;
 
-        setRows((prev) =>
-          prev.map((r) =>
-            r.id === a.id
-              ? { ...r, sort_order: b.sort_order ?? 0 }
-              : r.id === b.id
-                ? { ...r, sort_order: a.sort_order ?? 0 }
-                : r,
-          ),
-        );
+        const nextMap = new Map(updates.map((u) => [u.id, u.sort_order]));
+        setRows((prev) => prev.map((r) => (nextMap.has(r.id) ? { ...r, sort_order: nextMap.get(r.id)! } : r)));
       } catch (e: any) {
         toast({
           variant: "destructive",
@@ -290,26 +286,26 @@ export function useBusinessTypesAdmin() {
       const swapWith = dir === "up" ? idx - 1 : idx + 1;
       if (swapWith < 0 || swapWith >= movable.length) return;
 
-      const a = movable[idx];
-      const b = movable[swapWith];
-
       try {
-        const updates = [
-          { name: a.category, sort_order: b.sort_order ?? 0 },
-          { name: b.category, sort_order: a.sort_order ?? 0 },
-        ];
+        const next = [...movable];
+        const tmp = next[idx];
+        next[idx] = next[swapWith];
+        next[swapWith] = tmp;
 
+        const updates = next.map((g, i) => ({ name: g.category, sort_order: i * 10 }));
         const { error } = await (supabase as any)
           .from("business_type_categories")
           .upsert(updates, { onConflict: "name" });
         if (error) throw error;
 
+        // Keep Others always last
+        const merged = new Map<string, number>(updates.map((u) => [u.name, u.sort_order]));
         setCategoryOrders((prev) =>
           prev.map((c) =>
-            c.name === a.category
-              ? { ...c, sort_order: b.sort_order ?? 0 }
-              : c.name === b.category
-                ? { ...c, sort_order: a.sort_order ?? 0 }
+            c.name === "Others" || isOthers(c.name)
+              ? { ...c, sort_order: 999999 }
+              : merged.has(c.name)
+                ? { ...c, sort_order: merged.get(c.name)! }
                 : c,
           ),
         );

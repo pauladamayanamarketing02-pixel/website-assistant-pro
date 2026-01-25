@@ -24,31 +24,8 @@ import {
 } from "@/components/ui/select";
 
 import { BusinessUserActions } from "./business-users/BusinessUserActions";
-
-async function getAccessToken() {
-  const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
-  if (sessionErr) throw sessionErr;
-
-  // If session is missing/expired, attempt a refresh once.
-  if (!sessionData.session) {
-    const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
-    if (refreshErr) throw refreshErr;
-    if (!refreshed.session?.access_token) throw new Error("Unauthorized: session not found");
-    return refreshed.session.access_token;
-  }
-
-  return sessionData.session.access_token;
-}
-
-async function invokeWithAuth<T>(fnName: string, body: unknown) {
-  const token = await getAccessToken();
-  return supabase.functions.invoke<T>(fnName, {
-    body,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
+import { invokeWithAuth } from "@/lib/invokeWithAuth";
+import { QuickCreateAccountDialog } from "./components/QuickCreateAccountDialog";
 
  type BusinessStatus = "pending" | "approved" | "active" | "suspended" | "expired";
 
@@ -247,11 +224,18 @@ export default function AdminBusinessUsers() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button type="button" onClick={() => navigate("/dashboard/admin/business-users/new")}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Business
-          </Button>
+          <QuickCreateAccountDialog
+            title="Add New Business"
+            description="Overlay email + password. User akan auto-confirm dan role = user."
+            functionName="admin-create-user"
+            onCreated={() => void fetchBusinessUsers()}
+            triggerContent={
+              <span className="inline-flex items-center">
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Business
+              </span>
+            }
+          />
         </div>
       </header>
 

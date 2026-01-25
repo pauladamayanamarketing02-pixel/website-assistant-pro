@@ -36,7 +36,7 @@ export function CategoryGroupCard({
 
   return (
     <Card>
-      <Collapsible defaultOpen>
+      <Collapsible defaultOpen={false}>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div className="min-w-0">
             <CardTitle className="text-base truncate">{group.category}</CardTitle>
