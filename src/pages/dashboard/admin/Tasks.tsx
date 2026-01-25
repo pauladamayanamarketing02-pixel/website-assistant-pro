@@ -81,8 +81,21 @@ export default function AdminTasks() {
         return;
       }
 
-      const userIds = Array.from(new Set(taskList.map((t) => t.user_id).filter(Boolean)));
-      const assigneeIds = Array.from(new Set(taskList.map((t) => t.assigned_to).filter(Boolean)));
+      // Handle duplicate task_numbers: keep only the most recent (newest created_at) per task_number
+      const tasksByNumber = new Map<number, any>();
+      for (const t of taskList) {
+        const num = t.task_number;
+        if (!num) continue;
+        const existing = tasksByNumber.get(num);
+        if (!existing) {
+          tasksByNumber.set(num, t);
+        }
+        // taskList is already sorted by created_at desc, so first occurrence is newest
+      }
+      const uniqueTasks = Array.from(tasksByNumber.values());
+
+      const userIds = Array.from(new Set(uniqueTasks.map((t) => t.user_id).filter(Boolean)));
+      const assigneeIds = Array.from(new Set(uniqueTasks.map((t) => t.assigned_to).filter(Boolean)));
 
       const [{ data: businesses, error: businessesError }, { data: assignees, error: assigneesError }] = await Promise.all([
         (supabase as any).from("businesses").select("user_id, business_name").in("user_id", userIds),
@@ -104,7 +117,7 @@ export default function AdminTasks() {
         if (a?.id) assigneeById.set(a.id, a?.name || "—");
       });
 
-      const nextRows: TaskRow[] = taskList.map((t) => {
+      const nextRows: TaskRow[] = uniqueTasks.map((t) => {
         const taskNumber = t?.task_number;
         const label = taskNumber ? `T-${String(taskNumber).padStart(4, "0")}` : String(t.id);
 
