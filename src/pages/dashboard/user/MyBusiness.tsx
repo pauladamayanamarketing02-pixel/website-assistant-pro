@@ -1559,7 +1559,7 @@ export default function MyBusiness() {
                               serviceArea: e.target.value,
                             }))
                           }
-                          placeholder="e.g., South Jakarta"
+                          placeholder="e.g., Los Angeles County, CA"
                           disabled={!isEditingMarketingSetup}
                         />
                       </div>
