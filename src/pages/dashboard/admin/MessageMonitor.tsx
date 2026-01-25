@@ -1,12 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
-import { Search, MessageSquare } from "lucide-react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { ArrowLeft, Download, MessageCircle, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 type AssistRow = {
@@ -46,20 +54,44 @@ function initials(name: string) {
   return (a + b).toUpperCase();
 }
 
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function getFileName(url: string) {
+  const parts = url.split("/");
+  const fileName = parts[parts.length - 1] ?? "Attachment";
+  return fileName.replace(/^\d+-/, "");
+}
+
 export default function AdminMessageMonitor() {
+  const isMobile = useIsMobile();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const [loadingAssists, setLoadingAssists] = useState(true);
   const [loadingPeers, setLoadingPeers] = useState(false);
   const [loadingThread, setLoadingThread] = useState(false);
 
   const [assists, setAssists] = useState<AssistRow[]>([]);
-  const [selectedAssist, setSelectedAssist] = useState<AssistRow | null>(null);
-  const [assistQuery, setAssistQuery] = useState("");
+  const [selectedAssistId, setSelectedAssistId] = useState<string>("");
 
   const [peers, setPeers] = useState<PeerRow[]>([]);
   const [selectedPeer, setSelectedPeer] = useState<PeerRow | null>(null);
   const [peerQuery, setPeerQuery] = useState("");
 
   const [messages, setMessages] = useState<MessageRow[]>([]);
+
+  // Mobile UX: show either list OR chat
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
   useEffect(() => {
     let mounted = true;
@@ -73,17 +105,22 @@ export default function AdminMessageMonitor() {
       if (error || data?.error) {
         console.error("Failed to load assists", error ?? data?.error);
         setAssists([]);
-        setSelectedAssist(null);
+        setSelectedAssistId("");
       } else {
-        const normalized = ((data?.assists ?? []) as any[]).map((a) => ({
+        const normalized = ((data?.assists ?? []) as any[])
+          .map((a) => ({
           id: String(a.id),
           name: String(a.name ?? ""),
           email: String(a.email ?? ""),
           avatar_url: (a.avatar_url ?? null) as string | null,
           status: String(a.status ?? "active"),
-        })) as AssistRow[];
+          }))
+          .sort((a: AssistRow, b: AssistRow) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "en-US")) as AssistRow[];
         setAssists(normalized);
-        setSelectedAssist(normalized[0] ?? null);
+        setSelectedAssistId(normalized[0]?.id ?? "");
+
+        // On mobile start on list view (don't auto-open chat)
+        if (isMobile) setMobileView("list");
       }
       setLoadingAssists(false);
     })();
@@ -96,9 +133,10 @@ export default function AdminMessageMonitor() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!selectedAssist?.id) {
+      if (!selectedAssistId) {
         setPeers([]);
         setSelectedPeer(null);
+        setMessages([]);
         return;
       }
 
@@ -108,7 +146,7 @@ export default function AdminMessageMonitor() {
       setMessages([]);
 
       const { data, error } = await supabase.functions.invoke("admin-message-monitor", {
-        body: { action: "list_peers", assistId: selectedAssist.id },
+        body: { action: "list_peers", assistId: selectedAssistId },
       });
 
       if (!mounted) return;
@@ -117,16 +155,25 @@ export default function AdminMessageMonitor() {
         setPeers([]);
         setSelectedPeer(null);
       } else {
-        const rows = ((data?.peers ?? []) as any[]).map((p) => ({
-          id: String(p.id),
-          name: String(p.name ?? ""),
-          email: String(p.email ?? ""),
-          avatar_url: (p.avatar_url ?? null) as string | null,
-          business_name: (p.business_name ?? null) as string | null,
-          last_message_at: (p.last_message_at ?? null) as string | null,
-        })) as PeerRow[];
+        const rows = ((data?.peers ?? []) as any[])
+          .map((p) => ({
+            id: String(p.id),
+            name: String(p.name ?? ""),
+            email: String(p.email ?? ""),
+            avatar_url: (p.avatar_url ?? null) as string | null,
+            business_name: (p.business_name ?? null) as string | null,
+            last_message_at: (p.last_message_at ?? null) as string | null,
+          }))
+          .sort((a: PeerRow, b: PeerRow) => {
+            const tsA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+            const tsB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+            if (tsA !== tsB) return tsB - tsA;
+            return String(a.name ?? "").localeCompare(String(b.name ?? ""), "en-US");
+          }) as PeerRow[];
         setPeers(rows);
         setSelectedPeer(rows[0] ?? null);
+
+        if (isMobile) setMobileView("list");
       }
       setLoadingPeers(false);
     })();
@@ -134,12 +181,12 @@ export default function AdminMessageMonitor() {
     return () => {
       mounted = false;
     };
-  }, [selectedAssist?.id]);
+  }, [isMobile, selectedAssistId]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!selectedAssist?.id || !selectedPeer?.id) {
+      if (!selectedAssistId || !selectedPeer?.id) {
         setMessages([]);
         return;
       }
@@ -147,7 +194,7 @@ export default function AdminMessageMonitor() {
       const { data, error } = await supabase.functions.invoke("admin-message-monitor", {
         body: {
           action: "fetch_thread",
-          assistId: selectedAssist.id,
+          assistId: selectedAssistId,
           peerId: selectedPeer.id,
           limit: 500,
         },
@@ -175,13 +222,30 @@ export default function AdminMessageMonitor() {
     return () => {
       mounted = false;
     };
-  }, [selectedAssist?.id, selectedPeer?.id]);
+  }, [selectedAssistId, selectedPeer?.id]);
 
-  const filteredAssists = useMemo(() => {
-    const q = assistQuery.trim().toLowerCase();
-    if (!q) return assists;
-    return assists.filter((a) => (a.name ?? "").toLowerCase().includes(q) || (a.email ?? "").toLowerCase().includes(q));
-  }, [assists, assistQuery]);
+  // If admin taps a contact on mobile, open chat view.
+  useEffect(() => {
+    if (!isMobile) return;
+    if (selectedPeer) setMobileView("chat");
+  }, [isMobile, selectedPeer]);
+
+  const scrollToBottom = () => {
+    const root = scrollRef.current;
+    if (!root) return;
+    const viewport = root.querySelector("[data-radix-scroll-area-viewport]") as HTMLElement | null;
+    const el = viewport ?? root;
+    el.scrollTop = el.scrollHeight;
+  };
+
+  useEffect(() => {
+    requestAnimationFrame(scrollToBottom);
+  }, [messages]);
+
+  const selectedAssist = useMemo(
+    () => assists.find((a) => a.id === selectedAssistId) ?? null,
+    [assists, selectedAssistId]
+  );
 
   const filteredPeers = useMemo(() => {
     const q = peerQuery.trim().toLowerCase();
@@ -193,179 +257,229 @@ export default function AdminMessageMonitor() {
         (p.business_name ?? "").toLowerCase().includes(q)
       );
     });
-  }, [peers, peerQuery]);
+  }, [peerQuery, peers]);
+
+  if (loadingAssists) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3" />
+          <div className="h-96 bg-muted rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-bold text-foreground">Message Monitor</h1>
-        <p className="text-sm text-muted-foreground">
-          View Assist conversations. Pick an Assist, then select a conversation to see the full thread.
-        </p>
-      </header>
+    <div className="h-full flex flex-col gap-6">
+      <div className="shrink-0 space-y-2">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Message Monitor</h1>
+          <p className="text-muted-foreground">Read-only monitoring of Assist conversations</p>
+        </div>
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        {/* Assists */}
-        <Card className="lg:col-span-3">
-          <CardHeader className="space-y-3">
-            <CardTitle className="text-base">Assists</CardTitle>
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input value={assistQuery} onChange={(e) => setAssistQuery(e.target.value)} placeholder="Search assists..." className="pl-8" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loadingAssists ? (
-              <div className="py-6 text-sm text-muted-foreground">Loading assists...</div>
-            ) : filteredAssists.length === 0 ? (
-              <div className="py-6 text-sm text-muted-foreground">No assists found.</div>
-            ) : (
-              <ScrollArea className="h-[60vh]">
-                <div className="space-y-1 pr-3">
-                  {filteredAssists.map((a) => {
-                    const active = selectedAssist?.id === a.id;
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => setSelectedAssist(a)}
-                        className={cn(
-                          "w-full text-left rounded-md border border-transparent p-2 hover:bg-accent/50",
-                          active ? "bg-accent text-accent-foreground" : "text-foreground"
-                        )}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={a.avatar_url ?? undefined} alt={a.name} />
-                            <AvatarFallback>{initials(a.name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium truncate">{a.name || "(Unnamed)"}</div>
-                            <div className="text-xs text-muted-foreground truncate">{a.email}</div>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            )}
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="text-sm text-muted-foreground sm:w-48">Monitor Assist</div>
+          <div className="w-full sm:max-w-md">
+            <Select value={selectedAssistId} onValueChange={(v) => setSelectedAssistId(v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Assist" />
+              </SelectTrigger>
+              <SelectContent>
+                {assists.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name || a.email || a.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
 
-        {/* Conversations */}
-        <Card className="lg:col-span-4">
-          <CardHeader className="space-y-3">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Contacts List */}
+        <Card className={cn("md:col-span-1 flex flex-col min-h-0", isMobile && mobileView === "chat" ? "hidden md:flex" : "")}>
+          <CardHeader className="border-b py-3 space-y-3">
             <CardTitle className="text-base">Conversations</CardTitle>
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input value={peerQuery} onChange={(e) => setPeerQuery(e.target.value)} placeholder="Search conversations..." className="pl-8" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or business..."
+                value={peerQuery}
+                onChange={(e) => setPeerQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
           </CardHeader>
-          <CardContent>
-            {!selectedAssist ? (
-              <div className="py-6 text-sm text-muted-foreground">Select an assist to view conversations.</div>
-            ) : loadingPeers ? (
-              <div className="py-6 text-sm text-muted-foreground">Loading conversations...</div>
-            ) : filteredPeers.length === 0 ? (
-              <div className="py-6 text-sm text-muted-foreground">No conversations found.</div>
-            ) : (
-              <ScrollArea className="h-[60vh]">
-                <div className="space-y-1 pr-3">
-                  {filteredPeers.map((p) => {
-                    const active = selectedPeer?.id === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setSelectedPeer(p)}
-                        className={cn(
-                          "w-full text-left rounded-md border border-transparent p-2 hover:bg-accent/50",
-                          active ? "bg-accent text-accent-foreground" : "text-foreground"
-                        )}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={p.avatar_url ?? undefined} alt={p.name} />
-                            <AvatarFallback>{initials(p.name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium truncate">{p.name || "(Unnamed)"}</div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              {p.business_name ? `${p.business_name} • ` : ""}
-                              {p.email}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
+          <CardContent className="p-0 flex-1 min-h-0">
+            <ScrollArea className="h-[60vh] md:h-full">
+              {!selectedAssistId ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  <p className="text-sm">Select an Assist to load conversations</p>
                 </div>
-              </ScrollArea>
-            )}
+              ) : loadingPeers ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  <p className="text-sm">Loading conversations...</p>
+                </div>
+              ) : filteredPeers.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  <p className="text-sm">No conversations found</p>
+                </div>
+              ) : (
+                filteredPeers.map((peer) => (
+                  <div
+                    key={peer.id}
+                    onClick={() => {
+                      setSelectedPeer(peer);
+                      if (isMobile) setMobileView("chat");
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
+                      selectedPeer?.id === peer.id ? "bg-muted" : ""
+                    )}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">{initials(peer.name || "Client")}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate break-words">{peer.name || "(Unnamed)"}</p>
+                      <p className="text-xs text-muted-foreground truncate break-words">
+                        {peer.business_name || peer.email}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </ScrollArea>
           </CardContent>
         </Card>
 
-        {/* Thread */}
-        <Card className="lg:col-span-5">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="min-w-0">
-              <CardTitle className="text-base">Thread</CardTitle>
-              <div className="text-xs text-muted-foreground truncate">
-                {selectedAssist?.name ? `${selectedAssist.name}` : ""}
-                {selectedPeer?.name ? ` → ${selectedPeer.name}` : ""}
-              </div>
-            </div>
-            <Button variant="outline" size="sm" disabled>
-              <MessageSquare className="h-4 w-4 mr-2" /> Read-only
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {!selectedAssist || !selectedPeer ? (
-              <div className="py-6 text-sm text-muted-foreground">Select a conversation to view messages.</div>
-            ) : loadingThread ? (
-              <div className="py-6 text-sm text-muted-foreground">Loading messages...</div>
-            ) : messages.length === 0 ? (
-              <div className="py-6 text-sm text-muted-foreground">No messages in this thread.</div>
-            ) : (
-              <ScrollArea className="h-[60vh]">
-                <div className="space-y-3 pr-3">
-                  {messages.map((m) => {
-                    const fromAssist = m.sender_id === selectedAssist.id;
-                    return (
-                      <div key={m.id} className={cn("flex", fromAssist ? "justify-start" : "justify-end")}>
-                        <div
-                          className={cn(
-                            "max-w-[85%] rounded-lg border border-border bg-card p-3",
-                            fromAssist ? "" : "bg-accent/40"
-                          )}
-                        >
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(m.created_at).toLocaleString()}
-                          </div>
-                          {m.content ? <div className="mt-1 text-sm whitespace-pre-wrap break-words">{m.content}</div> : null}
-                          {m.file_url ? (
-                            <div className="mt-2">
-                              <a
-                                className="text-sm underline underline-offset-4"
-                                href={m.file_url}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Attachment
-                              </a>
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
+        {/* Chat Area */}
+        <Card className={cn("md:col-span-2 flex flex-col min-h-0", isMobile && mobileView === "list" ? "hidden md:flex" : "")}>
+          {selectedPeer ? (
+            <>
+              <CardHeader className="border-b py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {isMobile ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setMobileView("list")}
+                        aria-label="Back to conversations"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    ) : null}
+
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">{initials(selectedPeer.name || "Client")}</AvatarFallback>
+                    </Avatar>
+
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg truncate">{selectedPeer.name || "(Unnamed)"}</CardTitle>
+                      <p className="text-xs text-muted-foreground truncate break-words">
+                        {selectedPeer.business_name || selectedPeer.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button variant="outline" size="sm" disabled>
+                    Read-only
+                  </Button>
                 </div>
-              </ScrollArea>
-            )}
-          </CardContent>
+              </CardHeader>
+
+              <CardContent className="flex-1 min-h-0 flex flex-col p-0">
+                <ScrollArea className="flex-1 min-h-0 p-4" ref={scrollRef}>
+                  {loadingThread ? (
+                    <div className="h-full flex items-center justify-center text-muted-foreground">Loading messages...</div>
+                  ) : messages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center py-12">
+                      <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="font-medium text-foreground">No messages yet</h3>
+                      <p className="text-sm text-muted-foreground">This conversation has no messages.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {messages.map((message, idx) => {
+                        const isOwn = message.sender_id === selectedAssistId;
+                        const prev = messages[idx - 1];
+                        const showDateSeparator =
+                          !prev ||
+                          new Date(prev.created_at).toDateString() !== new Date(message.created_at).toDateString();
+
+                        return (
+                          <div key={message.id} className="space-y-2">
+                            {showDateSeparator ? (
+                              <div className="flex justify-center">
+                                <span className="text-xs text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+                                  {formatDate(message.created_at)}
+                                </span>
+                              </div>
+                            ) : null}
+
+                            <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+                              <div
+                                className={cn(
+                                  "max-w-[70%] rounded-lg px-4 py-2",
+                                  isOwn ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                                )}
+                              >
+                                <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+
+                                {message.file_url ? (
+                                  <a
+                                    href={message.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={cn(
+                                      "flex items-center gap-1 text-xs mt-2 underline underline-offset-4",
+                                      isOwn ? "text-primary-foreground/80" : "text-primary"
+                                    )}
+                                  >
+                                    <Download className="h-3 w-3" />
+                                    {getFileName(message.file_url)}
+                                  </a>
+                                ) : null}
+
+                                <p
+                                  className={cn(
+                                    "text-xs mt-1 inline-flex items-center justify-end gap-1 w-full",
+                                    isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                                  )}
+                                >
+                                  <span>{formatTime(message.created_at)}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </>
+          ) : (
+            <CardContent className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="font-medium text-foreground">Select a conversation</h3>
+                <p className="text-sm text-muted-foreground">Choose a contact from the list to view the chat</p>
+              </div>
+            </CardContent>
+          )}
         </Card>
       </div>
+
+      {selectedAssist ? (
+        <div className="text-xs text-muted-foreground">
+          Monitoring: <span className="text-foreground">{selectedAssist.name || selectedAssist.email || selectedAssist.id}</span>
+        </div>
+      ) : null}
     </div>
   );
 }
