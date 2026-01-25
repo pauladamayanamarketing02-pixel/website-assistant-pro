@@ -1185,7 +1185,9 @@ export default function MyBusiness() {
                     {formData.hours.map((hour, index) => (
                       <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded text-xs">
                         <span className="font-medium min-w-[70px]">{hour.day}</span>
-                        <span className="text-muted-foreground">{hour.opensAt} - {hour.closesAt}</span>
+                        <span className="text-muted-foreground">
+                          {hour.opensAt === '00:00' && hour.closesAt === '23:59' ? '24 Hours' : `${hour.opensAt} - ${hour.closesAt}`}
+                        </span>
                         {isEditing && (
                           <Button
                             variant="ghost"
@@ -1206,7 +1208,7 @@ export default function MyBusiness() {
                       <SelectTrigger className="text-xs">
                         <SelectValue placeholder="Day" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border border-border z-50">
                         <SelectItem value="Monday">Mon</SelectItem>
                         <SelectItem value="Tuesday">Tue</SelectItem>
                         <SelectItem value="Wednesday">Wed</SelectItem>
@@ -1216,11 +1218,21 @@ export default function MyBusiness() {
                         <SelectItem value="Sunday">Sun</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Select value={newHour.opensAt} onValueChange={(v) => setNewHour({ ...newHour, opensAt: v })}>
+                    <Select
+                      value={newHour.opensAt}
+                      onValueChange={(v) => {
+                        if (v === '__24h__') {
+                          setNewHour({ ...newHour, opensAt: '00:00', closesAt: '23:59' });
+                          return;
+                        }
+                        setNewHour({ ...newHour, opensAt: v });
+                      }}
+                    >
                       <SelectTrigger className="text-xs">
                         <SelectValue placeholder="Opens" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-60">
+                      <SelectContent className="bg-background border border-border max-h-60 z-50">
+                        <SelectItem value="__24h__">24 Hours</SelectItem>
                         {Array.from({ length: 24 }, (_, i) => i).map(hour => 
                           ['00', '30'].map(min => {
                             const time = `${String(hour).padStart(2, '0')}:${min}`;
@@ -1229,11 +1241,21 @@ export default function MyBusiness() {
                         )}
                       </SelectContent>
                     </Select>
-                    <Select value={newHour.closesAt} onValueChange={(v) => setNewHour({ ...newHour, closesAt: v })}>
+                    <Select
+                      value={newHour.closesAt}
+                      onValueChange={(v) => {
+                        if (v === '__24h__') {
+                          setNewHour({ ...newHour, opensAt: '00:00', closesAt: '23:59' });
+                          return;
+                        }
+                        setNewHour({ ...newHour, closesAt: v });
+                      }}
+                    >
                       <SelectTrigger className="text-xs">
                         <SelectValue placeholder="Closes" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-60">
+                      <SelectContent className="bg-background border border-border max-h-60 z-50">
+                        <SelectItem value="__24h__">24 Hours</SelectItem>
                         {Array.from({ length: 24 }, (_, i) => i).map(hour => 
                           ['00', '30'].map(min => {
                             const time = `${String(hour).padStart(2, '0')}:${min}`;
