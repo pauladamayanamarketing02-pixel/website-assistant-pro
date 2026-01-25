@@ -61,6 +61,11 @@ export default function UserDashboard() {
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [paymentActive, setPaymentActive] = useState<boolean | null>(null);
 
+  const isContentPlannerRoute = useMemo(
+    () => location.pathname.includes('/dashboard/user/content-planner'),
+    [location.pathname]
+  );
+
   const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
   const { data: businessInfo } = useBusinessInfo(user?.id);
 
@@ -222,7 +227,9 @@ export default function UserDashboard() {
           </header>
 
           <main
-            className="flex-1 bg-background overflow-y-auto overflow-x-hidden no-scrollbar p-3 sm:p-4 lg:p-6"
+            className={`flex-1 bg-background overflow-y-auto overflow-x-hidden overscroll-y-contain no-scrollbar ${
+              isContentPlannerRoute ? 'px-3 pt-3 pb-0 sm:px-4 sm:pt-4 sm:pb-0 lg:px-6 lg:pt-6 lg:pb-0' : 'p-3 sm:p-4 lg:p-6'
+            }`}
           >
             <Routes>
               <Route
