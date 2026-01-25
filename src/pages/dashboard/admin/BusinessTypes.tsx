@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,6 +15,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -38,8 +49,8 @@ type BusinessTypeRow = {
 };
 
 const createSchema = z.object({
-  category: z.string().trim().min(1, "Category wajib diisi").max(80),
-  type: z.string().trim().min(1, "Type wajib diisi").max(80),
+  category: z.string().trim().min(1, "Category is required").max(80),
+  type: z.string().trim().min(1, "Type is required").max(80),
   sort_order: z.coerce.number().int().min(0).max(10000).default(0),
   is_active: z.boolean().default(true),
 });
@@ -49,8 +60,15 @@ export default function AdminBusinessTypes() {
   const [rows, setRows] = useState<BusinessTypeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<BusinessTypeRow | null>(null);
 
   const form = useForm<z.infer<typeof createSchema>>({
+    resolver: zodResolver(createSchema),
+    defaultValues: { category: "", type: "", sort_order: 0, is_active: true },
+  });
+
+  const editForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
     defaultValues: { category: "", type: "", sort_order: 0, is_active: true },
   });
@@ -72,8 +90,8 @@ export default function AdminBusinessTypes() {
       setRows([]);
       toast({
         variant: "destructive",
-        title: "Gagal memuat",
-        description: e?.message ? String(e.message) : "Tidak bisa memuat Business Types.",
+        title: "Failed to load",
+        description: e?.message ? String(e.message) : "Could not load Business Types.",
       });
     } finally {
       setLoading(false);
@@ -99,15 +117,53 @@ export default function AdminBusinessTypes() {
       const { error } = await (supabase as any).from("business_types").insert(payload);
       if (error) throw error;
 
-      toast({ title: "Berhasil", description: "Business Type ditambahkan." });
+      toast({ title: "Saved", description: "Business Type created." });
       form.reset({ category: "", type: "", sort_order: 0, is_active: true });
       setOpen(false);
       await fetchTypes();
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal menambah",
-        description: e?.message ? String(e.message) : "Tidak bisa menambah Business Type.",
+        title: "Create failed",
+        description: e?.message ? String(e.message) : "Could not create Business Type.",
+      });
+    }
+  };
+
+  const openEditDialog = (row: BusinessTypeRow) => {
+    setEditing(row);
+    editForm.reset({
+      category: row.category,
+      type: row.type,
+      sort_order: row.sort_order,
+      is_active: row.is_active,
+    });
+    setEditOpen(true);
+  };
+
+  const onEdit = async (values: z.infer<typeof createSchema>) => {
+    if (!editing) return;
+
+    try {
+      const payload = {
+        category: values.category.trim(),
+        type: values.type.trim(),
+        sort_order: values.sort_order,
+        is_active: values.is_active,
+      };
+
+      const { error } = await (supabase as any).from("business_types").update(payload).eq("id", editing.id);
+      if (error) throw error;
+
+      toast({ title: "Saved", description: "Business Type updated." });
+      setEditOpen(false);
+      setEditing(null);
+      await fetchTypes();
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: e?.message ? String(e.message) : "Could not update Business Type.",
       });
     }
   };
@@ -123,8 +179,8 @@ export default function AdminBusinessTypes() {
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal",
-        description: e?.message ? String(e.message) : "Tidak bisa update status.",
+        title: "Update failed",
+        description: e?.message ? String(e.message) : "Could not update status.",
       });
     }
   };
@@ -134,12 +190,12 @@ export default function AdminBusinessTypes() {
       const { error } = await (supabase as any).from("business_types").delete().eq("id", id);
       if (error) throw error;
       setRows((prev) => prev.filter((r) => r.id !== id));
-      toast({ title: "Dihapus", description: "Business Type dihapus." });
+      toast({ title: "Deleted", description: "Business Type deleted." });
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal menghapus",
-        description: e?.message ? String(e.message) : "Tidak bisa menghapus Business Type.",
+        title: "Delete failed",
+        description: e?.message ? String(e.message) : "Could not delete Business Type.",
       });
     }
   };
@@ -150,7 +206,7 @@ export default function AdminBusinessTypes() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Business Types</h1>
           <p className="text-sm text-muted-foreground">
-            Kelola daftar Business Type untuk dropdown onboarding. ({groupedCount} kategori)
+            Manage the Business Type list used in onboarding dropdowns. ({groupedCount} categories)
           </p>
         </div>
 
@@ -164,7 +220,7 @@ export default function AdminBusinessTypes() {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add Business Type</DialogTitle>
-              <DialogDescription>Tambahkan category + type baru.</DialogDescription>
+                <DialogDescription>Create a new category + type.</DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onCreate)} className="space-y-4">
@@ -235,6 +291,89 @@ export default function AdminBusinessTypes() {
             </Form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Business Type</DialogTitle>
+              <DialogDescription>Update category, type, ordering, and status.</DialogDescription>
+            </DialogHeader>
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(onEdit)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Home Services" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Plumbing Service" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={editForm.control}
+                    name="sort_order"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sort Order</FormLabel>
+                        <FormControl>
+                          <Input type="number" min={0} step={1} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editForm.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                        <FormLabel className="m-0">Active</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setEditOpen(false);
+                      setEditing(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">Save</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </header>
 
       <Card>
@@ -246,7 +385,7 @@ export default function AdminBusinessTypes() {
             <div className="py-8 text-sm text-muted-foreground">Loading...</div>
           ) : rows.length === 0 ? (
             <div className="py-8 text-sm text-muted-foreground">
-              Belum ada data. Tambahkan beberapa Business Types dulu.
+              No data yet. Add some Business Types to get started.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -270,15 +409,37 @@ export default function AdminBusinessTypes() {
                         <Switch checked={r.is_active} onCheckedChange={(v) => void toggleActive(r.id, v)} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => void removeRow(r.id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="inline-flex items-center justify-end gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditDialog(r)}
+                            title="Edit"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button type="button" size="sm" variant="ghost" title="Delete">
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Business Type?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. Are you sure you want to delete this Business Type?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>No</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => void removeRow(r.id)}>Yes, delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
