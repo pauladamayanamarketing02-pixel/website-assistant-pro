@@ -92,6 +92,18 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
   const alignJustify = (align: string) =>
     align === "center" ? "justify-center" : align === "right" ? "justify-end" : "justify-start";
 
+  const effectSpanClass = (effect: string) => {
+    if (effect === "pulse") return "motion-reduce:animate-none animate-pulse";
+    if (effect === "blink") return "dashboard-banner-blink motion-reduce:animate-none";
+    if (effect === "glow") return "dashboard-banner-glow";
+    if (effect === "shake") return "dashboard-banner-shake motion-reduce:animate-none";
+    if (effect === "bounce") return "dashboard-banner-bounce motion-reduce:animate-none";
+    if (effect === "slide") return "dashboard-banner-slide motion-reduce:animate-none";
+    if (effect === "fade") return "dashboard-banner-fade motion-reduce:animate-none";
+    if (effect === "flip") return "dashboard-banner-flip motion-reduce:animate-none";
+    return "";
+  };
+
   return (
     <div className={cn(className)}>
       <Card className="border border-border bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -163,24 +175,30 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
             ) : (
               <>
                 {textEffect === "typewriter" ? (
-                  <div className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign), "dashboard-banner-typewriter motion-reduce:animate-none")}>{marqueeText}</div>
+                  // Keep alignment on a full-width wrapper; animate only the inner text.
+                  <div className={cn("w-full", alignClass(titleAlign))}>
+                    <span
+                      className={cn(
+                        "inline-block text-sm font-semibold text-foreground",
+                        "dashboard-banner-typewriter motion-reduce:animate-none",
+                      )}
+                    >
+                      {marqueeText}
+                    </span>
+                  </div>
                 ) : (
-                  <div
-                    className={cn(
-                      "space-y-1",
-                      textEffect === "pulse" ? "motion-reduce:animate-none animate-pulse" : null,
-                      textEffect === "blink" ? "dashboard-banner-blink motion-reduce:animate-none" : null,
-                      textEffect === "glow" ? "dashboard-banner-glow" : null,
-                      textEffect === "shake" ? "dashboard-banner-shake motion-reduce:animate-none" : null,
-                      textEffect === "bounce" ? "dashboard-banner-bounce motion-reduce:animate-none" : null,
-                      textEffect === "slide" ? "dashboard-banner-slide motion-reduce:animate-none" : null,
-                      textEffect === "fade" ? "dashboard-banner-fade motion-reduce:animate-none" : null,
-                      textEffect === "flip" ? "dashboard-banner-flip motion-reduce:animate-none" : null
-                    )}
-                  >
-                    <div className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</div>
+                  <div className="space-y-1">
+                    <div className={cn("w-full", alignClass(titleAlign))}>
+                      <span className={cn("inline-block text-sm font-semibold text-foreground", effectSpanClass(textEffect))}>
+                        {activeBanner.title}
+                      </span>
+                    </div>
                     {activeBanner.subtitle ? (
-                      <div className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</div>
+                      <div className={cn("w-full", alignClass(subtitleAlign))}>
+                        <span className={cn("inline-block text-sm text-muted-foreground", effectSpanClass(textEffect))}>
+                          {activeBanner.subtitle}
+                        </span>
+                      </div>
                     ) : null}
                   </div>
                 )}
