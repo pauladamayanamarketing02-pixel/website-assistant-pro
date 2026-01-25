@@ -1314,7 +1314,8 @@ export default function MyBusiness() {
           <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl p-0 sm:rounded-lg">
             <div className="flex max-h-[85vh] flex-col">
               <div className="border-b border-border px-6 py-4">
-                <div className="flex items-start justify-between gap-3">
+                {/* Leave room for DialogContent's built-in close (X) button */}
+                <div className="flex items-start justify-between gap-3 pr-10 sm:pr-12">
                   <DialogHeader className="space-y-0">
                     <DialogTitle className="text-xl">Marketing Setup</DialogTitle>
                     <p className="text-sm text-muted-foreground">Set marketing goal & services/offerings.</p>
@@ -1550,7 +1551,7 @@ export default function MyBusiness() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="bkb" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="w-full flex flex-wrap gap-1 h-auto justify-start">
                 <TabsTrigger value="bkb" className="text-xs">My BKB</TabsTrigger>
                 <TabsTrigger value="be" className="text-xs">Brand Expert</TabsTrigger>
                 <TabsTrigger value="persona1" className="text-xs">Persona 1</TabsTrigger>

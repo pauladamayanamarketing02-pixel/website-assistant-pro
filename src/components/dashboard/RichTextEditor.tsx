@@ -298,12 +298,12 @@ export function RichTextEditor({
   return (
     <div className={isFullscreen ? 'fixed inset-0 z-50 bg-background p-4 flex flex-col' : 'space-y-4'}>
       {showTopBar && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <Icon className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               {editableTitle && editingTitle ? (
                 <div className="flex items-center gap-2">
                   <Input
@@ -325,7 +325,7 @@ export function RichTextEditor({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">{title}</h3>
+                  <h3 className="font-semibold text-foreground truncate">{title}</h3>
                   {editableTitle && (
                     <Button
                       size="icon"
@@ -343,7 +343,7 @@ export function RichTextEditor({
           </div>
 
           {showSaveControls && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
               <Button variant="outline" size="sm" onClick={handleCopy}>
                 {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
                 {copied ? 'Copied' : 'Copy'}
