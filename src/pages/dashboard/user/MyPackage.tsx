@@ -449,19 +449,19 @@ export default function MyPackage() {
   return (
     <div className="h-full min-h-0 flex flex-col gap-6">
       <div className="shrink-0">
-        <h1 className="text-3xl font-bold text-foreground">My Package</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Package</h1>
         <p className="text-muted-foreground">View your active package and available upgrades</p>
       </div>
 
       <div className="flex-1 min-h-0 grid gap-6 lg:grid-cols-2 items-start">
         {/* LEFT: Active Package */}
         <div className="min-h-0 space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">Current Package</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-foreground">Current Package</h2>
 
           {activePackage ? (
             <Card className="border-primary/30">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Package className="h-5 w-5 text-primary" />
@@ -480,7 +480,7 @@ export default function MyPackage() {
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="default" className="bg-primary/10 text-primary">
+                  <Badge variant="default" className="bg-primary/10 text-primary self-start sm:self-auto">
                     {statusLabel}
                   </Badge>
                 </div>
@@ -528,7 +528,7 @@ export default function MyPackage() {
                     <div className="grid gap-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm text-muted-foreground">Duration:</span>
-                        <div className="min-w-[180px]">
+                        <div className="w-full sm:w-[220px]">
                           <Select
                             value={currentDurationSelectValue}
                             onValueChange={handleChangeDuration}
@@ -686,9 +686,9 @@ export default function MyPackage() {
                       {/* Upgrade Options Duration (same rules as onboarding) */}
                       <div className="rounded-lg border bg-card/50 p-3 space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2 min-w-0">
                             <span className="text-sm text-muted-foreground">Duration:</span>
-                            <div className="min-w-[180px]">
+                            <div className="w-full sm:w-[220px]">
                               <Select
                                 value={selectedUpgradeMonths ? String(selectedUpgradeMonths) : ""}
                                 onValueChange={(v) =>
