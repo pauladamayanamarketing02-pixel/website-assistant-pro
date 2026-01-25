@@ -25,6 +25,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,6 +60,8 @@ export default function MyGallery() {
   const [loadingTextPreview, setLoadingTextPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<MediaItem | null>(null);
 
   // Fetch gallery from database
   useEffect(() => {
@@ -181,6 +193,11 @@ export default function MyGallery() {
       title: 'Deleted',
       description: 'File has been removed.',
     });
+  };
+
+  const requestDelete = (item: MediaItem) => {
+    setPendingDeleteItem(item);
+    setConfirmDeleteOpen(true);
   };
 
   const handleCopyUrl = (url: string) => {
@@ -367,7 +384,7 @@ export default function MyGallery() {
                       <Button
                         size="icon"
                         variant="destructive"
-                        onClick={() => handleDelete(item)}
+                        onClick={() => requestDelete(item)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -423,7 +440,7 @@ export default function MyGallery() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={() => handleDelete(item)}
+                            onClick={() => requestDelete(item)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
@@ -561,6 +578,37 @@ export default function MyGallery() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this file?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the file from your gallery and storage. This action can’t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingDeleteItem(null);
+              }}
+            >
+              No
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                const item = pendingDeleteItem;
+                setConfirmDeleteOpen(false);
+                setPendingDeleteItem(null);
+                if (item) await handleDelete(item);
+              }}
+            >
+              Yes, delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

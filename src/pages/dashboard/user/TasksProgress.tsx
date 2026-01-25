@@ -4,6 +4,7 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
+  PartyPopper,
   Plus,
   Upload,
   X,
@@ -189,6 +190,25 @@ export default function TasksProgress() {
 
   // Mark completed confirmation
   const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
+
+  // Celebration overlay when a task is marked as completed
+  const [showCelebration, setShowCelebration] = useState(false);
+  const celebrationTimerRef = useRef<number | null>(null);
+
+  const triggerCelebration = () => {
+    setShowCelebration(true);
+    if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
+    celebrationTimerRef.current = window.setTimeout(() => {
+      setShowCelebration(false);
+      celebrationTimerRef.current = null;
+    }, 1400);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
+    };
+  }, []);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -652,6 +672,8 @@ export default function TasksProgress() {
           title: 'Completed',
           description: 'Task marked as completed.',
         });
+
+        triggerCelebration();
       } catch (err: any) {
         toast({
           variant: 'destructive',
@@ -664,7 +686,19 @@ export default function TasksProgress() {
     };
 
     return (
-      <div className="space-y-6">
+      <div className="relative">
+        {showCelebration && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-start justify-center pt-20">
+            <div className="animate-enter rounded-full border bg-background/90 px-5 py-3 shadow-lg">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <PartyPopper className="h-5 w-5 text-primary" />
+                <span>Nice! Task completed.</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={resetForm}>
@@ -1169,6 +1203,7 @@ export default function TasksProgress() {
               </Dialog>
             </CardContent>
           </Card>
+        </div>
         </div>
       </div>
     );
