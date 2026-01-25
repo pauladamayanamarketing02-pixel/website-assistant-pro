@@ -16,9 +16,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
-import type { Database } from "@/integrations/supabase/types";
-
-type FaqRow = Database["public"]["Tables"]["website_faqs"]["Row"];
+type FaqRow = {
+  id: string;
+  page: string;
+  question: string;
+  answer: string;
+  sort_order: number | null;
+  is_published: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 
 type ServiceIconKey = "globe" | "message" | "code" | "file" | "handshake";
 

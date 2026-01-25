@@ -17,9 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import type { Database } from "@/integrations/supabase/types";
-
-type BlogStatus = Database["public"]["Enums"]["blog_post_status"];
+type BlogStatus = "draft" | "pending_review" | "private" | "scheduled" | "published";
 
 type BlogPostRow = {
   id: string;

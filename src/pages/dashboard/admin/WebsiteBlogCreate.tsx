@@ -19,16 +19,13 @@ import {
 } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/dashboard/RichTextEditor";
 
-import type { Database } from "@/integrations/supabase/types";
 import { AuthorPicker } from "@/components/blog/AuthorPicker";
 import { CategoriesPanel, type BlogCategoryRow } from "@/components/blog/CategoriesPanel";
 import { TagsInput, type BlogTagRow } from "@/components/blog/TagsInput";
 import { WebsiteMediaPickerDialog } from "@/components/media/WebsiteMediaPickerDialog";
 
 
-type BlogPostStatus = Database["public"]["Enums"]["blog_post_status"];
-
-type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type BlogPostStatus = "draft" | "pending_review" | "private" | "scheduled" | "published";
 
 const slugify = (input: string) =>
   input

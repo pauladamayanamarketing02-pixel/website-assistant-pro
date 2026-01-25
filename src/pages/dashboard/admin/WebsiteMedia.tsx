@@ -9,13 +9,19 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 
-import type { Database } from "@/integrations/supabase/types";
 
 type MediaType = "image" | "video" | "file";
 
 type MediaFilter = "all" | "image" | "video" | "file";
 
-type WebsiteMediaRow = Database["public"]["Tables"]["website_media_items"]["Row"];
+type WebsiteMediaRow = {
+  id: string;
+  name: string;
+  media_type: string;
+  url: string;
+  storage_path: string;
+  created_at: string | null;
+};
 
 type MediaItem = {
   id: string;
