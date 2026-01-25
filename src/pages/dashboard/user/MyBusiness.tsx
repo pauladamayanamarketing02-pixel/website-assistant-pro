@@ -18,6 +18,7 @@ import { SocialMediaInput, SocialMediaLink } from '@/components/dashboard/Social
 import { findCountryByName, findStateByName, getAllCountries, getCitiesOfState, getStatesOfCountry } from '@/lib/locations';
 import { businessTypeCategories } from '@/data/businessTypes';
 import { useSupabaseRealtimeReload } from '@/hooks/useSupabaseRealtimeReload';
+import { useBusinessTypes } from '@/hooks/useBusinessTypes';
 
 interface BusinessData {
   name: string;
@@ -69,6 +70,7 @@ const KB_DRAFT_STORAGE_KEY = 'kb_draft';
 export default function MyBusiness() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { categories: businessTypesFromDb } = useBusinessTypes({ fallback: businessTypeCategories });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingKB, setSavingKB] = useState(false);
@@ -1118,7 +1120,7 @@ export default function MyBusiness() {
                     <SelectValue placeholder="Select business type" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-border max-h-80 z-50">
-                    {businessTypeCategories.map((category) => (
+                    {businessTypesFromDb.map((category) => (
                       <SelectGroup key={category.category}>
                         <SelectLabel className="font-semibold text-primary py-2">
                           {category.category}
