@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -137,6 +137,7 @@ function isPromoActive(promo: HomepagePromo, now: Date) {
 export function HomePromoBanner({ className }: { className?: string }) {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<PromoSettings>({ promos: [] });
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -172,6 +173,35 @@ export function HomePromoBanner({ className }: { className?: string }) {
     return active[0] ?? null;
   }, [settings.promos]);
 
+  // Expose the banner height to the page so the hero can offset itself responsively.
+  // This prevents the banner from covering hero text on desktop/tablet/mobile.
+  useEffect(() => {
+    const reset = () => document.documentElement.style.setProperty("--homepage-promo-height", "0px");
+
+    if (loading || !activePromo) {
+      reset();
+      return;
+    }
+
+    const el = rootRef.current;
+    if (!el) {
+      reset();
+      return;
+    }
+
+    const setVar = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height || 0);
+      document.documentElement.style.setProperty("--homepage-promo-height", `${h}px`);
+    };
+
+    setVar();
+    window.addEventListener("resize", setVar);
+    return () => {
+      window.removeEventListener("resize", setVar);
+      reset();
+    };
+  }, [activePromo?.id, loading]);
+
   if (loading || !activePromo) return null;
 
   const textEffect: TextEffect = (activePromo.textEffect ?? "none") as TextEffect;
@@ -180,7 +210,7 @@ export function HomePromoBanner({ className }: { className?: string }) {
   const ctaHref = activePromo.ctaHref ? normalizeCtaHref(activePromo.ctaHref) : null;
 
   return (
-    <div className={cn("container", className)}>
+    <div ref={rootRef} className={cn("container", className)}>
       <Card className="border border-border bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
           {/* Make the text area take the available width so text-align settings are visually accurate */}
