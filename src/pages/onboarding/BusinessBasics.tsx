@@ -11,12 +11,14 @@ import { findCountryByName, findStateByName, getAllCountries, getCitiesOfState, 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useBusinessTypes } from '@/hooks/useBusinessTypes';
 
 export default function BusinessBasics() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const allCountries = getAllCountries();
+  const { categories: businessTypesFromDb } = useBusinessTypes({ fallback: businessTypeCategories });
   const [formData, setFormData] = useState({
     businessName: '',
     businessType: '',
@@ -277,7 +279,7 @@ export default function BusinessBasics() {
                   <SelectValue placeholder="Select business type" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                  {businessTypeCategories.map((category) => (
+                  {businessTypesFromDb.map((category) => (
                     <SelectGroup key={category.category}>
                       <SelectLabel className="font-semibold text-foreground">{category.category}</SelectLabel>
                       {category.types.map((type) => (

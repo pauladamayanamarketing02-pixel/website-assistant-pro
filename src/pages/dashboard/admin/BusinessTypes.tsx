@@ -1,0 +1,293 @@
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+
+type BusinessTypeRow = {
+  id: string;
+  category: string;
+  type: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+const createSchema = z.object({
+  category: z.string().trim().min(1, "Category wajib diisi").max(80),
+  type: z.string().trim().min(1, "Type wajib diisi").max(80),
+  sort_order: z.coerce.number().int().min(0).max(10000).default(0),
+  is_active: z.boolean().default(true),
+});
+
+export default function AdminBusinessTypes() {
+  const { toast } = useToast();
+  const [rows, setRows] = useState<BusinessTypeRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  const form = useForm<z.infer<typeof createSchema>>({
+    resolver: zodResolver(createSchema),
+    defaultValues: { category: "", type: "", sort_order: 0, is_active: true },
+  });
+
+  const fetchTypes = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await (supabase as any)
+        .from("business_types")
+        .select("id, category, type, is_active, sort_order, created_at")
+        .order("category", { ascending: true })
+        .order("sort_order", { ascending: true })
+        .order("type", { ascending: true });
+
+      if (error) throw error;
+      setRows((data ?? []) as BusinessTypeRow[]);
+    } catch (e: any) {
+      console.error("fetch business_types failed:", e);
+      setRows([]);
+      toast({
+        variant: "destructive",
+        title: "Gagal memuat",
+        description: e?.message ? String(e.message) : "Tidak bisa memuat Business Types.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchTypes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const groupedCount = useMemo(() => new Set(rows.map((r) => r.category)).size, [rows]);
+
+  const onCreate = async (values: z.infer<typeof createSchema>) => {
+    try {
+      const payload = {
+        category: values.category.trim(),
+        type: values.type.trim(),
+        sort_order: values.sort_order,
+        is_active: values.is_active,
+      };
+
+      const { error } = await (supabase as any).from("business_types").insert(payload);
+      if (error) throw error;
+
+      toast({ title: "Berhasil", description: "Business Type ditambahkan." });
+      form.reset({ category: "", type: "", sort_order: 0, is_active: true });
+      setOpen(false);
+      await fetchTypes();
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menambah",
+        description: e?.message ? String(e.message) : "Tidak bisa menambah Business Type.",
+      });
+    }
+  };
+
+  const toggleActive = async (id: string, next: boolean) => {
+    try {
+      const { error } = await (supabase as any)
+        .from("business_types")
+        .update({ is_active: next })
+        .eq("id", id);
+      if (error) throw error;
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, is_active: next } : r)));
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: e?.message ? String(e.message) : "Tidak bisa update status.",
+      });
+    }
+  };
+
+  const removeRow = async (id: string) => {
+    try {
+      const { error } = await (supabase as any).from("business_types").delete().eq("id", id);
+      if (error) throw error;
+      setRows((prev) => prev.filter((r) => r.id !== id));
+      toast({ title: "Dihapus", description: "Business Type dihapus." });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menghapus",
+        description: e?.message ? String(e.message) : "Tidak bisa menghapus Business Type.",
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground">Business Types</h1>
+          <p className="text-sm text-muted-foreground">
+            Kelola daftar Business Type untuk dropdown onboarding. ({groupedCount} kategori)
+          </p>
+        </div>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button type="button">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Type
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add Business Type</DialogTitle>
+              <DialogDescription>Tambahkan category + type baru.</DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onCreate)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Home Services" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Plumbing Service" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="sort_order"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sort Order</FormLabel>
+                        <FormControl>
+                          <Input type="number" min={0} step={1} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                        <FormLabel className="m-0">Active</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Save</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">All Types</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="py-8 text-sm text-muted-foreground">Loading...</div>
+          ) : rows.length === 0 ? (
+            <div className="py-8 text-sm text-muted-foreground">
+              Belum ada data. Tambahkan beberapa Business Types dulu.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[180px]">Category</TableHead>
+                    <TableHead className="min-w-[200px]">Type</TableHead>
+                    <TableHead className="min-w-[110px]">Order</TableHead>
+                    <TableHead className="min-w-[110px]">Active</TableHead>
+                    <TableHead className="text-right min-w-[110px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.category}</TableCell>
+                      <TableCell>{r.type}</TableCell>
+                      <TableCell className="text-muted-foreground">{r.sort_order}</TableCell>
+                      <TableCell>
+                        <Switch checked={r.is_active} onCheckedChange={(v) => void toggleActive(r.id, v)} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => void removeRow(r.id)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

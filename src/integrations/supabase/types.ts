@@ -362,6 +362,36 @@ export type Database = {
           },
         ]
       }
+      business_types: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       businesses: {
         Row: {
           bkb_content: string | null
