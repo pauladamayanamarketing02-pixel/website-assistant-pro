@@ -109,12 +109,25 @@ Deno.serve(async (req) => {
         .in("id", peerIds);
       if (profErr) throw profErr;
 
+      // Try to enrich business_name from businesses table (more accurate for user accounts).
+      const { data: bizRows } = await admin
+        .from("businesses")
+        .select("user_id,business_name")
+        .in("user_id", peerIds);
+
+      const businessNameByUserId: Record<string, string> = {};
+      for (const b of (bizRows ?? []) as any[]) {
+        const uid = String(b.user_id ?? "");
+        const bn = String(b.business_name ?? "").trim();
+        if (uid && bn && !businessNameByUserId[uid]) businessNameByUserId[uid] = bn;
+      }
+
       const peerRows = (profiles ?? []).map((p: any) => ({
         id: String(p.id),
         name: String(p.name ?? ""),
         email: String(p.email ?? ""),
         avatar_url: (p.avatar_url ?? null) as string | null,
-        business_name: (p.business_name ?? null) as string | null,
+        business_name: (businessNameByUserId[String(p.id)] ?? p.business_name ?? null) as string | null,
         last_message_at: lastByPeer[String(p.id)] ?? null,
       }));
 
