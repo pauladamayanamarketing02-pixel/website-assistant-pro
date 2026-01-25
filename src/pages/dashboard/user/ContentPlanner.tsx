@@ -774,7 +774,7 @@ export default function ContentPlanner() {
   };
 
   return (
-    <div className="space-y-6 min-w-0">
+    <div className="space-y-6 min-w-0 overflow-x-hidden">
       <header className="space-y-1">
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
           <CalendarDays className="h-8 w-8 text-primary" />
@@ -842,8 +842,9 @@ export default function ContentPlanner() {
                 classNames={{
                   months: "w-full min-w-0",
                   month: "w-full min-w-0 space-y-6",
-                  caption: "flex justify-center pt-1 relative items-center",
-                  caption_label: "text-sm sm:text-base font-semibold",
+                  // Prevent long month labels (e.g. January 2026) from causing horizontal overflow on small screens.
+                  caption: "flex justify-center pt-1 relative items-center w-full min-w-0 px-8",
+                  caption_label: "text-sm sm:text-base font-semibold truncate max-w-full",
                   table: "w-full border-collapse table-fixed",
                   // Grid keeps 7 columns visible on mobile without horizontal scrolling.
                   head_row: "grid grid-cols-7 w-full",
