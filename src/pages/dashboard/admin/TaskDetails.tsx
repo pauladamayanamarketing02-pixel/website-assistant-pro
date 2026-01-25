@@ -320,6 +320,10 @@ export default function AdminTaskDetails() {
       if (updErr) throw updErr;
 
       setTask(updated);
+      // Update edit form state if in edit mode
+      setEditData((prev) => ({ ...prev, status: "cancelled" }));
+      // Exit edit mode after cancelling
+      setIsEditing(false);
       setShowCancelDialog(false);
 
       toast({ title: "Task Cancelled", description: "Task status has been updated to cancelled." });
