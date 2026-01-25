@@ -62,6 +62,13 @@ export default function AssistDashboard() {
   const [assignedTasksCount, setAssignedTasksCount] = useState(0);
   const [activeClientsCount, setActiveClientsCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [taskStats, setTaskStats] = useState({
+    pending: 0,
+    assigned: 0,
+    inProgress: 0,
+    readyForReview: 0,
+    completed: 0,
+  });
 
   // Prevent the document body from becoming the scroll container on mobile.
   // Keep scrolling inside the dashboard <main> (and hide its scrollbar indicator).
@@ -90,6 +97,41 @@ export default function AssistDashboard() {
 
     if (error) return;
     setAssignedTasksCount(Number(count ?? 0));
+  };
+
+  const fetchTaskStats = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await (supabase as any)
+        .from('tasks')
+        .select('status')
+        .eq('assigned_to', user.id);
+
+      if (error) throw error;
+
+      const next = {
+        pending: 0,
+        assigned: 0,
+        inProgress: 0,
+        readyForReview: 0,
+        completed: 0,
+      };
+
+      (data ?? []).forEach((row: any) => {
+        const s = String(row?.status ?? '').toLowerCase();
+        if (s === 'pending') next.pending += 1;
+        else if (s === 'assigned') next.assigned += 1;
+        else if (s === 'in_progress') next.inProgress += 1;
+        else if (s === 'ready_for_review') next.readyForReview += 1;
+        else if (s === 'completed') next.completed += 1;
+      });
+
+      setTaskStats(next);
+      // Keep sidebar badge consistent
+      setAssignedTasksCount(next.assigned);
+    } catch (e) {
+      console.error('Error fetching task stats:', e);
+    }
   };
 
   const fetchActiveClientsCount = async () => {
@@ -139,7 +181,7 @@ export default function AssistDashboard() {
   useEffect(() => {
     if (!user?.id || role !== 'assist') return;
 
-    void fetchAssignedTasksCount();
+    void fetchTaskStats();
     void fetchActiveClientsCount();
     void fetchUnreadMessagesCount();
 
@@ -148,7 +190,7 @@ export default function AssistDashboard() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
-        () => void fetchAssignedTasksCount()
+        () => void fetchTaskStats()
       )
       .on(
         'postgres_changes',
@@ -326,6 +368,7 @@ export default function AssistDashboard() {
                     activeClients={activeClientsCount}
                     assignedTasks={assignedTasksCount}
                     unreadMessages={unreadMessagesCount}
+                    taskStats={taskStats}
                   />
                 }
               />
