@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { AssistantActions } from "@/pages/dashboard/admin/assistants/AssistantActions";
 import { formatAssistStatusLabel } from "@/lib/assistStatus";
+import { QuickCreateAccountDialog } from "./components/QuickCreateAccountDialog";
 
 type AssistantRow = {
   id: string;
@@ -90,10 +91,18 @@ export default function AdminAssistants() {
           <p className="text-sm text-muted-foreground">View and manage marketing assistant accounts.</p>
         </div>
 
-        <Button type="button" onClick={() => navigate("/dashboard/admin/assistants/new")}>
-          <Plus className="h-4 w-4" />
-          Add New Assistant
-        </Button>
+        <QuickCreateAccountDialog
+          title="Add New Assistant"
+          description="Overlay email + password. User akan auto-confirm dan role = assist."
+          functionName="admin-create-assistant"
+          onCreated={() => void fetchAssistants()}
+          triggerContent={
+            <span className="inline-flex items-center">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Assistant
+            </span>
+          }
+        />
       </header>
 
       <Card>
