@@ -135,7 +135,9 @@ export default function AdminMessageMonitor() {
 
         if (!mounted) return;
         setAssists(normalized);
-        setSelectedAssistId((prev) => prev || normalized[0]?.id || "");
+        // Do not auto-select an assistant on page load.
+        // This keeps the Select placeholder visible until admin explicitly chooses one.
+        setSelectedAssistId((prev) => prev);
 
         // On mobile start on list view (don't auto-open chat)
         if (isMobile) setMobileView("list");
