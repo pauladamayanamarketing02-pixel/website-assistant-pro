@@ -129,6 +129,7 @@ export default function AdminDashboard() {
         title: "Business",
         url: "/dashboard/admin/business-users",
         icon: Users,
+        badgeCount: businessPendingCount > 0 ? businessPendingCount : undefined,
         children: [
           {
             title: "Accounts",
