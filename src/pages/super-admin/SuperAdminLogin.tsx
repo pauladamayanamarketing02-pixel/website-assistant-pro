@@ -11,8 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const schema = z.object({
-  email: z.string().trim().email("Email tidak valid"),
-  password: z.string().min(6, "Password minimal 6 karakter"),
+  email: z.string().trim().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export default function SuperAdminLogin() {
@@ -28,7 +28,7 @@ export default function SuperAdminLogin() {
   const redirectTo = useMemo(() => `${window.location.origin}/dashboard/super-admin`, []);
 
   useEffect(() => {
-    // Jika sudah login dan punya role super_admin → langsung masuk.
+    // If already signed in and has super_admin role, redirect.
     (async () => {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
@@ -49,7 +49,7 @@ export default function SuperAdminLogin() {
         return;
       }
 
-      // Jika session ada tapi bukan super admin → logout supaya tidak nyangkut.
+      // If a session exists but is not super admin, sign out.
       await supabase.auth.signOut();
       setChecking(false);
     })();
@@ -77,7 +77,7 @@ export default function SuperAdminLogin() {
       });
       if (error) throw error;
 
-      if (!data.user) throw new Error("Gagal login. Silakan coba lagi.");
+      if (!data.user) throw new Error("Sign-in failed. Please try again.");
 
       const { data: roleData, error: roleErr } = await supabase
         .from("user_roles")
@@ -90,16 +90,16 @@ export default function SuperAdminLogin() {
       // Type assertion: role enum tidak selalu sinkron dengan types.ts
       if (roleData?.role !== ("super_admin" as any)) {
         await supabase.auth.signOut();
-        throw new Error("Akun ini tidak memiliki akses Super Admin.");
+        throw new Error("This account does not have Super Admin access.");
       }
 
-      toast({ title: "Berhasil login", description: "Mengalihkan ke Super Admin Dashboard..." });
+      toast({ title: "Signed in", description: "Redirecting to the Super Admin dashboard..." });
       navigate("/dashboard/super-admin", { replace: true });
     } catch (err) {
       toast({
         variant: "destructive",
-        title: "Login gagal",
-        description: err instanceof Error ? err.message : "Terjadi kesalahan.",
+        title: "Sign-in failed",
+        description: err instanceof Error ? err.message : "An unexpected error occurred.",
       });
     } finally {
       setIsSubmitting(false);
@@ -121,7 +121,7 @@ export default function SuperAdminLogin() {
         className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Kembali
+        Back
       </Link>
 
       <div className="w-full max-w-md space-y-8 animate-fade-in">
@@ -132,13 +132,13 @@ export default function SuperAdminLogin() {
             </div>
             <span className="text-2xl font-bold text-foreground">Super Admin</span>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">Login khusus untuk akses Super Admin.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Restricted sign-in for Super Admin access.</p>
         </div>
 
         <Card className="shadow-soft">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Login Super Admin</CardTitle>
-            <CardDescription>Masukkan email &amp; password Super Admin.</CardDescription>
+            <CardDescription>Please enter your Super Admin email and password.</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -181,7 +181,7 @@ export default function SuperAdminLogin() {
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Memproses..." : "Login Super Admin"}
+                {isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </CardContent>

@@ -6,7 +6,7 @@ export default function SuperAdminOverview() {
       <section className="space-y-1">
         <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">
-          Monitoring cepat kondisi sistem & bisnis (placeholder UI — data menyusul).
+          Quick monitoring of system and business health (UI placeholder — data to follow).
         </p>
       </section>
 
@@ -17,37 +17,37 @@ export default function SuperAdminOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">—</div>
-            <p className="text-xs text-muted-foreground">Akan diisi dari data pembayaran</p>
+            <p className="text-xs text-muted-foreground">Will be populated from payment data</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Transaksi hari ini</CardTitle>
+            <CardTitle className="text-sm font-medium">Today’s transactions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">—</div>
-            <p className="text-xs text-muted-foreground">Masuk / sukses / gagal</p>
+            <p className="text-xs text-muted-foreground">Incoming / successful / failed</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">User aktif</CardTitle>
+            <CardTitle className="text-sm font-medium">Active users</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">—</div>
-            <p className="text-xs text-muted-foreground">Aktif 7 hari terakhir</p>
+            <p className="text-xs text-muted-foreground">Active in the last 7 days</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Assist aktif</CardTitle>
+            <CardTitle className="text-sm font-medium">Active assistants</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">—</div>
-            <p className="text-xs text-muted-foreground">Aktif 7 hari terakhir</p>
+            <p className="text-xs text-muted-foreground">Active in the last 7 days</p>
           </CardContent>
         </Card>
       </section>
@@ -55,7 +55,7 @@ export default function SuperAdminOverview() {
       <section className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Status sistem</CardTitle>
+            <CardTitle className="text-sm font-medium">System status</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between text-sm">
@@ -75,14 +75,14 @@ export default function SuperAdminOverview() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Alert penting</CardTitle>
+            <CardTitle className="text-sm font-medium">Important alerts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground">Belum ada data.</div>
+            <div className="text-sm text-muted-foreground">No data available yet.</div>
             <ul className="mt-3 list-disc pl-5 text-sm text-muted-foreground">
-              <li>Gagal bayar</li>
-              <li>Refund pending</li>
-              <li>Anomali API</li>
+              <li>Failed payments</li>
+              <li>Pending refunds</li>
+              <li>API anomalies</li>
             </ul>
           </CardContent>
         </Card>

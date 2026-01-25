@@ -55,7 +55,7 @@ export default function SubscriptionPlan() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Sudah termasuk biaya Domain, Hosting, dan Web Template.
+              Includes domain, hosting, and website template costs.
             </p>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -75,7 +75,7 @@ export default function SubscriptionPlan() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-base font-semibold text-foreground">{opt.label ?? `${opt.years} Tahun`}</p>
+                        <p className="text-base font-semibold text-foreground">{opt.label ?? `${opt.years} Years`}</p>
                         <p className="mt-1 text-sm text-muted-foreground">All-in (domain + hosting + template)</p>
                       </div>
                       {isSelected ? <Badge variant="secondary">Selected</Badge> : <Badge variant="outline">Plan</Badge>}
@@ -85,7 +85,7 @@ export default function SubscriptionPlan() {
                       <p className="text-2xl font-bold text-foreground">
                         {opt.totalUsd == null ? "—" : formatUsd(opt.totalUsd)}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Total untuk {opt.years} tahun</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Total for {opt.years} year(s)</p>
                     </div>
                   </button>
                 );
@@ -94,7 +94,7 @@ export default function SubscriptionPlan() {
 
             {pricing.packagePriceUsd == null ? (
               <p className="text-xs text-muted-foreground">
-                Catatan: harga hosting+template mengikuti <span className="font-medium text-foreground">Default Package</span> di
+                Note: hosting and template pricing follows the <span className="font-medium text-foreground">Default Package</span> in
                 Domain Tools.
               </p>
             ) : null}

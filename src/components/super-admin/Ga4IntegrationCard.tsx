@@ -35,8 +35,8 @@ export function Ga4IntegrationCard({ loading, status, value, onChange, onSave, o
         </div>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
-        Masukkan <span className="font-medium text-foreground">Measurement ID</span> (contoh: <span className="font-mono">G-CTS53JM1RF</span>).
-        Setelah disimpan, GA4 otomatis aktif di halaman publik (homepage, services, dll).
+        Enter the <span className="font-medium text-foreground">Measurement ID</span> (example: <span className="font-mono">G-CTS53JM1RF</span>).
+        Once saved, GA4 will be enabled automatically on public pages (homepage, services, etc.).
 
         <div className="mt-4 space-y-4">
           <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
@@ -44,7 +44,7 @@ export function Ga4IntegrationCard({ loading, status, value, onChange, onSave, o
               <span>Measurement ID aktif</span>
               <span className="font-mono text-foreground">{status.configured ? status.measurementIdMasked ?? "—" : "—"}</span>
             </div>
-            <div className="mt-1">Perubahan disimpan dan tindakan admin dicatat di audit log.</div>
+            <div className="mt-1">Changes are saved and administrative actions are recorded in the audit log.</div>
           </div>
 
           <form onSubmit={onSave} className="space-y-3">
@@ -61,20 +61,20 @@ export function Ga4IntegrationCard({ loading, status, value, onChange, onSave, o
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={loading}>
-                <Save className="h-4 w-4 mr-2" /> Simpan
+                <Save className="h-4 w-4 mr-2" /> Save
               </Button>
               <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
                 <RefreshCcw className="h-4 w-4 mr-2" /> Refresh status
               </Button>
               <Button type="button" variant="destructive" onClick={onClear} disabled={loading || !status.configured}>
-                <Trash2 className="h-4 w-4 mr-2" /> Nonaktifkan
+                <Trash2 className="h-4 w-4 mr-2" /> Disable
               </Button>
             </div>
           </form>
 
           <div className="text-xs text-muted-foreground">
-            Disimpan di <span className="font-medium text-foreground">website_settings</span> key: <span className="font-mono">ga4_measurement_id</span>.
-            {status.updatedAt ? <span> Terakhir update: {new Date(status.updatedAt).toLocaleString()}</span> : null}
+            Stored in <span className="font-medium text-foreground">website_settings</span> key: <span className="font-mono">ga4_measurement_id</span>.
+            {status.updatedAt ? <span> Last updated: {new Date(status.updatedAt).toLocaleString()}</span> : null}
           </div>
         </div>
       </CardContent>

@@ -491,7 +491,7 @@ export default function Reports() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete this report?</AlertDialogTitle>
                                     <AlertDialogDescription className="break-words">
-                                      File "{row.file_name}" akan dihapus dari list downloadable reports.
+                                      The file "{row.file_name}" will be removed from the downloadable reports list.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
