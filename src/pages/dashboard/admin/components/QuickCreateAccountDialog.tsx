@@ -20,7 +20,7 @@ import { invokeWithAuth } from "@/lib/invokeWithAuth";
 
 const schema = z.object({
   email: z.string().trim().email("Invalid email address").max(255),
-  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+  password: z.string().min(6, "Password must be at least 6 characters").max(200),
 });
 
 type Props = {
@@ -102,7 +102,7 @@ export function QuickCreateAccountDialog({ title, description, triggerContent, f
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="At least 8 characters" autoComplete="new-password" {...field} />
+                    <Input type="password" placeholder="At least 6 characters" autoComplete="new-password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
