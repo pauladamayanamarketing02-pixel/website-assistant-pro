@@ -112,6 +112,8 @@ export default function AdminTaskDetails() {
             "id, task_number, user_id, assigned_to, title, description, deadline, status, created_at, type, platform, file_url, notes",
           )
           .eq("task_number", taskNumber)
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (tErr) throw tErr;
