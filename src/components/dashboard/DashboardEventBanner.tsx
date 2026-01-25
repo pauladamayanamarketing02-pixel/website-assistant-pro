@@ -327,7 +327,9 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
 
           {activeBanner.ctaLabel && activeBanner.ctaHref ? (
             <Button asChild size="sm">
-              <a href={activeBanner.ctaHref}>{activeBanner.ctaLabel}</a>
+              <a href={activeBanner.ctaHref} target="_blank" rel="noopener noreferrer">
+                {activeBanner.ctaLabel}
+              </a>
             </Button>
           ) : null}
         </div>
