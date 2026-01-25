@@ -49,7 +49,7 @@ interface Task {
   task_number: number | null;
   title: string;
   description: string | null;
-  status: 'pending' | 'assigned' | 'in_progress' | 'ready_for_review' | 'completed';
+  status: 'pending' | 'assigned' | 'in_progress' | 'ready_for_review' | 'completed' | 'cancelled';
   type: 'blog' | 'social_media' | 'email_marketing' | 'ads' | 'others' | null;
   platform: 'facebook' | 'instagram' | 'x' | 'threads' | 'linkedin' | null;
   file_url: string | null;
@@ -117,6 +117,11 @@ const statusConfig: Record<Task['status'], { label: string; icon: any; className
     label: 'Completed',
     icon: CheckSquare,
     className: 'bg-muted text-muted-foreground',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    icon: X,
+    className: 'bg-destructive/10 text-destructive',
   },
 };
 
@@ -721,8 +726,8 @@ export default function TasksProgress() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={statusConfig[selectedTask.status].className}>
-                  {statusConfig[selectedTask.status].label}
+                <Badge variant="outline" className={(statusConfig[selectedTask.status] ?? statusConfig.pending).className}>
+                  {(statusConfig[selectedTask.status] ?? statusConfig.pending).label}
                 </Badge>
 
                 <Button
@@ -807,7 +812,7 @@ export default function TasksProgress() {
 
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <Input value={statusConfig[selectedTask.status].label} disabled className="bg-muted" />
+                  <Input value={(statusConfig[selectedTask.status] ?? statusConfig.pending).label} disabled className="bg-muted" />
                   <p className="text-xs text-muted-foreground">Status updates automatically based on progress.</p>
                 </div>
 
@@ -1499,14 +1504,18 @@ export default function TasksProgress() {
           <CardHeader>
             <CardTitle>
               {statusFilters.length
-                ? `${statusFilters.map((s) => statusConfig[s].label).join(', ')} Tasks`
+                ? `${statusFilters.map((s) => (statusConfig[s] ?? { label: s.replace(/_/g, ' ') }).label).join(', ')} Tasks`
                 : 'All Tasks'}
             </CardTitle>
             <CardDescription>Tasks created for your Marketing Assist</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {visibleTasks.map((task) => {
-              const config = statusConfig[task.status];
+              const config = statusConfig[task.status] ?? {
+                label: task.status.replace(/_/g, ' '),
+                icon: AlertCircle,
+                className: 'bg-muted text-muted-foreground',
+              };
               return (
                 <div
                   key={task.id}
