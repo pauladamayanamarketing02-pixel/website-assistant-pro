@@ -65,7 +65,7 @@ function alignJustify(align: Align) {
 function effectSpanClass(effect: TextEffect) {
   switch (effect) {
     case "blink":
-      return "animate-pulse";
+      return "animate-[promo-blink_1.1s_steps(2,end)_infinite]";
     case "pulse":
       return "pulse";
     case "glow":
@@ -77,7 +77,7 @@ function effectSpanClass(effect: TextEffect) {
     case "slide":
       return "animate-[promo-slide_1.2s_ease-in-out_infinite]";
     case "fade":
-      return "animate-fade-in";
+      return "animate-[promo-fade_1.8s_ease-in-out_infinite]";
     case "flip":
       return "animate-[promo-flip_1.6s_ease-in-out_infinite]";
     default:
@@ -215,71 +215,32 @@ export function HomePromoBanner({ className }: { className?: string }) {
                     </div>
                   </div>
                 ) : null}
-
-                <style>
-                  {`
-                    .homepage-promo-marquee {
-                      display: inline-flex;
-                      align-items: center;
-                      gap: 0;
-                      will-change: transform;
-                      animation: homepage-promo-marquee 18s linear infinite;
-                    }
-
-                    @keyframes homepage-promo-marquee {
-                      0% { transform: translateX(0); }
-                      100% { transform: translateX(-33.333%); }
-                    }
-
-                    @keyframes promo-slide {
-                      0% { transform: translateX(0); }
-                      50% { transform: translateX(10px); }
-                      100% { transform: translateX(0); }
-                    }
-
-                    @keyframes promo-flip {
-                      0% { transform: rotateX(0deg); }
-                      50% { transform: rotateX(180deg); }
-                      100% { transform: rotateX(360deg); }
-                    }
-
-                    @keyframes shake {
-                      0%, 100% { transform: translateX(0); }
-                      20% { transform: translateX(-2px); }
-                      40% { transform: translateX(2px); }
-                      60% { transform: translateX(-2px); }
-                      80% { transform: translateX(2px); }
-                    }
-
-                    .homepage-promo-typewriter {
-                      overflow: hidden;
-                      border-right: 2px solid currentColor;
-                      white-space: nowrap;
-                      animation: promo-typewriter 2.2s steps(28, end) infinite;
-                    }
-
-                    @keyframes promo-typewriter {
-                      0% { width: 0; }
-                      60% { width: 100%; }
-                      100% { width: 100%; }
-                    }
-
-                    @media (prefers-reduced-motion: reduce) {
-                      .homepage-promo-marquee,
-                      .homepage-promo-typewriter {
-                        animation: none;
-                      }
-                    }
-                  `}
-                </style>
               </div>
             ) : textEffect === "typewriter" ? (
               <div className="space-y-1">
                 <div className={cn("w-full", alignClass(titleAlign))}>
-                  <span className={cn("inline-block text-sm font-semibold text-foreground", "homepage-promo-typewriter motion-reduce:animate-none")}>
-                    {[activePromo.title, activePromo.subtitle].filter(Boolean).join(" — ")}
+                  <span
+                    className={cn(
+                      "inline-block text-sm font-semibold text-foreground",
+                      "homepage-promo-typewriter motion-reduce:animate-none"
+                    )}
+                  >
+                    {activePromo.title}
                   </span>
                 </div>
+
+                {activePromo.subtitle ? (
+                  <div className={cn("w-full", alignClass(subtitleAlign))}>
+                    <span
+                      className={cn(
+                        "inline-block text-xs text-muted-foreground",
+                        "homepage-promo-typewriter motion-reduce:animate-none"
+                      )}
+                    >
+                      {activePromo.subtitle}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="space-y-1">
@@ -308,6 +269,77 @@ export function HomePromoBanner({ className }: { className?: string }) {
           ) : null}
         </div>
       </Card>
+
+      {/* Keep promo-specific keyframes local, but ALWAYS available for every effect */}
+      <style>
+        {`
+          .homepage-promo-marquee {
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            will-change: transform;
+            animation: homepage-promo-marquee 18s linear infinite;
+          }
+
+          @keyframes homepage-promo-marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-33.333%); }
+          }
+
+          @keyframes promo-slide {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
+          }
+
+          @keyframes promo-flip {
+            0% { transform: rotateX(0deg); }
+            50% { transform: rotateX(180deg); }
+            100% { transform: rotateX(360deg); }
+          }
+
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-2px); }
+            40% { transform: translateX(2px); }
+            60% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
+          }
+
+          @keyframes promo-blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+          }
+
+          @keyframes promo-fade {
+            0% { opacity: 0.2; }
+            50% { opacity: 1; }
+            100% { opacity: 0.2; }
+          }
+
+          .homepage-promo-typewriter {
+            overflow: hidden;
+            border-right: 2px solid currentColor;
+            white-space: nowrap;
+            max-width: 100%;
+            animation: promo-typewriter 2.2s steps(28, end) infinite;
+          }
+
+          @keyframes promo-typewriter {
+            0% { width: 0; }
+            60% { width: 100%; }
+            100% { width: 100%; }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .homepage-promo-marquee,
+            .homepage-promo-typewriter {
+              animation: none;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
