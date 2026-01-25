@@ -183,7 +183,8 @@ export function HomePromoBanner({ className }: { className?: string }) {
     <div className={cn("container", className)}>
       <Card className="border border-border bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
+          {/* Make the text area take the available width so text-align settings are visually accurate */}
+          <div className="min-w-0 flex-1">
             {textEffect === "marquee" ? (
               <div className="space-y-1">
                 <div className={cn("relative overflow-hidden whitespace-nowrap flex", alignJustify(titleAlign))}>
