@@ -242,7 +242,7 @@ export default function AdminBusinessUsers() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground">Business List</h1>
+          <h1 className="text-3xl font-bold text-foreground">Business Accounts</h1>
           <p className="text-sm text-muted-foreground">Read-only view of business accounts.</p>
         </div>
 

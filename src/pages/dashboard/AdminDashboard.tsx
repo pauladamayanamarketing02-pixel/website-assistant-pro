@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   TrendingUp,
+  Tags,
   User,
   Users,
 } from "lucide-react";
@@ -45,6 +46,7 @@ import AdminWebsiteLayout from "./admin/WebsiteLayout";
 import AdminWebsiteHomepage from "./admin/WebsiteHomepage";
 import AdminWebsiteDomainTools from "./admin/WebsiteDomainTools";
 import AdminBusinessUsers from "./admin/BusinessUsers";
+import AdminBusinessTypes from "./admin/BusinessTypes";
 import AdminBusinessUserDetails from "./admin/BusinessUserDetails";
 import AdminCreateBusinessUser from "./admin/BusinessUserCreate";
 import AdminAssistants from "./admin/Assistants";
@@ -124,10 +126,14 @@ export default function AdminDashboard() {
     () => [
       { title: "Dashboard", url: "/dashboard/admin", icon: LayoutDashboard },
       {
-        title: "Business",
+        title: "Business Accounts",
         url: "/dashboard/admin/business-users",
         icon: Users,
         badgeCount: businessPendingCount > 0 ? businessPendingCount : undefined,
+        children: [
+          { title: "Accounts", url: "/dashboard/admin/business-users", icon: Users },
+          { title: "Business Types", url: "/dashboard/admin/business-users/types", icon: Tags },
+        ],
       },
       { title: "Assistant", url: "/dashboard/admin/assistants", icon: ShieldCheck },
       {
@@ -274,6 +280,7 @@ export default function AdminDashboard() {
             <Routes>
               <Route index element={<AdminOverview />} />
               <Route path="business-users" element={<AdminBusinessUsers />} />
+               <Route path="business-users/types" element={<AdminBusinessTypes />} />
               <Route path="business-users/new" element={<AdminCreateBusinessUser />} />
               <Route path="business-users/:userId" element={<AdminBusinessUserDetails />} />
               <Route path="assistants" element={<AdminAssistants />} />
