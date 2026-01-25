@@ -401,6 +401,7 @@ export type Database = {
           updated_at: string
           user_id: string
           website_url: string | null
+          zip_code: string | null
         }
         Insert: {
           bkb_content?: string | null
@@ -440,6 +441,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           website_url?: string | null
+          zip_code?: string | null
         }
         Update: {
           bkb_content?: string | null
@@ -479,6 +481,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           website_url?: string | null
+          zip_code?: string | null
         }
         Relationships: []
       }
