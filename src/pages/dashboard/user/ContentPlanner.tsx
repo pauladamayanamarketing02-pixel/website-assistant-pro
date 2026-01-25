@@ -774,7 +774,7 @@ export default function ContentPlanner() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       <header className="space-y-1">
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
           <CalendarDays className="h-8 w-8 text-primary" />
@@ -796,9 +796,9 @@ export default function ContentPlanner() {
         <Card className="lg:col-span-2">
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="flex items-center justify-between gap-3">
-                <span>Monthly Calendar</span>
-                <span className="text-sm font-medium text-muted-foreground">{format(month, "MMMM yyyy")}</span>
+              <CardTitle className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <span className="truncate">Monthly Calendar</span>
+                <span className="text-sm font-medium text-muted-foreground shrink-0">{format(month, "MMMM yyyy")}</span>
               </CardTitle>
 
               <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId}>
@@ -830,6 +830,7 @@ export default function ContentPlanner() {
                   if (d) setMonth(d);
                 }}
                 month={month}
+                fixedWeeks
                 onMonthChange={(d) => {
                   if (viewOnly) return;
                   setMonth(d);
