@@ -65,6 +65,7 @@ type ScheduledContentItem = {
   platform: string | null;
   businessId: string;
   businessName: string | null;
+  description: string | null;
 };
 
 type RecommendationIdea = {
@@ -86,6 +87,7 @@ type Recommendation =
       contentTypeName: string;
       platform: string | null;
       businessName: string | null;
+      description: string | null;
     }
   | RecommendationIdea;
 
@@ -380,7 +382,7 @@ export default function ContentPlanner() {
         let query = supabase
           .from("content_items")
           .select(
-            "id, title, business_id, scheduled_at, platform, businesses!inner(business_name, user_id), content_types(name)",
+            "id, title, description, business_id, scheduled_at, platform, businesses!inner(business_name, user_id), content_types(name)",
           )
           // Hard guarantee: only show scheduled content for the logged-in user's businesses
           .eq("businesses.user_id", user.id)
@@ -410,6 +412,7 @@ export default function ContentPlanner() {
             platform: (d.platform ?? null) as string | null,
             businessId: d.business_id as string,
             businessName: (d.businesses?.business_name ?? null) as string | null,
+            description: (d.description ?? null) as string | null,
           }));
 
         setScheduledItems(mapped);
@@ -515,6 +518,7 @@ export default function ContentPlanner() {
       contentTypeName: it.contentTypeName,
       platform: it.platform,
       businessName: it.businessName,
+      description: it.description,
     }));
 
     const filtered = filter === "all" ? scheduled : scheduled.filter((r) => r.type === filter);
@@ -598,10 +602,11 @@ export default function ContentPlanner() {
       const description =
         postTarget.kind === "scheduled"
           ? [
+              postTarget.description || "",
               `View Content (Read-only): ${new URL(`${window.location.origin}/dashboard/assist/calendar/view/${postTarget.id}`).toString()}`,
               // Keep the existing deep-link to Content Planner so we can detect "already posted" items reliably.
               `View Detail Content: ${buildScheduledContentDetailUrl({ itemId: postTarget.id, businessId: postTarget.businessId })}`,
-            ].join("\n")
+            ].filter(Boolean).join("\n\n")
           : postTarget.notes;
 
       const taskTitle = `Content Post - ${postTarget.title}`;
