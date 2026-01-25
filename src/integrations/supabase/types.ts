@@ -1897,6 +1897,7 @@ export type Database = {
         | "in_progress"
         | "ready_for_review"
         | "completed"
+        | "cancelled"
       task_type: "blog" | "social_media" | "email_marketing" | "ads" | "others"
     }
     CompositeTypes: {
@@ -2060,6 +2061,7 @@ export const Constants = {
         "in_progress",
         "ready_for_review",
         "completed",
+        "cancelled",
       ],
       task_type: ["blog", "social_media", "email_marketing", "ads", "others"],
     },

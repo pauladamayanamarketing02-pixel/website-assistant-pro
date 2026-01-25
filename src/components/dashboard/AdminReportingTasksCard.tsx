@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 
-type TaskStatus = "pending" | "assigned" | "in_progress" | "ready_for_review" | "completed";
+type TaskStatus = "pending" | "assigned" | "in_progress" | "ready_for_review" | "completed" | "cancelled";
 
 interface TaskRow {
   id: string;
@@ -61,7 +61,7 @@ export function AdminReportingTasksCard({ days, userId }: { days: number; userId
         .from("tasks")
         .select("id, task_number, title, status, type, platform, created_at, updated_at")
         .eq("user_id", userId)
-        .eq("status", "completed" as any)
+        .in("status", ["completed", "cancelled"] as any)
         .gte("updated_at", sinceIso)
         .order("updated_at", { ascending: false });
 
@@ -78,7 +78,7 @@ export function AdminReportingTasksCard({ days, userId }: { days: number; userId
       <CardHeader>
         <CardTitle>Reporting Tasks</CardTitle>
         <CardDescription>
-          Completed tasks in the last {days} days (based on completion time)
+          Completed and cancelled tasks in the last {days} days (based on update time)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -108,7 +108,9 @@ export function AdminReportingTasksCard({ days, userId }: { days: number; userId
                   <TableCell>{t.type ? typeLabels[t.type] ?? t.type : "-"}</TableCell>
                   <TableCell>{t.platform ? platformLabels[t.platform] ?? t.platform : "-"}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">Completed</Badge>
+                    <Badge variant={t.status === "cancelled" ? "destructive" : "outline"}>
+                      {t.status === "completed" ? "Completed" : "Cancelled"}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">{new Date(t.updated_at).toLocaleString()}</TableCell>
                 </TableRow>
