@@ -340,7 +340,7 @@ export default function AdminMessageMonitor() {
 
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
         {/* Contacts List */}
-        <Card className={cn("md:col-span-1 flex flex-col h-full", isMobile && mobileView === "chat" ? "hidden md:flex" : "")}>
+        <Card className={cn("md:col-span-1 flex flex-col h-full", (isMobile || isTabletOrSmaller) && mobileView === "chat" ? "hidden lg:flex" : "")}>
           <CardHeader className="border-b py-3 space-y-3">
             <CardTitle className="text-base">Conversations</CardTitle>
             <div className="relative">
@@ -400,7 +400,10 @@ export default function AdminMessageMonitor() {
         </Card>
 
         {/* Chat Area */}
-        <Card className={cn("md:col-span-2 flex flex-col h-full", isMobile && mobileView === "list" ? "hidden md:flex" : "")}>
+        <Card className={cn("flex flex-col h-full", 
+          (isMobile || isTabletOrSmaller) && mobileView === "list" ? "hidden lg:flex" : "",
+          (isMobile || isTabletOrSmaller) && mobileView === "chat" ? "col-span-full" : "md:col-span-2"
+        )}>
           {selectedPeer ? (
             <>
               <CardHeader className="border-b py-3">
