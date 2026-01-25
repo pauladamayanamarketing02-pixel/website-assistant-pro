@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Send, Paperclip, MessageCircle, User, Search, Trash2, Download, X, Check, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Send, Paperclip, MessageCircle, User, Search, Trash2, Download, X, Check, CheckCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRealtimeContactActivity } from '@/hooks/useRealtimeContactActivity';
 import { usePackageMenuRules } from '@/hooks/usePackageMenuRules';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Message {
   id: string;
@@ -45,6 +46,7 @@ interface AssistContact {
 export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
   const canSendMessages = useMemo(() => {
     // Default allow while loading to avoid briefly locking sending on slow rule loads.
@@ -61,6 +63,9 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Mobile UX: show either contact list OR chat (prevents content being pushed out of view)
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Per-user clear chat marker (do NOT delete from DB)
   const [clearedAt, setClearedAt] = useState<string | null>(null);
@@ -95,6 +100,9 @@ export default function Messages() {
         const activeOnly = normalized.filter((c) => c.status === 'active');
         setAssists(activeOnly);
         setSelectedAssist(activeOnly[0] ?? null);
+
+        // On mobile start on list view (don't auto-open chat)
+        if (isMobile) setMobileView('list');
       } catch (error: any) {
         toast({
           variant: 'destructive',
@@ -109,7 +117,13 @@ export default function Messages() {
     };
 
     fetchAssists();
-  }, [toast]);
+  }, [toast, isMobile]);
+
+  // If user taps an assist on mobile, open chat view.
+  useEffect(() => {
+    if (!isMobile) return;
+    if (selectedAssist) setMobileView('chat');
+  }, [isMobile, selectedAssist]);
 
   // Unread notifications per contact (for contacts list badge)
   useEffect(() => {
@@ -522,15 +536,20 @@ export default function Messages() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-6">
+    <div className="space-y-6">
       <div className="shrink-0">
-        <h1 className="text-3xl font-bold text-foreground">Messages</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Messages</h1>
         <p className="text-muted-foreground">Chat with your Marketing Assist</p>
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Contacts List */}
-        <Card className="md:col-span-1 flex flex-col min-h-0">
+        <Card
+          className={cn(
+            'md:col-span-1 flex flex-col min-h-0',
+            isMobile && mobileView === 'chat' ? 'hidden md:flex' : ''
+          )}
+        >
           <CardHeader className="border-b py-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -543,7 +562,7 @@ export default function Messages() {
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 min-h-0">
-            <ScrollArea className="h-full">
+            <ScrollArea className="h-[60vh] md:h-full">
               {filteredAssists.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <User className="h-8 w-8 mx-auto mb-2" />
@@ -559,6 +578,7 @@ export default function Messages() {
                       onClick={() => {
                         setSelectedAssist(assist);
                         setUnreadByAssistId((prev) => ({ ...prev, [assist.id]: 0 }));
+                        if (isMobile) setMobileView('chat');
                       }}
                       className={cn(
                         "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
@@ -590,12 +610,28 @@ export default function Messages() {
         </Card>
 
         {/* Chat Area */}
-        <Card className="md:col-span-2 flex flex-col min-h-0">
+        <Card
+          className={cn(
+            'md:col-span-2 flex flex-col min-h-0',
+            isMobile && mobileView === 'list' ? 'hidden md:flex' : ''
+          )}
+        >
           {selectedAssist ? (
             <>
               <CardHeader className="border-b py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
+                    {isMobile ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setMobileView('list')}
+                        aria-label="Back to assists"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    ) : null}
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={selectedAssist.avatar_url || undefined} />
                       <AvatarFallback className="bg-primary/10 text-primary">
@@ -632,7 +668,10 @@ export default function Messages() {
               </CardHeader>
 
               <CardContent className="flex-1 min-h-0 flex flex-col p-0">
-                <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+                <div
+                  ref={scrollRef}
+                  className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 max-h-[70vh]"
+                >
                   {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                       <MessageCircle className="h-10 w-10 mb-2" />
