@@ -7,6 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -108,6 +115,7 @@ export default function DashboardBanners() {
       id: crypto.randomUUID(),
       title: "New event",
       subtitle: "",
+      textEffect: "marquee",
       ctaLabel: null,
       ctaHref: null,
       startsAt: new Date().toISOString(),
@@ -237,6 +245,25 @@ export default function DashboardBanners() {
                       disabled={!canSave}
                       rows={2}
                     />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Text effect</Label>
+                    <Select
+                      value={banner.textEffect ?? "marquee"}
+                      onValueChange={(v) => updateBanner(banner.id, { textEffect: v as any })}
+                      disabled={!canSave}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose effect" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="marquee">Marquee (tulisan berjalan)</SelectItem>
+                        <SelectItem value="blink">Blink (kedip-kedip)</SelectItem>
+                        <SelectItem value="pulse">Pulse (motion halus)</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid gap-2">
