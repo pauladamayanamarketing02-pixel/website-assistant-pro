@@ -198,22 +198,6 @@
 }
 
 @layer utilities {
-  /* Hide scrollbars while keeping scroll enabled (useful for mobile/tablet). */
-  .no-scrollbar {
-    -ms-overflow-style: none; /* IE/Edge legacy */
-    scrollbar-width: none; /* Firefox */
-  }
-
-  .no-scrollbar::-webkit-scrollbar {
-    /* More reliable than `display:none` across platforms (e.g. Windows). */
-    width: 0;
-    height: 0;
-  }
-
-  .no-scrollbar::-webkit-scrollbar-thumb {
-    background: transparent;
-  }
-
   .gradient-primary {
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--coral-light)) 100%);
   }

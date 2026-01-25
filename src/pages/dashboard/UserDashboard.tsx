@@ -209,14 +209,10 @@ export default function UserDashboard() {
 
   return (
     <SidebarProvider>
-        <div className="h-screen flex w-full overflow-hidden">
+      <div className="h-screen flex w-full overflow-hidden">
         <UserSidebar items={gatedMenuItems} onLogout={signOut} />
 
-          {/*
-            Keep scroll confined to the <main> area so the sticky header never scrolls away
-            (important on mobile/tablet where flex items may otherwise cause body scrolling).
-          */}
-          <div className="flex-1 min-w-0 flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
             <SidebarTrigger />
             <div className="min-w-0">
@@ -226,7 +222,7 @@ export default function UserDashboard() {
           </header>
 
           <main
-            className="flex-1 min-h-0 bg-background overflow-auto no-scrollbar p-3 sm:p-4 lg:p-6"
+            className="flex-1 bg-background overflow-auto p-3 sm:p-4 lg:p-6"
           >
             <Routes>
               <Route
