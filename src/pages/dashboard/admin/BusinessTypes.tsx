@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Pencil, Plus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,41 +14,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
-
-type BusinessTypeRow = {
-  id: string;
-  category: string;
-  type: string;
-  is_active: boolean;
-  sort_order: number;
-  created_at: string;
-};
-
-type SortKey = "category" | "type" | "sort_order" | "is_active";
-type SortDir = "asc" | "desc";
+import type { BusinessTypeRow } from "./business-types/types";
+import { useBusinessTypesAdmin } from "./business-types/useBusinessTypesAdmin";
+import { CategoryGroupCard } from "./business-types/CategoryGroupCard";
+import { isOthers } from "./business-types/sort";
 
 const createSchema = z.object({
   category: z.string().trim().min(1, "Category is required").max(80),
@@ -59,13 +30,11 @@ const createSchema = z.object({
 });
 
 export default function AdminBusinessTypes() {
-  const { toast } = useToast();
-  const [rows, setRows] = useState<BusinessTypeRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<BusinessTypeRow | null>(null);
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "category", dir: "asc" });
+  const { loading, grouped, categoryCount, createType, updateType, toggleActive, removeType, moveType, moveCategory } =
+    useBusinessTypesAdmin();
 
   const form = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -77,136 +46,10 @@ export default function AdminBusinessTypes() {
     defaultValues: { category: "", type: "", sort_order: 0, is_active: true },
   });
 
-  const fetchTypes = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await (supabase as any)
-        .from("business_types")
-        .select("id, category, type, is_active, sort_order, created_at")
-        .order("category", { ascending: true })
-        .order("sort_order", { ascending: true })
-        .order("type", { ascending: true });
-
-      if (error) throw error;
-      setRows((data ?? []) as BusinessTypeRow[]);
-    } catch (e: any) {
-      console.error("fetch business_types failed:", e);
-      setRows([]);
-      toast({
-        variant: "destructive",
-        title: "Failed to load",
-        description: e?.message ? String(e.message) : "Could not load Business Types.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void fetchTypes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const groupedCount = useMemo(() => new Set(rows.map((r) => r.category)).size, [rows]);
-
-  const isOthers = (value: unknown) => String(value ?? "").trim().toLowerCase() === "others";
-
-  /** Always push label "Others" to the bottom, regardless of asc/desc. */
-  const compareWithOthersLast = (a: unknown, b: unknown, dir: SortDir) => {
-    const ao = isOthers(a);
-    const bo = isOthers(b);
-    if (ao && !bo) return 1;
-    if (!ao && bo) return -1;
-    const dirMult = dir === "asc" ? 1 : -1;
-    return dirMult * String(a ?? "").localeCompare(String(b ?? ""));
-  };
-
-  const sortedRows = useMemo(() => {
-    const copy = [...rows];
-
-    copy.sort((a, b) => {
-      // Always keep categories grouped, and always keep "Others" category at the bottom.
-      const byCategory = compareWithOthersLast(a.category, b.category, "asc");
-      if (byCategory !== 0) return byCategory;
-
-      switch (sort.key) {
-        case "category": {
-          // Category is already grouped; sort inside category by order then type.
-          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
-          if (byOrder !== 0) return byOrder;
-          return compareWithOthersLast(a.type, b.type, "asc");
-        }
-        case "type": {
-          // Within each category, sort types but always keep "Others" type at the bottom.
-          const byType = compareWithOthersLast(a.type, b.type, sort.dir);
-          if (byType !== 0) return byType;
-          // Then by sort order to keep things predictable.
-          return (a.sort_order ?? 0) - (b.sort_order ?? 0);
-        }
-        case "sort_order": {
-          const dirMult = sort.dir === "asc" ? 1 : -1;
-          const byOrder = dirMult * ((a.sort_order ?? 0) - (b.sort_order ?? 0));
-          if (byOrder !== 0) return byOrder;
-          return compareWithOthersLast(a.type, b.type, "asc");
-        }
-        case "is_active": {
-          const dirMult = sort.dir === "asc" ? 1 : -1;
-          const av = a.is_active ? 1 : 0;
-          const bv = b.is_active ? 1 : 0;
-          const byActive = dirMult * (av - bv);
-          if (byActive !== 0) return byActive;
-          // Keep stable ordering inside category.
-          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
-          if (byOrder !== 0) return byOrder;
-          return compareWithOthersLast(a.type, b.type, "asc");
-        }
-        default: {
-          // Fallback: stable ordering inside category.
-          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
-          if (byOrder !== 0) return byOrder;
-          return compareWithOthersLast(a.type, b.type, "asc");
-        }
-      }
-    });
-
-    return copy;
-  }, [rows, sort.dir, sort.key]);
-
-  const toggleSort = (key: SortKey) => {
-    setSort((prev) => {
-      if (prev.key !== key) return { key, dir: "asc" };
-      return { key, dir: prev.dir === "asc" ? "desc" : "asc" };
-    });
-  };
-
-  const sortLabel = (key: SortKey) => {
-    if (sort.key !== key) return "Sort";
-    return sort.dir === "asc" ? "Sorted ascending" : "Sorted descending";
-  };
-
   const onCreate = async (values: z.infer<typeof createSchema>) => {
-    try {
-      const payload = {
-        category: values.category.trim(),
-        type: values.type.trim(),
-        sort_order: values.sort_order,
-        is_active: values.is_active,
-      };
-
-      const { error } = await (supabase as any).from("business_types").insert(payload);
-      if (error) throw error;
-
-      toast({ title: "Saved", description: "Business Type created." });
-      form.reset({ category: "", type: "", sort_order: 0, is_active: true });
-      setOpen(false);
-      await fetchTypes();
-    } catch (e: any) {
-      toast({
-        variant: "destructive",
-        title: "Create failed",
-        description: e?.message ? String(e.message) : "Could not create Business Type.",
-      });
-    }
+    await createType(values);
+    form.reset({ category: "", type: "", sort_order: 0, is_active: true });
+    setOpen(false);
   };
 
   const openEditDialog = (row: BusinessTypeRow) => {
@@ -223,60 +66,9 @@ export default function AdminBusinessTypes() {
   const onEdit = async (values: z.infer<typeof createSchema>) => {
     if (!editing) return;
 
-    try {
-      const payload = {
-        category: values.category.trim(),
-        type: values.type.trim(),
-        sort_order: values.sort_order,
-        is_active: values.is_active,
-      };
-
-      const { error } = await (supabase as any).from("business_types").update(payload).eq("id", editing.id);
-      if (error) throw error;
-
-      toast({ title: "Saved", description: "Business Type updated." });
-      setEditOpen(false);
-      setEditing(null);
-      await fetchTypes();
-    } catch (e: any) {
-      toast({
-        variant: "destructive",
-        title: "Update failed",
-        description: e?.message ? String(e.message) : "Could not update Business Type.",
-      });
-    }
-  };
-
-  const toggleActive = async (id: string, next: boolean) => {
-    try {
-      const { error } = await (supabase as any)
-        .from("business_types")
-        .update({ is_active: next })
-        .eq("id", id);
-      if (error) throw error;
-      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, is_active: next } : r)));
-    } catch (e: any) {
-      toast({
-        variant: "destructive",
-        title: "Update failed",
-        description: e?.message ? String(e.message) : "Could not update status.",
-      });
-    }
-  };
-
-  const removeRow = async (id: string) => {
-    try {
-      const { error } = await (supabase as any).from("business_types").delete().eq("id", id);
-      if (error) throw error;
-      setRows((prev) => prev.filter((r) => r.id !== id));
-      toast({ title: "Deleted", description: "Business Type deleted." });
-    } catch (e: any) {
-      toast({
-        variant: "destructive",
-        title: "Delete failed",
-        description: e?.message ? String(e.message) : "Could not delete Business Type.",
-      });
-    }
+    await updateType(editing.id, values);
+    setEditOpen(false);
+    setEditing(null);
   };
 
   return (
@@ -285,7 +77,7 @@ export default function AdminBusinessTypes() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Business Types</h1>
           <p className="text-sm text-muted-foreground">
-            Manage the Business Type list used in onboarding dropdowns. ({groupedCount} categories)
+            Manage the Business Type list used in onboarding dropdowns. ({categoryCount} categories)
           </p>
         </div>
 
@@ -457,113 +249,37 @@ export default function AdminBusinessTypes() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">All Types</CardTitle>
+          <CardTitle className="text-base">All Categories</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="py-8 text-sm text-muted-foreground">Loading...</div>
-          ) : rows.length === 0 ? (
+          ) : grouped.length === 0 ? (
             <div className="py-8 text-sm text-muted-foreground">
               No data yet. Add some Business Types to get started.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[180px]">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 text-left"
-                        onClick={() => toggleSort("category")}
-                        title={sortLabel("category")}
-                      >
-                        Category
-                        <ArrowUpDown className="h-4 w-4" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="min-w-[200px]">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 text-left"
-                        onClick={() => toggleSort("type")}
-                        title={sortLabel("type")}
-                      >
-                        Type
-                        <ArrowUpDown className="h-4 w-4" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="min-w-[110px]">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 text-left"
-                        onClick={() => toggleSort("sort_order")}
-                        title={sortLabel("sort_order")}
-                      >
-                        Order
-                        <ArrowUpDown className="h-4 w-4" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="min-w-[110px]">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 text-left"
-                        onClick={() => toggleSort("is_active")}
-                        title={sortLabel("is_active")}
-                      >
-                        Active
-                        <ArrowUpDown className="h-4 w-4" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right min-w-[110px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedRows.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.category}</TableCell>
-                      <TableCell>{r.type}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.sort_order}</TableCell>
-                      <TableCell>
-                        <Switch checked={r.is_active} onCheckedChange={(v) => void toggleActive(r.id, v)} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex items-center justify-end gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openEditDialog(r)}
-                            title="Edit"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+            <div className="space-y-4">
+              {grouped.map((g) => {
+                const movable = grouped.filter((x) => !isOthers(x.category));
+                const idx = movable.findIndex((x) => x.category === g.category);
+                const isFirstMovable = idx === 0;
+                const isLastMovable = idx === movable.length - 1;
 
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button type="button" size="sm" variant="ghost" title="Delete">
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Business Type?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. Are you sure you want to delete this Business Type?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>No</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => void removeRow(r.id)}>Yes, delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                return (
+                  <CategoryGroupCard
+                    key={g.category}
+                    group={g}
+                    isFirstMovable={isFirstMovable}
+                    isLastMovable={isLastMovable}
+                    onMoveCategory={(cat, dir) => void moveCategory(cat, dir)}
+                    onMoveType={(cat, id, dir) => void moveType(cat, id, dir)}
+                    onToggleActive={(id, next) => void toggleActive(id, next)}
+                    onDelete={(id) => void removeType(id)}
+                    onEdit={openEditDialog}
+                  />
+                );
+              })}
             </div>
           )}
         </CardContent>
