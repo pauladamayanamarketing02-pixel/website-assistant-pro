@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseRealtimeReload } from '@/hooks/useSupabaseRealtimeReload';
+import { DashboardEventBanner } from '@/components/dashboard/DashboardEventBanner';
 
 interface DashboardData {
   activePackage: string | null;
@@ -153,6 +154,8 @@ export default function DashboardOverview() {
         <h1 className="text-3xl font-bold text-foreground">Overview</h1>
         <p className="text-muted-foreground">We're working on your marketing.</p>
       </div>
+
+      <DashboardEventBanner audience="user" />
 
       {/* Status Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
