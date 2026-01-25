@@ -677,7 +677,7 @@ export default function TaskManager() {
   // Task View Mode with Work Log
   if (viewMode === 'view' && selectedTask) {
     const config = statusConfig[selectedTask.status] ?? statusConfig.pending;
-    const isCompleted = selectedTask.status === 'completed';
+    const isTaskFinalized = selectedTask.status === 'completed' || selectedTask.status === 'cancelled';
 
     return (
       <div className="space-y-6">
@@ -797,7 +797,7 @@ export default function TaskManager() {
 
               <div className="flex justify-end">
                 <Button disabled variant="secondary">
-                  {isCompleted ? 'Completed' : 'Read-only'}
+                  {isTaskFinalized ? (selectedTask.status === 'completed' ? 'Completed' : 'Cancelled') : 'Read-only'}
                 </Button>
               </div>
             </CardContent>
@@ -890,9 +890,9 @@ export default function TaskManager() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    disabled={deleteDisabled || isCompleted}
+                                    disabled={deleteDisabled || isTaskFinalized}
                                     onClick={() => {
-                                      if (isCompleted) return;
+                                      if (isTaskFinalized) return;
                                       setActiveDeleteRequestLogId(log.id);
                                       setDeleteRequestReason('');
                                     }}
@@ -949,7 +949,7 @@ export default function TaskManager() {
                                       onChange={(e) => setDeleteRequestReason(e.target.value)}
                                       placeholder="Examples: wrong file uploaded, incorrect time spent, etc."
                                       rows={3}
-                                      disabled={sendingDeleteRequest || isCompleted}
+                                      disabled={sendingDeleteRequest || isTaskFinalized}
                                     />
                                   </div>
                                   <div className="flex items-center justify-end gap-2">
@@ -969,7 +969,7 @@ export default function TaskManager() {
                                       type="button"
                                       size="sm"
                                       onClick={() => handleSendDeleteRequest(log.id)}
-                                      disabled={sendingDeleteRequest || isCompleted}
+                                      disabled={sendingDeleteRequest || isTaskFinalized}
                                     >
                                       {sendingDeleteRequest ? 'Sending...' : 'Send Request'}
                                     </Button>
@@ -986,7 +986,7 @@ export default function TaskManager() {
               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className={cn(isCompleted && "pointer-events-none opacity-60")}>
+              <div className={cn(isTaskFinalized && "pointer-events-none opacity-60")}>
                 <div className="space-y-3">
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
@@ -997,7 +997,7 @@ export default function TaskManager() {
                         placeholder="1"
                         value={workLogForm.hours}
                         onChange={(e) => setWorkLogForm((prev) => ({ ...prev, hours: e.target.value }))}
-                        disabled={isCompleted || workLogLocked}
+                        disabled={isTaskFinalized || workLogLocked}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1018,7 +1018,7 @@ export default function TaskManager() {
                           const safe = Number.isFinite(n) ? Math.min(59, Math.max(0, n)) : 0;
                           setWorkLogForm((prev) => ({ ...prev, minutes: String(safe) }));
                         }}
-                        disabled={isCompleted || workLogLocked}
+                        disabled={isTaskFinalized || workLogLocked}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1028,7 +1028,7 @@ export default function TaskManager() {
                         onValueChange={(value) =>
                           setWorkLogForm((prev) => ({ ...prev, status: value as WorkLogStatus }))
                         }
-                        disabled={isCompleted || workLogLocked}
+                        disabled={isTaskFinalized || workLogLocked}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -1052,7 +1052,7 @@ export default function TaskManager() {
                     value={workLogForm.workDescription}
                     onChange={(e) => setWorkLogForm((prev) => ({ ...prev, workDescription: e.target.value }))}
                     rows={3}
-                    disabled={isCompleted || workLogLocked}
+                    disabled={isTaskFinalized || workLogLocked}
                   />
                 </div>
 
@@ -1065,7 +1065,7 @@ export default function TaskManager() {
                     placeholder="https://..."
                     value={workLogForm.sharedUrl}
                     onChange={(e) => setWorkLogForm((prev) => ({ ...prev, sharedUrl: e.target.value }))}
-                    disabled={isCompleted || workLogLocked}
+                    disabled={isTaskFinalized || workLogLocked}
                   />
                 </div>
 
@@ -1077,7 +1077,7 @@ export default function TaskManager() {
                     </Label>
                     <div
                       className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50"
-                      onClick={() => (isCompleted || workLogLocked ? undefined : workLogFileRef.current?.click())}
+                      onClick={() => (isTaskFinalized || workLogLocked ? undefined : workLogFileRef.current?.click())}
                     >
                       {workLogFile ? (
                         <div className="flex items-center justify-between">
@@ -1099,7 +1099,7 @@ export default function TaskManager() {
                       type="file"
                       onChange={(e) => e.target.files?.[0] && setWorkLogFile(e.target.files[0])}
                       className="hidden"
-                      disabled={isCompleted || workLogLocked}
+                      disabled={isTaskFinalized || workLogLocked}
                     />
                   </div>
 
@@ -1110,7 +1110,7 @@ export default function TaskManager() {
                     </Label>
                     <div
                       className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50"
-                      onClick={() => (isCompleted || workLogLocked ? undefined : screenshotRef.current?.click())}
+                      onClick={() => (isTaskFinalized || workLogLocked ? undefined : screenshotRef.current?.click())}
                     >
                       {screenshotFile ? (
                         <div className="flex items-center justify-between">
@@ -1133,12 +1133,12 @@ export default function TaskManager() {
                       accept="image/*"
                       onChange={(e) => e.target.files?.[0] && setScreenshotFile(e.target.files[0])}
                       className="hidden"
-                      disabled={isCompleted || workLogLocked}
+                      disabled={isTaskFinalized || workLogLocked}
                     />
                   </div>
                 </div>
 
-                {workLogLocked && !isCompleted ? (
+                {workLogLocked && !isTaskFinalized ? (
                   <Button
                     type="button"
                     onClick={handleStartNow}
@@ -1147,8 +1147,8 @@ export default function TaskManager() {
                     Start Now
                   </Button>
                 ) : (
-                  <Button onClick={handleSaveWorkLog} disabled={savingWorkLog || isCompleted} className="w-full">
-                    {isCompleted ? 'Completed' : savingWorkLog ? 'Saving...' : 'Add Work Log'}
+                  <Button onClick={handleSaveWorkLog} disabled={savingWorkLog || isTaskFinalized} className="w-full">
+                    {isTaskFinalized ? (selectedTask.status === 'completed' ? 'Completed' : 'Cancelled') : savingWorkLog ? 'Saving...' : 'Add Work Log'}
                   </Button>
                 )}
               </div>
