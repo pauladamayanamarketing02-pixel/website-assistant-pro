@@ -839,19 +839,20 @@ export default function ContentPlanner() {
                   modifiersClassNames={{
                     hasContent: "ring-1 ring-primary/30 rounded-md",
                   }}
-                  className="w-full p-3 pointer-events-auto"
+                  className="w-full p-2 sm:p-3 pointer-events-auto"
                   classNames={{
                     months: "w-full",
                     month: "w-full space-y-6",
                     caption: "flex justify-center pt-1 relative items-center",
-                    caption_label: "text-base font-semibold",
+                    caption_label: "text-sm sm:text-base font-semibold",
                     table: "w-full border-collapse",
                     head_row: "flex w-full",
                     head_cell:
-                      "text-muted-foreground rounded-md w-full font-medium text-sm flex-1 text-center",
+                      "text-muted-foreground rounded-md w-full font-medium text-[11px] sm:text-sm flex-1 text-center",
                     row: "flex w-full mt-3",
-                    cell: "h-16 flex-1 text-center text-base p-0 relative focus-within:relative focus-within:z-20",
-                    day: "h-16 w-full p-0 font-normal aria-selected:opacity-100",
+                    // mobile/tablet: keep the whole month visible without horizontal scrolling
+                    cell: "h-12 sm:h-14 md:h-16 flex-1 text-center text-sm sm:text-base p-0 relative focus-within:relative focus-within:z-20",
+                    day: "h-12 sm:h-14 md:h-16 w-full p-0 font-normal aria-selected:opacity-100",
                   }}
                   components={{
                     DayContent: ({ date }) => {
@@ -863,11 +864,11 @@ export default function ContentPlanner() {
 
                       return (
                         <div className="h-full w-full flex flex-col items-center justify-between py-1">
-                          <div className="text-sm">{date.getDate()}</div>
-                          <div className="flex items-center gap-1 pb-1">
+                          <div className="text-xs sm:text-sm">{date.getDate()}</div>
+                          <div className="flex items-center gap-0.5 sm:gap-1 pb-1">
                             {uniqueTypes.map((t) => {
                               const Icon = getTypeIcon(t);
-                              return <Icon key={t} className="h-3.5 w-3.5 text-primary" />;
+                              return <Icon key={t} className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary" />;
                             })}
                           </div>
                         </div>
