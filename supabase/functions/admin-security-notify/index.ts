@@ -101,12 +101,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      const subject = "[Security] Password akun admin telah diubah";
+      const subject = "[Security] Admin account password changed";
       const html = `
-        <h2>Password akun admin telah diubah</h2>
-        <p>Jika Anda tidak melakukan perubahan ini, segera hubungi tim teknis.</p>
-        <p><strong>Password baru:</strong> ${escapeHtml(body.newPassword)}</p>
-        <p>Waktu: ${new Date().toISOString()}</p>
+        <h2>Admin account password changed</h2>
+        <p>If you did not perform this change, please contact your technical team immediately.</p>
+        <p><strong>New password:</strong> ${escapeHtml(body.newPassword)}</p>
+        <p>Time: ${new Date().toISOString()}</p>
       `;
 
       const emailResponse = await resend.emails.send({
@@ -130,14 +130,14 @@ Deno.serve(async (req) => {
         });
       }
 
-      const subject = "[Security] Email akun admin akan diganti";
+      const subject = "[Security] Admin account email change requested";
       const html = `
-        <h2>Permintaan perubahan email akun admin</h2>
-        <p>Email akun admin telah diajukan untuk diganti.</p>
-        <p><strong>Email lama:</strong> ${escapeHtml(body.oldEmail)}</p>
-        <p><strong>Email baru:</strong> ${escapeHtml(body.newEmail)}</p>
-        <p>Jika Anda tidak melakukan perubahan ini, segera hubungi tim teknis.</p>
-        <p>Waktu: ${new Date().toISOString()}</p>
+        <h2>Admin account email change requested</h2>
+        <p>An email change has been requested for the admin account.</p>
+        <p><strong>Old email:</strong> ${escapeHtml(body.oldEmail)}</p>
+        <p><strong>New email:</strong> ${escapeHtml(body.newEmail)}</p>
+        <p>If you did not perform this change, please contact your technical team immediately.</p>
+        <p>Time: ${new Date().toISOString()}</p>
       `;
 
       const emailResponse = await resend.emails.send({

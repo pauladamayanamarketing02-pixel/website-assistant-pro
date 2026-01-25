@@ -29,14 +29,14 @@ export default function ResetPassword() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const hasRecoveryContext = useMemo(() => {
-    // Supabase biasanya menambahkan parameter seperti type=recovery di URL.
+    // Supabase typically adds parameters like type=recovery to the URL.
     const params = new URLSearchParams(window.location.search);
     const type = params.get("type");
     return type === "recovery" || type === "magiclink" || !!params.get("code");
   }, []);
 
   useEffect(() => {
-    // Pastikan session recovery tersedia (Supabase akan membuat session setelah klik link).
+    // Ensure the recovery session exists (Supabase creates a session after the user clicks the link).
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
@@ -44,16 +44,16 @@ export default function ResetPassword() {
         if (!data.session) {
           toast({
             variant: "destructive",
-            title: "Link tidak valid",
-            description: "Silakan minta link reset password lagi dari halaman login.",
+            title: "Invalid link",
+            description: "Please request a new password reset link from the sign-in page.",
           });
         }
       })
       .catch((e: any) => {
         toast({
           variant: "destructive",
-          title: "Gagal",
-          description: e?.message ?? "Gagal memverifikasi sesi reset password.",
+          title: "Unable to continue",
+          description: e?.message ?? "Unable to verify the password recovery session.",
         });
       })
       .finally(() => setChecking(false));
@@ -81,17 +81,17 @@ export default function ResetPassword() {
 
       toast({
         title: "Password updated",
-        description: "Silakan login menggunakan password baru Anda.",
+        description: "Please sign in using your new password.",
       });
 
-      // (Opsional) sign out untuk memastikan user login ulang
+      // (Optional) sign out to ensure the user signs in again
       await supabase.auth.signOut();
       navigate("/auth");
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal",
-        description: e?.message ?? "Gagal mengubah password.",
+        title: "Unable to update password",
+        description: e?.message ?? "Unable to update your password.",
       });
     } finally {
       setSubmitting(false);

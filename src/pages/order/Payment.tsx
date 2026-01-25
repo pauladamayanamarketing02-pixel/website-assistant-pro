@@ -104,14 +104,14 @@ export default function Payment() {
                   }
                   if (baseTotalUsd == null) {
                     setAppliedPromo(null);
-                    toast({ variant: "destructive", title: "Tidak bisa apply promo", description: "Total belum siap." });
+                      toast({ variant: "destructive", title: "Unable to apply promo", description: "The total amount is not available yet." });
                     return;
                   }
 
                   const res = await validatePromoCode(code, baseTotalUsd);
                   if (!res.ok) {
                     setAppliedPromo(null);
-                    toast({ variant: "destructive", title: "Promo tidak valid", description: "Kode promo tidak ditemukan / tidak aktif." });
+                      toast({ variant: "destructive", title: "Invalid promo code", description: "The promo code was not found or is not active." });
                     return;
                   }
 
@@ -148,7 +148,7 @@ export default function Payment() {
             size="lg"
             disabled={!canComplete}
             onClick={() => {
-              toast({ title: "Order completed", description: "Terima kasih! Order Anda sudah kami terima." });
+              toast({ title: "Order completed", description: "Thank you. Your order has been received." });
               navigate("/order/payment", { replace: true });
             }}
           >

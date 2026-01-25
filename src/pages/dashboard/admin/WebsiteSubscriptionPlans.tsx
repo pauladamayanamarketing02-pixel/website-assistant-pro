@@ -58,18 +58,18 @@ export default function WebsiteSubscriptionPlans() {
         parsed.length
           ? parsed.map((p) => ({
               ...p,
-              label: p.label || `${p.years} Tahun`,
+              label: p.label || `${p.years} Years`,
               sort_order: p.sort_order || p.years,
             }))
           : [
-              { years: 1, label: "1 Tahun", is_active: true, sort_order: 1 },
-              { years: 2, label: "2 Tahun", is_active: true, sort_order: 2 },
-              { years: 3, label: "3 Tahun", is_active: true, sort_order: 3 },
+              { years: 1, label: "1 Year", is_active: true, sort_order: 1 },
+              { years: 2, label: "2 Years", is_active: true, sort_order: 2 },
+              { years: 3, label: "3 Years", is_active: true, sort_order: 3 },
             ],
       );
     } catch (e: any) {
       console.error(e);
-      const msg = e?.message || "Gagal memuat Subscription Plans";
+      const msg = e?.message || "Unable to load subscription plans";
       if (String(msg).toLowerCase().includes("unauthorized")) {
         navigate("/admin/login", { replace: true });
         return;
@@ -91,7 +91,7 @@ export default function WebsiteSubscriptionPlans() {
       const payload = plans
         .map((p) => ({
           years: asNumber(p.years),
-          label: String(p.label ?? "").trim() || `${asNumber(p.years)} Tahun`,
+          label: String(p.label ?? "").trim() || `${asNumber(p.years)} Years`,
           is_active: p.is_active !== false,
           sort_order: asNumber(p.sort_order, asNumber(p.years)),
         }))
@@ -118,7 +118,7 @@ export default function WebsiteSubscriptionPlans() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Subscription Plans (Order)</h1>
-          <p className="text-muted-foreground">Kelola opsi “Choose plan duration” di halaman /order/subscription.</p>
+          <p className="text-muted-foreground">Manage the “Choose plan duration” options on /order/subscription.</p>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={fetchPlans} disabled={loading || saving}>
@@ -132,7 +132,7 @@ export default function WebsiteSubscriptionPlans() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <CardTitle>Choose plan duration</CardTitle>
-              <CardDescription>Contoh: 1 Tahun, 2 Tahun, 3 Tahun.</CardDescription>
+              <CardDescription>Example: 1 Year, 2 Years, 3 Years.</CardDescription>
             </div>
             <Badge variant="outline">Total: {countLabel}</Badge>
           </div>
@@ -203,7 +203,7 @@ export default function WebsiteSubscriptionPlans() {
               </div>
             ))
           ) : !loading ? (
-            <div className="text-sm text-muted-foreground">Belum ada plan. Klik “Add Plan”.</div>
+            <div className="text-sm text-muted-foreground">No plans yet. Click “Add Plan”.</div>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
@@ -226,7 +226,7 @@ export default function WebsiteSubscriptionPlans() {
               <Plus className="h-4 w-4 mr-2" /> Add Plan
             </Button>
             <Button type="button" onClick={savePlans} disabled={saving}>
-              <Save className="h-4 w-4 mr-2" /> Simpan
+              <Save className="h-4 w-4 mr-2" /> Save
             </Button>
           </div>
         </CardContent>

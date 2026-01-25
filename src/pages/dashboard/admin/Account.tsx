@@ -15,20 +15,20 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const passwordSchema = z
   .object({
-    newPassword: z.string().min(8, "Minimal 8 karakter").max(128, "Maksimal 128 karakter"),
-    confirmPassword: z.string().min(1, "Wajib diisi"),
+    newPassword: z.string().min(8, "Must be at least 8 characters").max(128, "Must be 128 characters or fewer"),
+    confirmPassword: z.string().min(1, "This field is required"),
   })
   .refine((v) => v.newPassword === v.confirmPassword, {
-    message: "Konfirmasi password tidak sama",
+    message: "Password confirmation does not match",
     path: ["confirmPassword"],
   });
 
 const emailSchema = z.object({
-  newEmail: z.string().trim().email("Email tidak valid").max(255, "Maksimal 255 karakter"),
+  newEmail: z.string().trim().email("Invalid email address").max(255, "Must be 255 characters or fewer"),
 });
 
 async function trySendSecurityEmail(payload: unknown) {
-  // Best effort: kalau belum dikonfigurasi, UI tetap jalan.
+  // Best effort: if not configured, the UI should still work.
   const { error } = await supabase.functions.invoke("admin-security-notify", {
     body: payload,
   });
@@ -76,12 +76,12 @@ export default function AdminAccount() {
   const handleChangePassword = async () => {
     const parsed = passwordSchema.safeParse(passwordForm);
     if (!parsed.success) {
-      toast({ variant: "destructive", title: "Validasi gagal", description: "Periksa input password." });
+      toast({ variant: "destructive", title: "Validation failed", description: "Please review the password fields." });
       return;
     }
 
     if (!currentEmail) {
-      toast({ variant: "destructive", title: "Error", description: "Email admin tidak ditemukan." });
+      toast({ variant: "destructive", title: "Error", description: "The current admin email address could not be found." });
       return;
     }
 
@@ -90,7 +90,7 @@ export default function AdminAccount() {
       const { error } = await supabase.auth.updateUser({ password: parsed.data.newPassword });
       if (error) throw error;
 
-      // Notifikasi ke email admin saat ini (best effort)
+      // Notify the current admin email (best effort)
       const { error: notifyErr } = await trySendSecurityEmail({
         type: "password_changed",
         to: currentEmail,
@@ -100,13 +100,13 @@ export default function AdminAccount() {
       setPasswordForm({ newPassword: "", confirmPassword: "" });
 
       toast({
-        title: "Password berhasil diubah",
+        title: "Password updated",
         description: notifyErr
-          ? "Password berubah, namun notifikasi email belum aktif (butuh konfigurasi Resend)."
-          : "Password berubah dan notifikasi email telah dikirim.",
+          ? "Your password was updated; however, email notifications are not yet enabled (Resend configuration required)."
+          : "Your password was updated and a notification email has been sent.",
       });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal mengubah password", description: e?.message ?? "Unknown error" });
+      toast({ variant: "destructive", title: "Unable to update password", description: e?.message ?? "Unknown error" });
     } finally {
       setChangingPassword(false);
     }
@@ -115,27 +115,27 @@ export default function AdminAccount() {
   const handleChangeEmail = async () => {
     const parsed = emailSchema.safeParse({ newEmail });
     if (!parsed.success) {
-      toast({ variant: "destructive", title: "Validasi gagal", description: "Email baru tidak valid." });
+      toast({ variant: "destructive", title: "Validation failed", description: "The new email address is invalid." });
       return;
     }
 
     if (!currentEmail) {
-      toast({ variant: "destructive", title: "Error", description: "Email admin saat ini tidak ditemukan." });
+      toast({ variant: "destructive", title: "Error", description: "The current admin email address could not be found." });
       return;
     }
 
     if (parsed.data.newEmail.toLowerCase() === currentEmail.toLowerCase()) {
-      toast({ variant: "destructive", title: "Tidak ada perubahan", description: "Email baru sama dengan email lama." });
+      toast({ variant: "destructive", title: "No changes detected", description: "The new email matches the current email." });
       return;
     }
 
     setChangingEmail(true);
     try {
-      // Supabase akan mengirim email konfirmasi ke alamat baru (sesuai setting auth).
+      // Supabase will send a confirmation email to the new address (per Auth settings).
       const { error } = await supabase.auth.updateUser({ email: parsed.data.newEmail });
       if (error) throw error;
 
-      // Notifikasi ke email lama (best effort)
+      // Notify the old email address (best effort)
       const { error: notifyErr } = await trySendSecurityEmail({
         type: "email_change_requested",
         to: currentEmail,
@@ -144,15 +144,15 @@ export default function AdminAccount() {
       });
 
       toast({
-        title: "Permintaan ganti email dibuat",
+        title: "Email change requested",
         description: notifyErr
-          ? "Cek email baru untuk konfirmasi. Notifikasi ke email lama belum aktif (butuh konfigurasi Resend)."
-          : "Cek email baru untuk konfirmasi. Notifikasi juga telah dikirim ke email lama.",
+          ? "Please check your new email address for the confirmation link. Notifications to the old email are not yet enabled (Resend configuration required)."
+          : "Please check your new email address for the confirmation link. A notification has also been sent to your old email address.",
       });
 
       setNewEmail("");
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Gagal mengganti email", description: e?.message ?? "Unknown error" });
+      toast({ variant: "destructive", title: "Unable to change email", description: e?.message ?? "Unknown error" });
     } finally {
       setChangingEmail(false);
     }
@@ -162,15 +162,15 @@ export default function AdminAccount() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">My Account</h1>
-        <p className="text-muted-foreground">Kelola akun admin (email & password).</p>
+        <p className="text-muted-foreground">Manage the admin account (email and password).</p>
       </div>
 
       <Alert>
         <ShieldAlert className="h-4 w-4" />
-        <AlertTitle>Catatan</AlertTitle>
+        <AlertTitle>Note</AlertTitle>
         <AlertDescription>
-          Fitur notifikasi email via Resend akan aktif setelah kunci Resend dikonfigurasi. Halaman ini tetap bisa
-          dipakai untuk update email/password.
+          Email notifications via Resend will become available once the Resend key is configured. You can still use this
+          page to update email and password.
         </AlertDescription>
       </Alert>
 
@@ -182,7 +182,7 @@ export default function AdminAccount() {
             </div>
             <div>
               <CardTitle>Email</CardTitle>
-              <CardDescription>Ganti email dengan konfirmasi Supabase + notifikasi ke email lama.</CardDescription>
+              <CardDescription>Change your email using Supabase confirmation and notify the old address.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -204,11 +204,11 @@ export default function AdminAccount() {
               autoComplete="email"
             />
             {emailErrors.newEmail && <p className="text-sm text-destructive">{emailErrors.newEmail}</p>}
-            <p className="text-xs text-muted-foreground">Setelah submit, cek email baru untuk link konfirmasi.</p>
+            <p className="text-xs text-muted-foreground">After submitting, check your new email for the confirmation link.</p>
           </div>
 
           <Button onClick={handleChangeEmail} disabled={changingEmail || !newEmail || !!emailErrors.newEmail}>
-            {changingEmail ? "Memproses..." : "Request Email Change"}
+            {changingEmail ? "Processing..." : "Request Email Change"}
           </Button>
         </CardContent>
       </Card>
@@ -221,7 +221,7 @@ export default function AdminAccount() {
             </div>
             <div>
               <CardTitle>Password</CardTitle>
-              <CardDescription>Ubah password + notifikasi ke email admin saat ini.</CardDescription>
+              <CardDescription>Update your password and notify the current admin email address.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -247,7 +247,7 @@ export default function AdminAccount() {
               </Button>
             </div>
             {passwordErrors.newPassword && <p className="text-sm text-destructive">{passwordErrors.newPassword}</p>}
-            <p className="text-xs text-muted-foreground">Minimal 8 karakter.</p>
+            <p className="text-xs text-muted-foreground">Must be at least 8 characters.</p>
           </div>
 
           <div className="space-y-2">
@@ -277,7 +277,7 @@ export default function AdminAccount() {
             onClick={handleChangePassword}
             disabled={changingPassword || !passwordForm.newPassword || !passwordForm.confirmPassword || !!passwordErrors.newPassword || !!passwordErrors.confirmPassword}
           >
-            {changingPassword ? "Mengubah..." : "Change Password"}
+            {changingPassword ? "Updating..." : "Change Password"}
           </Button>
         </CardContent>
       </Card>

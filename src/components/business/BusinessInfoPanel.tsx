@@ -21,11 +21,11 @@ export default function BusinessInfoPanel({ fields }: { fields: BusinessInfoFiel
     async (text: string) => {
       const normalized = normalizeValue(text);
       if (normalized === "-") {
-        toast({ variant: "destructive", title: "Tidak ada data", description: "Field ini kosong." });
+        toast({ variant: "destructive", title: "No data available", description: "This field is empty." });
         return;
       }
       await navigator.clipboard.writeText(normalized);
-      toast({ title: "Copied", description: "Berhasil disalin ke clipboard." });
+      toast({ title: "Copied", description: "Copied to your clipboard." });
     },
     [toast]
   );

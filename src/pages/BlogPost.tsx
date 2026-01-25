@@ -201,12 +201,12 @@ export default function BlogPost() {
               <CardHeader>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">Post not found</h1>
                 <p className="text-muted-foreground">
-                  Artikel tidak ditemukan atau belum dipublikasikan.
+                  This article was not found or has not been published yet.
                 </p>
               </CardHeader>
               <CardContent>
                 <Button asChild>
-                  <Link to="/blog">Kembali ke daftar blog</Link>
+                  <Link to="/blog">Back to blog</Link>
                 </Button>
               </CardContent>
             </Card>

@@ -158,8 +158,8 @@ export default function AICreation() {
       console.error(e);
       toast({
         variant: 'destructive',
-        title: 'Gagal memuat tools',
-        description: e?.message ?? 'Terjadi kesalahan.',
+        title: 'Unable to load tools',
+        description: e?.message ?? 'An unexpected error occurred.',
       });
     } finally {
       setLoadingTools(false);
@@ -198,8 +198,8 @@ export default function AICreation() {
       return (
         <Card>
           <CardHeader>
-            <CardTitle>Tool dinonaktifkan</CardTitle>
-            <CardDescription>Tool ini tidak tersedia untuk package kamu.</CardDescription>
+            <CardTitle>This tool is unavailable</CardTitle>
+            <CardDescription>This tool is not available for your current package.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -209,7 +209,7 @@ export default function AICreation() {
                 setSelectedTool(null);
               }}
             >
-              Kembali ke All Tools
+              Back to All Tools
             </Button>
           </CardContent>
         </Card>
@@ -319,13 +319,13 @@ export default function AICreation() {
       {!canUsePage ? (
         <Card>
           <CardContent className="py-10">
-            <p className="text-muted-foreground">Silakan login untuk melihat tools.</p>
+            <p className="text-muted-foreground">Please sign in to view tools.</p>
           </CardContent>
         </Card>
       ) : loadingTools ? (
         <Card>
           <CardContent className="py-10">
-            <p className="text-muted-foreground">Memuat tools...</p>
+            <p className="text-muted-foreground">Loading tools...</p>
           </CardContent>
         </Card>
       ) : (
@@ -337,7 +337,7 @@ export default function AICreation() {
           <CardContent>
             {tools.length === 0 ? (
               <div className="py-10 text-muted-foreground">
-                Belum ada tools yang dipublish.
+                No tools have been published yet.
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

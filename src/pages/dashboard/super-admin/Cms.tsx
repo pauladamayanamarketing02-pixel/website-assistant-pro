@@ -66,11 +66,11 @@ export default function SuperAdminCms() {
     } catch (e: any) {
       console.error(e);
       if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
-        toast.error("Session expired. Silakan login ulang.");
+        toast.error("Your session has expired. Please sign in again.");
         navigate("/super-admin/login", { replace: true });
         return;
       }
-      toast.error(e?.message || "Gagal memuat status GA4");
+      toast.error(e?.message || "Unable to load GA4 status.");
     } finally {
       setLoading(false);
     }
@@ -89,11 +89,11 @@ export default function SuperAdminCms() {
     } catch (e: any) {
       console.error(e);
       if (String(e?.message ?? "").toLowerCase().includes("unauthorized")) {
-        toast.error("Session expired. Silakan login ulang.");
+        toast.error("Your session has expired. Please sign in again.");
         navigate("/super-admin/login", { replace: true });
         return;
       }
-      toast.error(e?.message || "Gagal memuat status DomainDuck");
+      toast.error(e?.message || "Unable to load DomainDuck status.");
     } finally {
       setLoading(false);
     }
@@ -109,18 +109,18 @@ export default function SuperAdminCms() {
     setLoading(true);
     try {
       const v = ga4MeasurementId.trim();
-      if (!v) throw new Error("Measurement ID wajib diisi");
-      if (!/^G-[A-Z0-9]{6,}$/i.test(v)) throw new Error("Format Measurement ID tidak valid (contoh: G-CTS53JM1RF)");
+      if (!v) throw new Error("Measurement ID is required.");
+      if (!/^G-[A-Z0-9]{6,}$/i.test(v)) throw new Error("Invalid Measurement ID format (example: G-CTS53JM1RF).");
 
       const { error } = await invokeWithAuth<any>("super-admin-ga4-settings", { action: "set", measurement_id: v });
       if (error) throw error;
 
       setGa4MeasurementId("");
-      toast.success("GA4 aktif");
+      toast.success("GA4 has been enabled.");
       await fetchGa4Status();
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal menyimpan GA4");
+      toast.error(e?.message || "Unable to save GA4 settings.");
     } finally {
       setLoading(false);
     }
@@ -131,11 +131,11 @@ export default function SuperAdminCms() {
     try {
       const { error } = await invokeWithAuth<any>("super-admin-ga4-settings", { action: "clear" });
       if (error) throw error;
-      toast.success("GA4 dinonaktifkan");
+      toast.success("GA4 has been disabled.");
       await fetchGa4Status();
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal menonaktifkan GA4");
+      toast.error(e?.message || "Unable to disable GA4.");
     } finally {
       setLoading(false);
     }
@@ -146,14 +146,14 @@ export default function SuperAdminCms() {
     setLoading(true);
     try {
       const v = domainduckKey.trim();
-      if (!v) throw new Error("API key wajib diisi");
-      if (/\s/.test(v) || v.length < 8) throw new Error("API key tidak valid");
+      if (!v) throw new Error("API key is required.");
+      if (/\s/.test(v) || v.length < 8) throw new Error("Invalid API key.");
 
       const { error } = await invokeWithAuth<any>("super-admin-domainduck-secret", { action: "set", api_key: v });
       if (error) throw error;
 
       setDomainduckKey("");
-      toast.success("API key tersimpan");
+      toast.success("API key has been saved.");
       await fetchDomainDuckStatus();
 
       // Ensure Test + Search Domain become immediately usable with the new key.
@@ -163,7 +163,7 @@ export default function SuperAdminCms() {
       }
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal menyimpan API key");
+      toast.error(e?.message || "Unable to save API key.");
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ export default function SuperAdminCms() {
     try {
       const { error } = await invokeWithAuth<any>("super-admin-domainduck-secret", { action: "clear" });
       if (error) throw error;
-      toast.success("API key di-reset");
+      toast.success("API key has been reset.");
       setDomainduckTestResult(null);
       setDomainduckUsage(null);
       setDomainduckApiKeyMasked(null);
@@ -182,7 +182,7 @@ export default function SuperAdminCms() {
       await fetchDomainDuckStatus();
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal reset API key");
+      toast.error(e?.message || "Unable to reset API key.");
     } finally {
       setLoading(false);
     }
@@ -197,7 +197,7 @@ export default function SuperAdminCms() {
       setDomainduckApiKeyMasked(String((data as any)?.api_key_masked ?? "") || null);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal menampilkan API key");
+      toast.error(e?.message || "Unable to reveal the API key.");
     } finally {
       setLoading(false);
     }
@@ -212,7 +212,7 @@ export default function SuperAdminCms() {
     setDomainduckTestResult(null);
     try {
       const d = domainduckTestDomain.trim();
-      if (!d) throw new Error("Domain test wajib diisi");
+      if (!d) throw new Error("Test domain is required.");
 
       const { data, error } = await supabase.functions.invoke<any>("domainduck-check", { body: { domain: d } });
       if (error) {
@@ -241,7 +241,7 @@ export default function SuperAdminCms() {
       else toast.message("Not Available");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal test DomainDuck");
+      toast.error(e?.message || "DomainDuck test failed.");
     } finally {
       setLoading(false);
     }
