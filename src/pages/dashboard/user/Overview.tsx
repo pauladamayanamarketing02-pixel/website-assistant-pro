@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Activity, Package, CheckCircle, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSupabaseRealtimeReload } from '@/hooks/useSupabaseRealtimeReload';
 
 interface DashboardData {
   activePackage: string | null;
@@ -21,62 +22,80 @@ export default function DashboardOverview() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user) return;
+  const fetchDashboardData = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-      try {
-        // Fetch active package
-        const nowIso = new Date().toISOString();
-        const { data: userPackage } = await supabase
-          .from('user_packages')
-          .select('packages(name)')
-          .eq('user_id', user.id)
-          // Package "current" is determined by timestamps, not user_packages.status.
-          .not('activated_at', 'is', null)
-          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-          .order('activated_at', { ascending: false })
-          .order('started_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    try {
+      // Fetch active package
+      const nowIso = new Date().toISOString();
+      const { data: userPackage } = await supabase
+        .from('user_packages')
+        .select('packages(name)')
+        .eq('user_id', user.id)
+        // Package "current" is determined by timestamps, not user_packages.status.
+        .not('activated_at', 'is', null)
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order('activated_at', { ascending: false })
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-        // Fetch task stats
-        const { data: tasks } = await supabase
-          .from('tasks')
-          .select('status')
-          .eq('user_id', user.id);
+      // Fetch task stats
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('status')
+        .eq('user_id', user.id);
 
-        const taskStats = {
-          pending: tasks?.filter(t => t.status === 'pending').length || 0,
-          inProgress: tasks?.filter(t => t.status === 'in_progress').length || 0,
-          completed: tasks?.filter(t => t.status === 'completed').length || 0,
-        };
+      const taskStats = {
+        pending: tasks?.filter((t) => t.status === 'pending').length || 0,
+        inProgress: tasks?.filter((t) => t.status === 'in_progress').length || 0,
+        completed: tasks?.filter((t) => t.status === 'completed').length || 0,
+      };
 
-        // Fetch unread messages
-        const { count } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', user.id)
-          .eq('is_read', false);
+      // Fetch unread messages
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
 
-        const pkgObj = Array.isArray((userPackage as any)?.packages)
-          ? (userPackage as any).packages[0]
-          : (userPackage as any)?.packages;
+      const pkgObj = Array.isArray((userPackage as any)?.packages)
+        ? (userPackage as any).packages[0]
+        : (userPackage as any)?.packages;
 
-        setData({
-          activePackage: (pkgObj as any)?.name || null,
-          taskStats,
-          unreadMessages: count || 0,
-        });
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
+      setData({
+        activePackage: (pkgObj as any)?.name || null,
+        taskStats,
+        unreadMessages: count || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    setLoading(true);
+    void fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Keep overview in sync with database changes.
+  useSupabaseRealtimeReload({
+    channelName: user ? `dashboard-user-overview:${user.id}` : 'dashboard-user-overview:anonymous',
+    targets: user
+      ? [
+          { table: 'user_packages', filter: `user_id=eq.${user.id}` },
+          { table: 'tasks', filter: `user_id=eq.${user.id}` },
+          { table: 'messages', filter: `receiver_id=eq.${user.id}` },
+        ]
+      : [],
+    debounceMs: 350,
+    onChange: fetchDashboardData,
+  });
 
   const totalTasks = data.taskStats.pending + data.taskStats.inProgress + data.taskStats.completed;
   const progressPercent = totalTasks > 0 ? (data.taskStats.completed / totalTasks) * 100 : 0;
