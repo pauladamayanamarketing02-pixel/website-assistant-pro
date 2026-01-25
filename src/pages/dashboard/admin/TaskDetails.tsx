@@ -313,7 +313,8 @@ export default function AdminTaskDetails() {
 
       const nextAssignedTo = editData.assignedTo === "__unassigned__" ? null : editData.assignedTo;
 
-      const { data: updated, error: updErr } = await (supabase as any)
+      // Update by task_number instead of id to handle duplicate records correctly
+      const { data: updatedRows, error: updErr } = await (supabase as any)
         .from("tasks")
         .update({
           user_id: editData.clientId,
@@ -327,13 +328,18 @@ export default function AdminTaskDetails() {
           notes: editData.notes.trim() ? editData.notes.trim() : null,
           file_url: nextFileUrl,
         })
-        .eq("id", task.id)
+        .eq("task_number", taskNumber)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .select(
           "id, task_number, user_id, assigned_to, title, description, deadline, status, created_at, type, platform, file_url, notes",
-        )
-        .maybeSingle();
+        );
 
       if (updErr) throw updErr;
+      const updated = updatedRows?.[0] ?? null;
+      if (!updated) {
+        throw new Error("Failed to update task - no matching record found");
+      }
 
       setTask(updated);
       setIsEditing(false);
@@ -373,16 +379,22 @@ export default function AdminTaskDetails() {
     try {
       setCancelling(true);
 
-      const { data: updated, error: updErr } = await (supabase as any)
+      // Update by task_number instead of id to handle duplicate records correctly
+      const { data: updatedRows, error: updErr } = await (supabase as any)
         .from("tasks")
         .update({ status: "cancelled" as any })
-        .eq("id", task.id)
+        .eq("task_number", taskNumber)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .select(
           "id, task_number, user_id, assigned_to, title, description, deadline, status, created_at, type, platform, file_url, notes",
-        )
-        .maybeSingle();
+        );
 
       if (updErr) throw updErr;
+      const updated = updatedRows?.[0] ?? null;
+      if (!updated) {
+        throw new Error("Failed to cancel task - no matching record found");
+      }
 
       setTask(updated);
       // Update edit form state if in edit mode
