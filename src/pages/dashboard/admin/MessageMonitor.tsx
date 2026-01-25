@@ -76,7 +76,16 @@ function getFileName(url: string) {
 
 export default function AdminMessageMonitor() {
   const isMobile = useIsMobile();
+  const [isTabletOrSmaller, setIsTabletOrSmaller] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Track tablet/mobile breakpoint (< 1024px = below md breakpoint)
+  useEffect(() => {
+    const checkSize = () => setIsTabletOrSmaller(window.innerWidth < 1024);
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
 
   const [loadingAssists, setLoadingAssists] = useState(true);
   const [loadingPeers, setLoadingPeers] = useState(false);
@@ -298,7 +307,7 @@ export default function AdminMessageMonitor() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-6">
+    <div className="flex flex-col gap-6" style={{ minHeight: 'calc(100vh - 160px)' }}>
       <div className="shrink-0 space-y-2">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Message Monitor</h1>
@@ -331,7 +340,7 @@ export default function AdminMessageMonitor() {
 
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Contacts List */}
-        <Card className={cn("md:col-span-1 flex flex-col min-h-0", isMobile && mobileView === "chat" ? "hidden md:flex" : "")}>
+        <Card className={cn("md:col-span-1 flex flex-col", isMobile && mobileView === "chat" ? "hidden md:flex" : "", "min-h-[calc(100vh-280px)] md:min-h-0")}>
           <CardHeader className="border-b py-3 space-y-3">
             <CardTitle className="text-base">Conversations</CardTitle>
             <div className="relative">
@@ -345,7 +354,7 @@ export default function AdminMessageMonitor() {
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 min-h-0">
-            <ScrollArea className="h-[60vh] md:h-full">
+            <ScrollArea className="h-full">
               {!selectedAssistId ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <p className="text-sm">Select an Assist to load conversations</p>
@@ -391,13 +400,14 @@ export default function AdminMessageMonitor() {
         </Card>
 
         {/* Chat Area */}
-        <Card className={cn("md:col-span-2 flex flex-col min-h-0", isMobile && mobileView === "list" ? "hidden md:flex" : "")}>
+        <Card className={cn("md:col-span-2 flex flex-col", isMobile && mobileView === "list" ? "hidden md:flex" : "", "min-h-[calc(100vh-280px)] md:min-h-0")}>
           {selectedPeer ? (
             <>
               <CardHeader className="border-b py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
-                    {isMobile ? (
+                    {/* Show back button on tablet and mobile (< 1024px md breakpoint) */}
+                    {isTabletOrSmaller ? (
                       <Button
                         type="button"
                         variant="ghost"
