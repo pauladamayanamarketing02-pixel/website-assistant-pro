@@ -603,8 +603,8 @@ export default function MyPackage() {
         </div>
 
         {/* RIGHT: Upgrade Options */}
-        <div className="min-h-0 space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">
+        <div className="min-h-0 space-y-4 pt-2 lg:pt-0">
+          <h2 className="text-lg sm:text-xl font-semibold text-foreground">
             {activePackage ? "Upgrade Options" : "Available Packages"}
           </h2>
 
@@ -640,7 +640,7 @@ export default function MyPackage() {
                   <Card
                     key={pkg.id}
                     className={
-                      "group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md " +
+                      "group relative isolate overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md " +
                       (isRecommended
                         ? "border-primary/50 ring-2 ring-primary/15 bg-gradient-to-br from-primary/10 via-background to-background"
                         : "hover:border-primary/30 bg-gradient-to-br from-muted/30 via-background to-background")
@@ -650,7 +650,7 @@ export default function MyPackage() {
                     <div
                       aria-hidden="true"
                       className={
-                        "pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full blur-3xl opacity-0 transition-opacity group-hover:opacity-100 " +
+                        "pointer-events-none absolute -top-24 -right-24 -z-10 h-48 w-48 rounded-full blur-3xl opacity-0 transition-opacity group-hover:opacity-100 " +
                         (isRecommended ? "bg-primary/20" : "bg-muted")
                       }
                     />
