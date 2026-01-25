@@ -226,7 +226,7 @@ export default function AdminBusinessUsers() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <QuickCreateAccountDialog
             title="Add New Business"
-            description="Overlay email + password. User akan auto-confirm dan role = user."
+            description="Create a USER account (email + password). The user will be auto-confirmed."
             functionName="admin-create-user"
             onCreated={() => void fetchBusinessUsers()}
             triggerContent={

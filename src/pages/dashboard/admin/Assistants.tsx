@@ -93,7 +93,7 @@ export default function AdminAssistants() {
 
         <QuickCreateAccountDialog
           title="Add New Assistant"
-          description="Overlay email + password. User akan auto-confirm dan role = assist."
+          description="Create an ASSIST account (email + password). The user will be auto-confirmed."
           functionName="admin-create-assistant"
           onCreated={() => void fetchAssistants()}
           triggerContent={

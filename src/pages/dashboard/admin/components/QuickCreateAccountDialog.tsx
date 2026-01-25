@@ -19,8 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import { invokeWithAuth } from "@/lib/invokeWithAuth";
 
 const schema = z.object({
-  email: z.string().trim().email("Email tidak valid").max(255),
-  password: z.string().min(8, "Password minimal 8 karakter").max(200),
+  email: z.string().trim().email("Invalid email address").max(255),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
 });
 
 type Props = {
@@ -52,7 +52,7 @@ export function QuickCreateAccountDialog({ title, description, triggerContent, f
 
       toast({
         title: "Created",
-        description: `Akun dibuat & auto-confirm: ${values.email.trim()}`,
+        description: `Account created and auto-confirmed: ${values.email.trim()}`,
       });
       form.reset({ email: "", password: "" });
       setOpen(false);
@@ -60,8 +60,8 @@ export function QuickCreateAccountDialog({ title, description, triggerContent, f
     } catch (e: any) {
       toast({
         variant: "destructive",
-        title: "Gagal membuat akun",
-        description: e?.message ? String(e.message) : "Terjadi kesalahan.",
+        title: "Failed to create account",
+        description: e?.message ? String(e.message) : "Something went wrong.",
       });
     } finally {
       setSaving(false);
@@ -102,7 +102,7 @@ export function QuickCreateAccountDialog({ title, description, triggerContent, f
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="Minimal 8 karakter" autoComplete="new-password" {...field} />
+                    <Input type="password" placeholder="At least 8 characters" autoComplete="new-password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
