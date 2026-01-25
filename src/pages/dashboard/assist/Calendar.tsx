@@ -429,8 +429,8 @@ export default function AssistCalendar() {
         </p>
       </header>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <section className="grid gap-4 min-w-0 lg:grid-cols-3">
+        <Card className="w-full min-w-0 lg:col-span-2">
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="flex items-center justify-between gap-3">
@@ -458,56 +458,58 @@ export default function AssistCalendar() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="w-full overflow-x-auto">
-              <div className="mx-auto w-full max-w-none">
-                <Calendar
-                  mode="single"
-                  selected={selectedDay}
-                  onSelect={(d) => d && setSelectedDay(d)}
-                  month={month}
-                  onMonthChange={setMonth}
-                  modifiers={{ hasContent: daysWithItems }}
-                  modifiersClassNames={{
-                    hasContent: "ring-1 ring-primary/30 rounded-md",
-                  }}
-                  className="w-full p-3 pointer-events-auto"
-                  classNames={{
-                    months: "w-full",
-                    month: "w-full space-y-6",
-                    caption_label: "text-base font-semibold",
-                    table: "w-full border-collapse",
-                    head_row: "flex w-full",
-                    head_cell: "text-muted-foreground rounded-md w-full font-medium text-sm flex-1 text-center",
-                    row: "flex w-full mt-3",
-                    cell: "h-16 flex-1 text-center text-base p-0 relative focus-within:relative focus-within:z-20",
-                    day: "h-16 w-full p-0 font-normal aria-selected:opacity-100",
-                  }}
-                  components={{
-                    DayContent: ({ date }) => {
-                      const key = format(date, "yyyy-MM-dd");
-                      const dayItems = dayToItems.get(key) ?? [];
-                      const uniqueTypes = Array.from(new Set(dayItems.map((d) => d.contentTypeName))).slice(0, 3);
+            <div className="w-full min-w-0">
+              <Calendar
+                fixedWeeks
+                mode="single"
+                selected={selectedDay}
+                onSelect={(d) => d && setSelectedDay(d)}
+                month={month}
+                onMonthChange={setMonth}
+                modifiers={{ hasContent: daysWithItems }}
+                modifiersClassNames={{
+                  hasContent: "ring-1 ring-primary/30 rounded-md",
+                }}
+                className="w-full min-w-0 p-3 pointer-events-auto"
+                classNames={{
+                  months: "w-full min-w-0",
+                  month: "w-full min-w-0 space-y-6",
+                  // Keep month labels from pushing the layout on small screens.
+                  caption: "flex justify-center pt-1 relative items-center w-full min-w-0 px-8",
+                  caption_label: "text-sm sm:text-base font-semibold truncate max-w-full",
+                  table: "w-full border-collapse table-fixed",
+                  // Grid ensures 7 columns always fit on mobile/tablet without horizontal scroll.
+                  head_row: "grid grid-cols-7 w-full",
+                  head_cell: "text-muted-foreground rounded-md font-medium text-[11px] sm:text-sm text-center",
+                  row: "grid grid-cols-7 w-full mt-3",
+                  cell: "h-12 sm:h-14 md:h-16 w-full text-center text-sm sm:text-base p-0 relative focus-within:relative focus-within:z-20",
+                  day: "h-12 sm:h-14 md:h-16 w-full p-0 font-normal aria-selected:opacity-100",
+                }}
+                components={{
+                  DayContent: ({ date }) => {
+                    const key = format(date, "yyyy-MM-dd");
+                    const dayItems = dayToItems.get(key) ?? [];
+                    const uniqueTypes = Array.from(new Set(dayItems.map((d) => d.contentTypeName))).slice(0, 3);
 
-                      return (
-                        <div className="h-full w-full flex flex-col items-center justify-between py-1">
-                          <div className="text-sm">{date.getDate()}</div>
-                          <div className="flex items-center gap-1 pb-1">
-                            {uniqueTypes.map((t) => {
-                              const Icon = getTypeIcon(t);
-                              return <Icon key={t} className="h-3.5 w-3.5 text-primary" />;
-                            })}
-                          </div>
+                    return (
+                      <div className="h-full w-full flex flex-col items-center justify-between py-1">
+                        <div className="text-[11px] sm:text-sm">{date.getDate()}</div>
+                        <div className="flex items-center gap-1 pb-1">
+                          {uniqueTypes.map((t) => {
+                            const Icon = getTypeIcon(t);
+                            return <Icon key={t} className="h-3.5 w-3.5 text-primary" />;
+                          })}
                         </div>
-                      );
-                    },
-                  }}
-                />
-              </div>
+                      </div>
+                    );
+                  },
+                }}
+              />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="w-full min-w-0">
           <CardHeader>
             <CardTitle>Monthly Schedule</CardTitle>
             <CardDescription>
