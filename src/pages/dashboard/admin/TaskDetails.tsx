@@ -313,8 +313,8 @@ export default function AdminTaskDetails() {
 
       const nextAssignedTo = editData.assignedTo === "__unassigned__" ? null : editData.assignedTo;
 
-      // Update by task_number instead of id to handle duplicate records correctly
-      const { data: updatedRows, error: updErr } = await (supabase as any)
+      // Update by the specific task id (fetched in the useEffect)
+      const { data: updated, error: updErr } = await (supabase as any)
         .from("tasks")
         .update({
           user_id: editData.clientId,
@@ -328,15 +328,13 @@ export default function AdminTaskDetails() {
           notes: editData.notes.trim() ? editData.notes.trim() : null,
           file_url: nextFileUrl,
         })
-        .eq("task_number", taskNumber)
-        .order("created_at", { ascending: false })
-        .limit(1)
+        .eq("id", task.id)
         .select(
           "id, task_number, user_id, assigned_to, title, description, deadline, status, created_at, type, platform, file_url, notes",
-        );
+        )
+        .single();
 
       if (updErr) throw updErr;
-      const updated = updatedRows?.[0] ?? null;
       if (!updated) {
         throw new Error("Failed to update task - no matching record found");
       }
@@ -379,19 +377,17 @@ export default function AdminTaskDetails() {
     try {
       setCancelling(true);
 
-      // Update by task_number instead of id to handle duplicate records correctly
-      const { data: updatedRows, error: updErr } = await (supabase as any)
+      // Update by the specific task id
+      const { data: updated, error: updErr } = await (supabase as any)
         .from("tasks")
         .update({ status: "cancelled" as any })
-        .eq("task_number", taskNumber)
-        .order("created_at", { ascending: false })
-        .limit(1)
+        .eq("id", task.id)
         .select(
           "id, task_number, user_id, assigned_to, title, description, deadline, status, created_at, type, platform, file_url, notes",
-        );
+        )
+        .single();
 
       if (updErr) throw updErr;
-      const updated = updatedRows?.[0] ?? null;
       if (!updated) {
         throw new Error("Failed to cancel task - no matching record found");
       }
