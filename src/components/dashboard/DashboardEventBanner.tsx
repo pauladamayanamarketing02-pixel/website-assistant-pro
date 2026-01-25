@@ -103,22 +103,30 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
                 <div className="space-y-1">
                   <div className={cn("relative overflow-hidden whitespace-nowrap flex", alignJustify(titleAlign))}>
                     <div className="dashboard-banner-marquee motion-reduce:animate-none">
-                      <span className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</span>
-                      <span className="px-8 text-muted-foreground">•</span>
-                      <span className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</span>
-                      <span className="px-8 text-muted-foreground">•</span>
-                      <span className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</span>
+                      <span className={cn("min-w-full text-sm font-semibold text-foreground", alignClass(titleAlign))}>
+                        {activeBanner.title}
+                      </span>
+                      <span className={cn("min-w-full text-sm font-semibold text-foreground", alignClass(titleAlign))}>
+                        {activeBanner.title}
+                      </span>
+                      <span className={cn("min-w-full text-sm font-semibold text-foreground", alignClass(titleAlign))}>
+                        {activeBanner.title}
+                      </span>
                     </div>
                   </div>
 
                   {activeBanner.subtitle ? (
                     <div className={cn("relative overflow-hidden whitespace-nowrap flex", alignJustify(subtitleAlign))}>
                       <div className="dashboard-banner-marquee motion-reduce:animate-none">
-                        <span className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</span>
-                        <span className="px-8 text-muted-foreground">•</span>
-                        <span className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</span>
-                        <span className="px-8 text-muted-foreground">•</span>
-                        <span className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</span>
+                        <span className={cn("min-w-full text-sm text-muted-foreground", alignClass(subtitleAlign))}>
+                          {activeBanner.subtitle}
+                        </span>
+                        <span className={cn("min-w-full text-sm text-muted-foreground", alignClass(subtitleAlign))}>
+                          {activeBanner.subtitle}
+                        </span>
+                        <span className={cn("min-w-full text-sm text-muted-foreground", alignClass(subtitleAlign))}>
+                          {activeBanner.subtitle}
+                        </span>
                       </div>
                     </div>
                   ) : null}
