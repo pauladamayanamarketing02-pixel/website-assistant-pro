@@ -288,7 +288,7 @@ export default function AdminMessageMonitor() {
               <SelectContent>
                 {assists.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.name || a.email || a.id}
+                    {(a.name || a.email || a.id) + (a.status ? ` (${a.status})` : "")}
                   </SelectItem>
                 ))}
               </SelectContent>

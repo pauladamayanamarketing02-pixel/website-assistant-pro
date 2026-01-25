@@ -77,6 +77,9 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
   const alignClass = (align: string) =>
     align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
 
+  const alignJustify = (align: string) =>
+    align === "center" ? "justify-center" : align === "right" ? "justify-end" : "justify-start";
+
   return (
     <div className={cn(className)}>
       <Card className="border border-border bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -85,14 +88,28 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
             {textEffect === "marquee" ? (
               <>
                 {/* Marquee text: scrolls without shifting the overall page layout */}
-                <div className="relative overflow-hidden whitespace-nowrap">
-                  <div className="dashboard-banner-marquee motion-reduce:animate-none">
-                    <span className="text-sm font-semibold text-foreground">{marqueeText}</span>
-                    <span className="px-8 text-muted-foreground">•</span>
-                    <span className="text-sm font-semibold text-foreground">{marqueeText}</span>
-                    <span className="px-8 text-muted-foreground">•</span>
-                    <span className="text-sm font-semibold text-foreground">{marqueeText}</span>
+                <div className="space-y-1">
+                  <div className={cn("relative overflow-hidden whitespace-nowrap flex", alignJustify(titleAlign))}>
+                    <div className="dashboard-banner-marquee motion-reduce:animate-none">
+                      <span className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</span>
+                      <span className="px-8 text-muted-foreground">•</span>
+                      <span className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</span>
+                      <span className="px-8 text-muted-foreground">•</span>
+                      <span className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</span>
+                    </div>
                   </div>
+
+                  {activeBanner.subtitle ? (
+                    <div className={cn("relative overflow-hidden whitespace-nowrap flex", alignJustify(subtitleAlign))}>
+                      <div className="dashboard-banner-marquee motion-reduce:animate-none">
+                        <span className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</span>
+                        <span className="px-8 text-muted-foreground">•</span>
+                        <span className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</span>
+                        <span className="px-8 text-muted-foreground">•</span>
+                        <span className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</span>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <style>
