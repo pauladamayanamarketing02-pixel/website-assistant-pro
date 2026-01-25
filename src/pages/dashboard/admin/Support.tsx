@@ -312,16 +312,17 @@ export default function AdminSupport() {
             <div className="py-8 text-sm text-muted-foreground">Loading inquiries...</div>
           ) : (
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-              <TabsList>
-                <TabsTrigger value="public" className="gap-2">
+              {/* Mobile/tablet: show all tabs without horizontal scrolling by wrapping into multiple rows */}
+              <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1">
+                <TabsTrigger value="public" className="gap-2 text-xs sm:text-sm">
                   <span>Tickets Public</span>
                   {newCounts.public > 0 ? <Badge variant="default">{newCounts.public}</Badge> : null}
                 </TabsTrigger>
-                <TabsTrigger value="business" className="gap-2">
+                <TabsTrigger value="business" className="gap-2 text-xs sm:text-sm">
                   <span>Tickets Business</span>
                   {newCounts.business > 0 ? <Badge variant="default">{newCounts.business}</Badge> : null}
                 </TabsTrigger>
-                <TabsTrigger value="assistant" className="gap-2">
+                <TabsTrigger value="assistant" className="gap-2 text-xs sm:text-sm">
                   <span>Tickets Assistant</span>
                   {newCounts.assistant > 0 ? <Badge variant="default">{newCounts.assistant}</Badge> : null}
                 </TabsTrigger>
