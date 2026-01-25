@@ -1025,36 +1025,36 @@ export default function ClientList({ initialClientId, backTo, hideClientList, al
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)}>
-          {/* Mobile/tablet: make the tab menu readable via horizontal scroll (no overlap) */}
-          <div className="w-full overflow-x-auto no-scrollbar">
-            <TabsList className="w-max min-w-full justify-start">
-              <TabsTrigger value="business" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
-              <Building2 className="h-4 w-4" />
-              Business Details
+          {/* Mobile/tablet: show all tabs without horizontal scrolling by wrapping into multiple rows */}
+          <div className="w-full">
+            <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1">
+              <TabsTrigger value="business" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Building2 className="h-4 w-4" />
+                Business Details
               </TabsTrigger>
-              <TabsTrigger value="marketing" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
-              <Megaphone className="h-4 w-4" />
-              Marketing Setup
+              <TabsTrigger value="marketing" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Megaphone className="h-4 w-4" />
+                Marketing Setup
               </TabsTrigger>
-              <TabsTrigger value="knowledge" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
-              <BookOpen className="h-4 w-4" />
-              Knowledge
+              <TabsTrigger value="knowledge" className="flex items-center gap-2 text-xs sm:text-sm">
+                <BookOpen className="h-4 w-4" />
+                Knowledge
               </TabsTrigger>
-              <TabsTrigger value="gallery" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
-              <Image className="h-4 w-4" />
-              Gallery
+              <TabsTrigger value="gallery" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Image className="h-4 w-4" />
+                Gallery
               </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
-              <FileText className="h-4 w-4" />
-              Reports
+              <TabsTrigger value="reports" className="flex items-center gap-2 text-xs sm:text-sm">
+                <FileText className="h-4 w-4" />
+                Reports
               </TabsTrigger>
-              <TabsTrigger value="packages" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
-              <Package className="h-4 w-4" />
-              Packages
+              <TabsTrigger value="packages" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Package className="h-4 w-4" />
+                Packages
               </TabsTrigger>
-              <TabsTrigger value="config" className="flex items-center gap-2 shrink-0 text-xs sm:text-sm">
-              <Settings className="h-4 w-4" />
-              Config
+              <TabsTrigger value="config" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Settings className="h-4 w-4" />
+                Config
               </TabsTrigger>
             </TabsList>
           </div>
