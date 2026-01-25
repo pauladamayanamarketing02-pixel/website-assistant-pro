@@ -104,8 +104,6 @@ export default function BusinessBasics() {
     formData.businessName.trim() && 
     formData.businessType && 
     formData.country && 
-    formData.state &&
-    formData.city && 
     formData.phoneNumber.trim();
 
   const handleContinue = async () => {
@@ -313,7 +311,7 @@ export default function BusinessBasics() {
             </div>
 
             <div className="space-y-2">
-              <Label>State <span className="text-destructive">*</span></Label>
+              <Label>State</Label>
               <Select
                 value={formData.state}
                 onValueChange={(value) => setFormData({ ...formData, state: value, city: '' })}
@@ -333,7 +331,7 @@ export default function BusinessBasics() {
             </div>
 
             <div className="space-y-2">
-              <Label>City <span className="text-destructive">*</span></Label>
+              <Label>City</Label>
               <Select
                 value={formData.city}
                 onValueChange={(value) => setFormData({ ...formData, city: value })}
