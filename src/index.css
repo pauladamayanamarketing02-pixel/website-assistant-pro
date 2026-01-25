@@ -224,4 +224,14 @@
   .shadow-glow {
     box-shadow: 0 0 30px -5px hsla(var(--primary), 0.3);
   }
+
+  /* Hide scrollbars but keep scrolling enabled */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
 }
