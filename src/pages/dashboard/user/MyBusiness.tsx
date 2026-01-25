@@ -146,6 +146,10 @@ export default function MyBusiness() {
   const cities = selectedCountry && selectedState ? getCitiesOfState(selectedCountry.isoCode, selectedState.isoCode) : [];
   const phoneCodes = [...new Set(allCountries.map((c) => c.phoneCode).filter(Boolean))].sort();
 
+  const isBlank = (v: unknown) => String(v ?? '').trim().length === 0;
+  const missingFieldClass = (missing: boolean) =>
+    missing ? 'border-destructive focus-visible:ring-destructive focus-visible:ring-1' : '';
+
   // Keep secondary field visibility in sync with loaded data (but don't override while editing)
   useEffect(() => {
     if (!isEditing) {
@@ -889,6 +893,7 @@ export default function MyBusiness() {
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                   placeholder="John"
                   disabled
+                  className={missingFieldClass(isBlank(formData.first_name))}
                 />
               </div>
               <div className="space-y-2">
@@ -899,6 +904,7 @@ export default function MyBusiness() {
                   onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   placeholder="Doe"
                   disabled
+                  className={missingFieldClass(isBlank(formData.last_name))}
                 />
               </div>
             </div>
@@ -935,6 +941,7 @@ export default function MyBusiness() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="john@example.com"
                   disabled
+                  className={missingFieldClass(isBlank(formData.email))}
                 />
                 {isEditing && (
                   <p className="text-xs text-muted-foreground">
@@ -952,6 +959,7 @@ export default function MyBusiness() {
                       onChange={(e) => setFormData({ ...formData, email_secondary: e.target.value })}
                       placeholder="john.secondary@example.com"
                       disabled={!isEditing}
+                      className={missingFieldClass(isBlank(formData.email_secondary))}
                     />
                   </div>
                 )}
@@ -996,7 +1004,7 @@ export default function MyBusiness() {
                     onValueChange={(value) => setFormData({ ...formData, phoneCode: value })}
                     disabled={!isEditing}
                   >
-                    <SelectTrigger className="w-[100px]">
+                    <SelectTrigger className={`w-[100px] ${missingFieldClass(isBlank(formData.phoneCode))}`}>
                       <SelectValue placeholder="+1" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border border-border max-h-60 z-50">
@@ -1014,7 +1022,7 @@ export default function MyBusiness() {
                     onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                     placeholder="234 567 8900"
                     disabled={!isEditing}
-                    className="flex-1"
+                    className={`flex-1 ${missingFieldClass(isBlank(formData.phoneNumber))}`}
                   />
                 </div>
 
@@ -1027,7 +1035,7 @@ export default function MyBusiness() {
                         onValueChange={(value) => setFormData({ ...formData, phoneSecondaryCode: value })}
                         disabled={!isEditing}
                       >
-                        <SelectTrigger className="w-[100px]">
+                        <SelectTrigger className={`w-[100px] ${missingFieldClass(isBlank(formData.phoneSecondaryCode))}`}>
                           <SelectValue placeholder={formData.phoneCode || '+1'} />
                         </SelectTrigger>
                         <SelectContent className="bg-background border border-border max-h-60 z-50">
@@ -1045,7 +1053,7 @@ export default function MyBusiness() {
                         onChange={(e) => setFormData({ ...formData, phoneSecondaryNumber: e.target.value })}
                         placeholder="234 567 8900"
                         disabled={!isEditing}
-                        className="flex-1"
+                        className={`flex-1 ${missingFieldClass(isBlank(formData.phoneSecondaryNumber))}`}
                       />
                     </div>
                   </div>
@@ -1063,6 +1071,7 @@ export default function MyBusiness() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Your Business Name"
                   disabled={!isEditing}
+                  className={missingFieldClass(isBlank(formData.name))}
                 />
               </div>
               <div className="space-y-2">
@@ -1072,7 +1081,7 @@ export default function MyBusiness() {
                   onValueChange={(value) => setFormData({ ...formData, business_type: value })}
                   disabled={!isEditing}
                 >
-                  <SelectTrigger id="type">
+                  <SelectTrigger id="type" className={missingFieldClass(isBlank(formData.business_type))}>
                     <SelectValue placeholder="Select business type" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-border max-h-80 z-50">
@@ -1102,7 +1111,7 @@ export default function MyBusiness() {
                   onValueChange={handleCountryChange}
                   disabled={!isEditing}
                 >
-                  <SelectTrigger id="country">
+                  <SelectTrigger id="country" className={missingFieldClass(isBlank(formData.country))}>
                     <SelectValue placeholder="Select a country" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-border max-h-60 z-50">
@@ -1121,7 +1130,7 @@ export default function MyBusiness() {
                   onValueChange={handleStateChange}
                   disabled={!formData.country || !isEditing}
                 >
-                  <SelectTrigger id="state">
+                  <SelectTrigger id="state" className={missingFieldClass(isBlank(formData.state))}>
                     <SelectValue placeholder={formData.country ? 'Select a state' : 'Select a country first'} />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-border max-h-60 z-50">
@@ -1140,7 +1149,7 @@ export default function MyBusiness() {
                   onValueChange={(city) => setFormData({ ...formData, city })}
                   disabled={!formData.country || !formData.state || !isEditing}
                 >
-                  <SelectTrigger id="city">
+                  <SelectTrigger id="city" className={missingFieldClass(isBlank(formData.city))}>
                     <SelectValue placeholder={formData.state ? 'Select a city' : 'Select a state first'} />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-border max-h-60 z-50">
@@ -1165,7 +1174,7 @@ export default function MyBusiness() {
                       value={formData.business_address}
                       onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
                       placeholder="123 Business St"
-                      className="min-h-[96px] max-h-[160px] resize-none overflow-auto"
+                      className={`min-h-[96px] max-h-[160px] resize-none overflow-auto ${missingFieldClass(isBlank(formData.business_address))}`}
                     />
                     <p className="text-xs text-muted-foreground">
                       Please enter the full business address including your service area.
@@ -1292,6 +1301,7 @@ export default function MyBusiness() {
                 onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
                 placeholder="e.g., 10210"
                 disabled={!isEditing}
+                className={missingFieldClass(isBlank(formData.zip_code))}
               />
             </div>
 
@@ -1303,6 +1313,7 @@ export default function MyBusiness() {
                   value={formData.website_url}
                   onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
                   placeholder="https://yourbusiness.com"
+                  className={missingFieldClass(isBlank(formData.website_url))}
                 />
               ) : formData.website_url ? (
                 <a 
@@ -1327,6 +1338,7 @@ export default function MyBusiness() {
                   value={formData.gmb_link}
                   onChange={(e) => setFormData({ ...formData, gmb_link: e.target.value })}
                   placeholder="https://g.page/..."
+                  className={missingFieldClass(isBlank(formData.gmb_link))}
                 />
               ) : formData.gmb_link ? (
                 <a 
@@ -1430,6 +1442,7 @@ export default function MyBusiness() {
                           }
                           placeholder="e.g., Home Cleaning"
                           disabled={!isEditingMarketingSetup}
+                          className={missingFieldClass(isBlank(marketingSetup.primaryService))}
                         />
                       </div>
 
@@ -1467,6 +1480,7 @@ export default function MyBusiness() {
                                 }
                                 placeholder={index === 0 ? 'e.g., Deep Cleaning' : 'e.g., Move-out Cleaning'}
                                 disabled={!isEditingMarketingSetup}
+                                className={missingFieldClass(isBlank(value))}
                               />
                               {marketingSetup.secondaryServices.length > 1 && (
                                 <Button
@@ -1503,6 +1517,7 @@ export default function MyBusiness() {
                           }
                           placeholder="Short, clear, benefit-focused description"
                           disabled={!isEditingMarketingSetup}
+                          className={missingFieldClass(isBlank(marketingSetup.shortDescription))}
                         />
                       </div>
 
@@ -1519,6 +1534,7 @@ export default function MyBusiness() {
                           }
                           placeholder="e.g., South Jakarta"
                           disabled={!isEditingMarketingSetup}
+                          className={missingFieldClass(isBlank(marketingSetup.serviceArea))}
                         />
                       </div>
                     </CardContent>
@@ -1573,6 +1589,7 @@ export default function MyBusiness() {
                           }
                           placeholder="e.g., 30 bookings per month"
                           disabled={!isEditingMarketingSetup}
+                          className={missingFieldClass(isBlank(marketingSetup.marketingGoalText))}
                         />
                       </div>
 
@@ -1633,7 +1650,8 @@ export default function MyBusiness() {
                 <TabsTrigger value="persona3" className="text-xs">Persona 3</TabsTrigger>
               </TabsList>
               <TabsContent value="bkb" className="mt-6">
-                <RichTextEditor
+                <div className={isBlank(kbData.bkb) ? 'rounded-lg border border-destructive' : undefined}>
+                  <RichTextEditor
                   title="My Business Knowledge Base (BKB)"
                   description="Core information about your business"
                   value={kbData.bkb}
@@ -1643,10 +1661,12 @@ export default function MyBusiness() {
                   saving={savingKB}
                   isEditing={kbEditingState.bkb}
                   icon={FileText}
-                />
+                  />
+                </div>
               </TabsContent>
               <TabsContent value="be" className="mt-6">
-                <RichTextEditor
+                <div className={isBlank(kbData.brandExpert) ? 'rounded-lg border border-destructive' : undefined}>
+                  <RichTextEditor
                   title="My Brand Expert (BE)"
                   description="Your brand voice and expertise guidelines"
                   value={kbData.brandExpert}
@@ -1656,10 +1676,12 @@ export default function MyBusiness() {
                   saving={savingKB}
                   isEditing={kbEditingState.brandExpert}
                   icon={User}
-                />
+                  />
+                </div>
               </TabsContent>
               <TabsContent value="persona1" className="mt-6">
-                <RichTextEditor
+                <div className={isBlank(kbData.persona1) ? 'rounded-lg border border-destructive' : undefined}>
+                  <RichTextEditor
                   title={kbData.persona1Title}
                   description="First target customer persona"
                   value={kbData.persona1}
@@ -1671,10 +1693,12 @@ export default function MyBusiness() {
                   icon={Users}
                   editableTitle={true}
                   onTitleChange={(newTitle) => handlePersonaTitleChange('persona1Title', newTitle)}
-                />
+                  />
+                </div>
               </TabsContent>
               <TabsContent value="persona2" className="mt-6">
-                <RichTextEditor
+                <div className={isBlank(kbData.persona2) ? 'rounded-lg border border-destructive' : undefined}>
+                  <RichTextEditor
                   title={kbData.persona2Title}
                   description="Second target customer persona"
                   value={kbData.persona2}
@@ -1686,22 +1710,25 @@ export default function MyBusiness() {
                   icon={Users}
                   editableTitle={true}
                   onTitleChange={(newTitle) => handlePersonaTitleChange('persona2Title', newTitle)}
-                />
+                  />
+                </div>
               </TabsContent>
               <TabsContent value="persona3" className="mt-6">
-                <RichTextEditor
-                  title={kbData.persona3Title}
-                  description="Third target customer persona"
-                  value={kbData.persona3}
-                  onChange={(value) => setKbData(prev => ({ ...prev, persona3: value }))}
-                  onSave={() => handleSaveKB('persona3')}
-                  onEdit={() => handleEditKB('persona3')}
-                  saving={savingKB}
-                  isEditing={kbEditingState.persona3}
-                  icon={Users}
-                  editableTitle={true}
-                  onTitleChange={(newTitle) => handlePersonaTitleChange('persona3Title', newTitle)}
-                />
+                <div className={isBlank(kbData.persona3) ? 'rounded-lg border border-destructive' : undefined}>
+                  <RichTextEditor
+                    title={kbData.persona3Title}
+                    description="Third target customer persona"
+                    value={kbData.persona3}
+                    onChange={(value) => setKbData(prev => ({ ...prev, persona3: value }))}
+                    onSave={() => handleSaveKB('persona3')}
+                    onEdit={() => handleEditKB('persona3')}
+                    saving={savingKB}
+                    isEditing={kbEditingState.persona3}
+                    icon={Users}
+                    editableTitle={true}
+                    onTitleChange={(newTitle) => handlePersonaTitleChange('persona3Title', newTitle)}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>
