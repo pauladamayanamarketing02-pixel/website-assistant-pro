@@ -72,6 +72,11 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
   const marqueeText = [activeBanner.title, activeBanner.subtitle].filter(Boolean).join(" — ");
   const textEffect = (activeBanner as any).textEffect ?? "marquee";
 
+  const titleAlign = (activeBanner as any).titleAlign ?? "left";
+  const subtitleAlign = (activeBanner as any).subtitleAlign ?? "left";
+  const alignClass = (align: string) =>
+    align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
+
   return (
     <div className={cn(className)}>
       <Card className="border border-border bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -112,25 +117,36 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
                 </style>
               </>
             ) : textEffect === "none" ? (
-              <div className="text-sm font-semibold text-foreground">{marqueeText}</div>
+              <div className="space-y-1">
+                <div className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</div>
+                {activeBanner.subtitle ? (
+                  <div className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</div>
+                ) : null}
+              </div>
             ) : (
               <>
-                <div
-                  className={cn(
-                    "text-sm font-semibold text-foreground",
-                    textEffect === "pulse" ? "motion-reduce:animate-none animate-pulse" : null,
-                    textEffect === "blink" ? "dashboard-banner-blink motion-reduce:animate-none" : null,
-                    textEffect === "glow" ? "dashboard-banner-glow" : null,
-                    textEffect === "shake" ? "dashboard-banner-shake motion-reduce:animate-none" : null,
-                    textEffect === "bounce" ? "dashboard-banner-bounce motion-reduce:animate-none" : null,
-                    textEffect === "slide" ? "dashboard-banner-slide motion-reduce:animate-none" : null,
-                    textEffect === "fade" ? "dashboard-banner-fade motion-reduce:animate-none" : null,
-                    textEffect === "typewriter" ? "dashboard-banner-typewriter motion-reduce:animate-none" : null,
-                    textEffect === "flip" ? "dashboard-banner-flip motion-reduce:animate-none" : null
-                  )}
-                >
-                  {marqueeText}
-                </div>
+                {textEffect === "typewriter" ? (
+                  <div className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign), "dashboard-banner-typewriter motion-reduce:animate-none")}>{marqueeText}</div>
+                ) : (
+                  <div
+                    className={cn(
+                      "space-y-1",
+                      textEffect === "pulse" ? "motion-reduce:animate-none animate-pulse" : null,
+                      textEffect === "blink" ? "dashboard-banner-blink motion-reduce:animate-none" : null,
+                      textEffect === "glow" ? "dashboard-banner-glow" : null,
+                      textEffect === "shake" ? "dashboard-banner-shake motion-reduce:animate-none" : null,
+                      textEffect === "bounce" ? "dashboard-banner-bounce motion-reduce:animate-none" : null,
+                      textEffect === "slide" ? "dashboard-banner-slide motion-reduce:animate-none" : null,
+                      textEffect === "fade" ? "dashboard-banner-fade motion-reduce:animate-none" : null,
+                      textEffect === "flip" ? "dashboard-banner-flip motion-reduce:animate-none" : null
+                    )}
+                  >
+                    <div className={cn("text-sm font-semibold text-foreground", alignClass(titleAlign))}>{activeBanner.title}</div>
+                    {activeBanner.subtitle ? (
+                      <div className={cn("text-sm text-muted-foreground", alignClass(subtitleAlign))}>{activeBanner.subtitle}</div>
+                    ) : null}
+                  </div>
+                )}
 
                 <style>
                   {`
