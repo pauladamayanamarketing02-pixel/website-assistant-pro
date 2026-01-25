@@ -58,7 +58,6 @@ import AdminReportsLayout from "./admin/reports/AdminReportsLayout";
 import ReportingComingSoon from "./user/reporting/ReportingComingSoon";
 import AdminSupport from "./admin/Support";
 import AdminAccount from "./admin/Account";
-import AdminDashboardBanners from "./admin/DashboardBanners";
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -314,7 +313,7 @@ export default function AdminDashboard() {
               <Route path="analytics/campaign" element={<AdminPlaceholder title="Campaign (UTM)" />} />
               <Route path="analytics/conversion" element={<AdminPlaceholder title="Conversion (read-only)" />} />
 
-              <Route path="dashboard-banners" element={<AdminDashboardBanners />} />
+              <Route path="dashboard-banners" element={<AdminPlaceholder title="Dashboard Banners" />} />
 
               <Route path="announcements" element={<AdminPlaceholder title="Announcements" />} />
               <Route path="logs" element={<AdminPlaceholder title="Activity Logs" />} />
