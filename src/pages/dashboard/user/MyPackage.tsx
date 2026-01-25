@@ -394,19 +394,19 @@ export default function MyPackage() {
     if (!user || !activePackage) return;
     const months = Number(monthsStr);
     if (!Number.isFinite(months) || months <= 0) {
-      toast.error("Duration tidak valid");
+      toast.error("Invalid duration selection.");
       return;
     }
 
     if (months === 1) {
-      toast.error("Duration 1 Month tidak tersedia");
+      toast.error('The "1 Month" duration is not available.');
       return;
     }
 
     // Only allow selecting durations that exist in options (keeps it consistent with onboarding rules).
     const allowed = visibleDurationOptions.some((d) => d.months === months);
     if (!allowed) {
-      toast.error("Duration tidak tersedia untuk package ini");
+      toast.error("This duration is not available for your current package.");
       return;
     }
 
@@ -421,10 +421,10 @@ export default function MyPackage() {
       if (error) throw error;
 
       setActivePackage((prev) => (prev ? { ...prev, duration_months: months } : prev));
-      toast.success("Duration berhasil diubah");
+      toast.success("Duration updated successfully.");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Gagal mengubah duration");
+      toast.error(e?.message || "Unable to update the duration.");
     } finally {
       setSavingDuration(false);
     }
@@ -536,7 +536,7 @@ export default function MyPackage() {
                             disabled={!activePackageId || savingDuration || visibleDurationOptions.length === 0}
                           >
                             <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Pilih duration" />
+                              <SelectValue placeholder="Select a duration" />
                             </SelectTrigger>
                             <SelectContent className="bg-popover z-50">
                               {visibleDurationOptions.map((opt) => (
@@ -563,7 +563,7 @@ export default function MyPackage() {
 
                       {visibleDurationOptions.length === 0 && (
                         <p className="text-xs text-muted-foreground">
-                          Package ini belum punya opsi duration selain 1 bulan.
+                          This package does not have any duration options beyond 1 month.
                         </p>
                       )}
                     </div>
@@ -701,7 +701,7 @@ export default function MyPackage() {
                                 disabled={upgradeDurationOptions.length === 0}
                               >
                                 <SelectTrigger className="h-9">
-                                  <SelectValue placeholder="Pilih duration" />
+                                  <SelectValue placeholder="Select a duration" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-popover z-50">
                                   {upgradeDurationOptions.map((opt) => (
@@ -732,7 +732,7 @@ export default function MyPackage() {
 
                         {upgradeDurationOptions.length === 0 && (
                           <p className="text-xs text-muted-foreground">
-                            Package ini belum punya opsi duration (selain 1 bulan).
+                            This package does not have any duration options (other than 1 month).
                           </p>
                         )}
                       </div>
