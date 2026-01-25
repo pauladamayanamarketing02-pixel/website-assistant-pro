@@ -299,12 +299,10 @@ export default function MyBusiness() {
         };
         
         setOriginalFormData(dbFormData);
-        
-        // Check if there's a draft, if not use db data
-        const savedDraft = localStorage.getItem(`${DRAFT_STORAGE_KEY}_${user.id}`);
-        if (!savedDraft) {
-          setFormData(dbFormData);
-        }
+
+        // Source of truth in view-mode: always reflect what is saved in DB.
+        // Drafts are only applied when the user explicitly enters Edit mode.
+        setFormData(dbFormData);
 
         // Load KB data from database
         const dbKbData: KnowledgeBaseData = {
@@ -371,6 +369,27 @@ export default function MyBusiness() {
 
     fetchBusiness();
   }, [user]);
+
+  const handleStartEdit = () => {
+    if (!user) {
+      setIsEditing(true);
+      return;
+    }
+
+    // If a draft exists, apply it only when user chooses to edit.
+    const savedDraft = localStorage.getItem(`${DRAFT_STORAGE_KEY}_${user.id}`);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft) as Partial<BusinessData>;
+        // Merge with the latest DB snapshot to avoid missing keys / stale schema.
+        setFormData((prev) => ({ ...prev, ...parsed } as BusinessData));
+      } catch {
+        // Ignore invalid drafts
+      }
+    }
+
+    setIsEditing(true);
+  };
 
   const detectPlatform = (url: string): string => {
     const lowercaseUrl = url.toLowerCase();
@@ -840,7 +859,7 @@ export default function MyBusiness() {
                 ) : (
                   <Button 
                     variant="outline" 
-                    onClick={() => setIsEditing(true)}
+                    onClick={handleStartEdit}
                     className="flex items-center gap-2"
                   >
                     <Pencil className="h-4 w-4" />
