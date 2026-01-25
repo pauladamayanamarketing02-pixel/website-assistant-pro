@@ -47,6 +47,16 @@ export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Treat tablet as a "narrow" layout too so chat can take full width when needed.
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1023px)');
+    const onChange = () => setIsNarrow(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
   const { loading: loadingMenuRules, isEnabled } = usePackageMenuRules(user?.id);
   const canSendMessages = useMemo(() => {
     // Default allow while loading to avoid briefly locking sending on slow rule loads.
@@ -64,7 +74,7 @@ export default function Messages() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Mobile UX: show either contact list OR chat (prevents content being pushed out of view)
+  // Narrow UX (mobile + tablet): show either contact list OR chat (prevents content being squeezed)
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Per-user clear chat marker (do NOT delete from DB)
@@ -101,8 +111,8 @@ export default function Messages() {
         setAssists(activeOnly);
         setSelectedAssist(activeOnly[0] ?? null);
 
-        // On mobile start on list view (don't auto-open chat)
-        if (isMobile) setMobileView('list');
+        // On narrow screens start on list view (don't auto-open chat)
+        if (isNarrow) setMobileView('list');
       } catch (error: any) {
         toast({
           variant: 'destructive',
@@ -117,13 +127,13 @@ export default function Messages() {
     };
 
     fetchAssists();
-  }, [toast, isMobile]);
+  }, [toast, isNarrow]);
 
-  // If user taps an assist on mobile, open chat view.
+  // If user taps an assist on narrow screens, open chat view.
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isNarrow) return;
     if (selectedAssist) setMobileView('chat');
-  }, [isMobile, selectedAssist]);
+  }, [isNarrow, selectedAssist]);
 
   // Unread notifications per contact (for contacts list badge)
   useEffect(() => {
@@ -542,12 +552,12 @@ export default function Messages() {
         <p className="text-muted-foreground">Chat with your Marketing Assist</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Contacts List */}
         <Card
           className={cn(
-            'md:col-span-1 flex flex-col min-h-0',
-            isMobile && mobileView === 'chat' ? 'hidden md:flex' : ''
+            'lg:col-span-1 flex flex-col min-h-0',
+            isNarrow && mobileView === 'chat' ? 'hidden lg:flex' : ''
           )}
         >
           <CardHeader className="border-b py-3">
@@ -562,7 +572,7 @@ export default function Messages() {
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 min-h-0">
-            <ScrollArea className="h-[60vh] md:h-[calc(100vh-240px)]">
+            <ScrollArea className="h-[60vh] lg:h-[calc(100vh-240px)]">
               {filteredAssists.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <User className="h-8 w-8 mx-auto mb-2" />
@@ -578,7 +588,7 @@ export default function Messages() {
                       onClick={() => {
                         setSelectedAssist(assist);
                         setUnreadByAssistId((prev) => ({ ...prev, [assist.id]: 0 }));
-                        if (isMobile) setMobileView('chat');
+                        if (isNarrow) setMobileView('chat');
                       }}
                       className={cn(
                         "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b",
@@ -612,8 +622,8 @@ export default function Messages() {
         {/* Chat Area */}
         <Card
           className={cn(
-            'md:col-span-1 lg:col-span-2 flex flex-col min-h-0',
-            isMobile && mobileView === 'list' ? 'hidden md:flex' : ''
+            'lg:col-span-2 flex flex-col min-h-0',
+            isNarrow && mobileView === 'list' ? 'hidden lg:flex' : ''
           )}
         >
           {selectedAssist ? (
@@ -621,7 +631,7 @@ export default function Messages() {
               <CardHeader className="border-b py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {isMobile ? (
+                    {isNarrow ? (
                       <Button
                         type="button"
                         variant="ghost"
@@ -673,9 +683,9 @@ export default function Messages() {
                   className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
                 >
                   {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-center px-4">
                       <MessageCircle className="h-10 w-10 mb-2" />
-                      <p className="text-sm">
+                      <p className="text-sm max-w-sm">
                         {clearedAt
                           ? 'Chat cleared. New messages will appear here.'
                           : 'No messages yet. Start the conversation!'}
