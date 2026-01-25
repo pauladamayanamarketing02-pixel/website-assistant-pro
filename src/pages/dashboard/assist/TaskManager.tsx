@@ -26,7 +26,7 @@ interface Task {
   task_number: number | null;
   title: string;
   description: string | null;
-  status: 'pending' | 'assigned' | 'in_progress' | 'ready_for_review' | 'completed';
+  status: 'pending' | 'assigned' | 'in_progress' | 'ready_for_review' | 'completed' | 'cancelled';
   type: 'blog' | 'social_media' | 'email_marketing' | 'ads' | 'others' | null;
   platform: 'facebook' | 'instagram' | 'x' | 'threads' | 'linkedin' | null;
   file_url: string | null;
@@ -103,6 +103,11 @@ const statusConfig: Record<Task['status'], { label: string; icon: any; className
     label: 'Completed',
     icon: CheckSquare,
     className: 'bg-muted text-muted-foreground',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    icon: X,
+    className: 'bg-destructive/10 text-destructive',
   },
 };
 
@@ -1373,6 +1378,7 @@ export default function TaskManager() {
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="ready_for_review">Ready for Review</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1405,7 +1411,11 @@ export default function TaskManager() {
               </TableHeader>
               <TableBody>
                 {filteredTasks.map((task) => {
-                  const config = statusConfig[task.status];
+                  const config = statusConfig[task.status] ?? {
+                    label: task.status.replace(/_/g, ' '),
+                    icon: AlertCircle,
+                    className: 'bg-muted text-muted-foreground',
+                  };
                   return (
                     <TableRow key={task.id}>
                       <TableCell className="font-mono">{getTaskId(task)}</TableCell>
