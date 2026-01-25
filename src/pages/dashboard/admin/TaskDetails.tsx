@@ -119,6 +119,11 @@ export default function AdminTaskDetails() {
       try {
         setLoading(true);
         setError(null);
+        
+        // Reset state to ensure fresh data
+        setTask(null);
+        setBusinessName("—");
+        setAssigneeName("—");
 
         const { data: t, error: tErr } = await (supabase as any)
           .from("tasks")
@@ -209,6 +214,66 @@ export default function AdminTaskDetails() {
     };
 
     void run();
+
+    // Set up realtime subscription for task updates
+    const subscription = supabase
+      .channel(`task-${taskNumber}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tasks',
+          filter: `task_number=eq.${taskNumber}`
+        },
+        async (payload) => {
+          console.log('Task updated in realtime:', payload);
+          const updatedTask = payload.new;
+          
+          // Update task state
+          setTask(updatedTask);
+          
+          // Update editData to sync with database
+          setEditData({
+            clientId: String(updatedTask.user_id ?? ""),
+            title: String(updatedTask.title ?? ""),
+            type: (String(updatedTask.type ?? "") as TaskType) || "",
+            platform: (String(updatedTask.platform ?? "") as TaskPlatform) || "",
+            description: String(updatedTask.description ?? ""),
+            deadline: updatedTask.deadline ? String(updatedTask.deadline).slice(0, 10) : "",
+            assignedTo: updatedTask.assigned_to ? String(updatedTask.assigned_to) : "__unassigned__",
+            status: toTaskStatus(updatedTask.status),
+            notes: String(updatedTask.notes ?? ""),
+          });
+          
+          // Fetch updated business and assignee names
+          const userId = updatedTask.user_id as string | undefined;
+          const assigneeId = updatedTask.assigned_to as string | undefined;
+          
+          const [{ data: businesses }, { data: assignees }] = await Promise.all([
+            userId
+              ? (supabase as any).from("businesses").select("user_id, business_name").eq("user_id", userId).maybeSingle()
+              : Promise.resolve({ data: null }),
+            assigneeId
+              ? (supabase as any).from("profiles").select("id, name").eq("id", assigneeId).maybeSingle()
+              : Promise.resolve({ data: null }),
+          ]);
+          
+          setBusinessName(String((businesses as any)?.business_name ?? "—"));
+          setAssigneeName(String((assignees as any)?.name ?? (assigneeId ? "—" : "Unassigned")));
+          
+          toast({ 
+            title: "Task Updated", 
+            description: "Task data has been synchronized with latest changes." 
+          });
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount or when taskNumber changes
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [taskNumber]);
 
   const label = taskNumber ? `T-${String(taskNumber).padStart(4, "0")}` : String(taskNumberLabel ?? "");
