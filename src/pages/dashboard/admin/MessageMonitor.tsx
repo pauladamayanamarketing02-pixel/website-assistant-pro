@@ -307,7 +307,7 @@ export default function AdminMessageMonitor() {
   }
 
   return (
-    <div className="flex flex-col gap-6 h-[calc(100vh-120px)]">
+    <div className="flex flex-col gap-6 h-full min-h-[calc(100vh-8rem)]">
       <div className="shrink-0 space-y-2">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Message Monitor</h1>
@@ -338,9 +338,9 @@ export default function AdminMessageMonitor() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Contacts List */}
-        <Card className={cn("md:col-span-1 flex flex-col h-full", (isMobile || isTabletOrSmaller) && mobileView === "chat" ? "hidden lg:flex" : "")}>
+        <Card className={cn("lg:col-span-1 flex flex-col min-h-[600px] lg:min-h-0 lg:h-full", (isMobile || isTabletOrSmaller) && mobileView === "chat" ? "hidden lg:flex" : "")}>
           <CardHeader className="border-b py-3 space-y-3">
             <CardTitle className="text-base">Conversations</CardTitle>
             <div className="relative">
@@ -400,9 +400,9 @@ export default function AdminMessageMonitor() {
         </Card>
 
         {/* Chat Area */}
-        <Card className={cn("flex flex-col h-full", 
+        <Card className={cn("flex flex-col min-h-[600px] lg:min-h-0 lg:h-full", 
           (isMobile || isTabletOrSmaller) && mobileView === "list" ? "hidden lg:flex" : "",
-          (isMobile || isTabletOrSmaller) && mobileView === "chat" ? "col-span-full" : "md:col-span-2"
+          (isMobile || isTabletOrSmaller) && mobileView === "chat" ? "col-span-full" : "lg:col-span-2"
         )}>
           {selectedPeer ? (
             <>
