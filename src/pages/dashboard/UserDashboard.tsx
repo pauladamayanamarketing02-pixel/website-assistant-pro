@@ -214,10 +214,10 @@ export default function UserDashboard() {
 
   return (
     <SidebarProvider>
-      <div className="h-screen flex w-full overflow-hidden">
+      <div className="h-[100dvh] flex w-full overflow-hidden">
         <UserSidebar items={gatedMenuItems} onLogout={signOut} />
 
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
           <header className="sticky top-0 z-20 h-12 flex items-center gap-3 border-b border-border bg-background px-3">
             <SidebarTrigger />
             <div className="min-w-0">
@@ -227,7 +227,7 @@ export default function UserDashboard() {
           </header>
 
           <main
-            className={`flex-1 bg-background overflow-y-auto overflow-x-hidden overscroll-y-contain no-scrollbar ${
+            className={`flex-1 min-h-0 bg-background overflow-y-auto overflow-x-hidden overscroll-y-contain no-scrollbar ${
               isContentPlannerRoute ? 'px-3 pt-3 pb-0 sm:px-4 sm:pt-4 sm:pb-0 lg:px-6 lg:pt-6 lg:pb-0' : 'p-3 sm:p-4 lg:p-6'
             }`}
           >
