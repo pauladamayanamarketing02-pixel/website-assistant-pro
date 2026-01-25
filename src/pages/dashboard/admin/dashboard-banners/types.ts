@@ -1,5 +1,7 @@
 export type DashboardBannerAudience = "user" | "assist";
 
+export type DashboardBannerTextAlign = "left" | "center" | "right";
+
 export type DashboardBannerTextEffect =
   | "marquee"
   | "blink"
@@ -17,6 +19,8 @@ export type DashboardBanner = {
   id: string;
   title: string;
   subtitle?: string | null;
+  titleAlign?: DashboardBannerTextAlign | null;
+  subtitleAlign?: DashboardBannerTextAlign | null;
   textEffect?: DashboardBannerTextEffect | null;
   ctaLabel?: string | null;
   ctaHref?: string | null;
@@ -46,6 +50,9 @@ export function sanitizeDashboardBannerSettings(value: unknown): DashboardBanner
           id: String(b.id ?? crypto.randomUUID()),
           title: String(b.title ?? ""),
           subtitle: b.subtitle == null ? null : String(b.subtitle),
+          titleAlign: b.titleAlign === "left" || b.titleAlign === "center" || b.titleAlign === "right" ? b.titleAlign : "left",
+          subtitleAlign:
+            b.subtitleAlign === "left" || b.subtitleAlign === "center" || b.subtitleAlign === "right" ? b.subtitleAlign : "left",
           textEffect:
             b.textEffect === "marquee" ||
             b.textEffect === "blink" ||

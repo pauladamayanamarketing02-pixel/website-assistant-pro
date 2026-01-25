@@ -115,6 +115,8 @@ export default function DashboardBanners() {
       id: crypto.randomUUID(),
       title: "New event",
       subtitle: "",
+      titleAlign: "left",
+      subtitleAlign: "left",
       textEffect: "marquee",
       ctaLabel: null,
       ctaHref: null,
@@ -245,6 +247,42 @@ export default function DashboardBanners() {
                       disabled={!canSave}
                       rows={2}
                     />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Title alignment</Label>
+                    <Select
+                      value={banner.titleAlign ?? "left"}
+                      onValueChange={(v) => updateBanner(banner.id, { titleAlign: v as any })}
+                      disabled={!canSave}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Left" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">Left</SelectItem>
+                        <SelectItem value="center">Center</SelectItem>
+                        <SelectItem value="right">Right</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Subtitle alignment</Label>
+                    <Select
+                      value={banner.subtitleAlign ?? "left"}
+                      onValueChange={(v) => updateBanner(banner.id, { subtitleAlign: v as any })}
+                      disabled={!canSave}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Left" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">Left</SelectItem>
+                        <SelectItem value="center">Center</SelectItem>
+                        <SelectItem value="right">Right</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid gap-2">
