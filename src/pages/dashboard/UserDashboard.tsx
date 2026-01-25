@@ -222,7 +222,7 @@ export default function UserDashboard() {
           </header>
 
           <main
-            className="flex-1 p-6 bg-background overflow-auto"
+            className="flex-1 bg-background overflow-auto p-3 sm:p-4 lg:p-6"
           >
             <Routes>
               <Route
