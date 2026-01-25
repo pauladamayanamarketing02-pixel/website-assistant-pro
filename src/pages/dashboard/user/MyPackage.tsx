@@ -787,8 +787,10 @@ export default function MyPackage() {
             <Card>
               <CardContent className="py-8 text-center">
                 <Check className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground">You have the best package!</h3>
-                <p className="text-muted-foreground">You’re already on our highest tier package</p>
+                <h3 className="text-lg font-semibold text-foreground">You’re on the highest plan</h3>
+                <p className="text-muted-foreground">
+                  Need more features? Contact our support team for a custom Enterprise plan.
+                </p>
               </CardContent>
             </Card>
           ) : (
