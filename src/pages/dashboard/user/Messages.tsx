@@ -552,11 +552,11 @@ export default function Messages() {
         <p className="text-muted-foreground">Chat with your Marketing Assist</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[calc(100vh-240px)]">
         {/* Contacts List */}
         <Card
           className={cn(
-            'lg:col-span-1 flex flex-col min-h-0',
+            'lg:col-span-1 flex flex-col min-h-0 lg:h-[calc(100vh-240px)]',
             isNarrow && mobileView === 'chat' ? 'hidden lg:flex' : ''
           )}
         >
@@ -622,7 +622,7 @@ export default function Messages() {
         {/* Chat Area */}
         <Card
           className={cn(
-            'lg:col-span-2 flex flex-col min-h-0',
+            'lg:col-span-2 flex flex-col min-h-0 lg:h-[calc(100vh-240px)]',
             isNarrow && mobileView === 'list' ? 'hidden lg:flex' : ''
           )}
         >
@@ -683,7 +683,7 @@ export default function Messages() {
                   className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
                 >
                   {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-center px-4">
+                    <div className="h-full min-h-[50vh] lg:min-h-0 flex flex-col items-center justify-center text-muted-foreground text-center px-4">
                       <MessageCircle className="h-10 w-10 mb-2" />
                       <p className="text-sm max-w-sm">
                         {clearedAt

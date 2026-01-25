@@ -300,9 +300,13 @@ export default function MyBusiness() {
         
         setOriginalFormData(dbFormData);
 
-        // Source of truth in view-mode: always reflect what is saved in DB.
-        // Drafts are only applied when the user explicitly enters Edit mode.
-        setFormData(dbFormData);
+        // IMPORTANT: never overwrite unsaved edits.
+        // If user is editing, keep the current formData (draft is stored in localStorage).
+        if (!isEditing) {
+          // Source of truth in view-mode: always reflect what is saved in DB.
+          // Drafts are only applied when the user explicitly enters Edit mode.
+          setFormData(dbFormData);
+        }
 
         // Load KB data from database
         const dbKbData: KnowledgeBaseData = {
@@ -365,7 +369,7 @@ export default function MyBusiness() {
       }
       
     setLoading(false);
-  }, [user, formData.businessId]);
+  }, [user, formData.businessId, isEditing]);
 
   useEffect(() => {
     void fetchBusiness();
@@ -383,6 +387,7 @@ export default function MyBusiness() {
     debounceMs: 300,
     onChange: async () => {
       if (!user) return;
+      if (document.visibilityState !== 'visible') return;
       if (isEditing || saving || savingKB || savingMarketingSetup || isEditingMarketingSetup) return;
       await fetchBusiness();
     },
