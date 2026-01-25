@@ -59,6 +59,7 @@ import ReportingComingSoon from "./user/reporting/ReportingComingSoon";
 import AdminSupport from "./admin/Support";
 import AdminAccount from "./admin/Account";
 import AdminDashboardBanners from "./admin/DashboardBanners";
+import AdminMessageMonitor from "./admin/MessageMonitor";
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -136,7 +137,7 @@ export default function AdminDashboard() {
         badgeCount: tasksPendingCount > 0 ? tasksPendingCount : undefined,
       },
       { title: "Reports", url: "/dashboard/admin/reports", icon: BarChart3 },
-      { title: "Message Monitor (soon)", url: "/dashboard/admin/message-monitor", icon: MessageSquare },
+      { title: "Message Monitor", url: "/dashboard/admin/message-monitor", icon: MessageSquare },
       {
         title: "Support Tickets",
         url: "/dashboard/admin/support-tickets",
@@ -291,7 +292,7 @@ export default function AdminDashboard() {
                 <Route path="conversion-insights" element={<ReportingComingSoon title="Conversion Insights" />} />
                 <Route path="downloadable-reports" element={<ReportingComingSoon title="Downloadable Reports" />} />
               </Route>
-              <Route path="message-monitor" element={<AdminPlaceholder title="Message Monitor" />} />
+              <Route path="message-monitor" element={<AdminMessageMonitor />} />
               <Route path="support-tickets" element={<AdminSupport />} />
               <Route path="website/pages" element={<AdminPlaceholder title="Pages" />} />
               <Route path="website/homepage" element={<AdminWebsiteHomepage />} />
