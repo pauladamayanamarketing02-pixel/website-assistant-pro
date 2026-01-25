@@ -121,6 +121,11 @@ export default function MyPackage() {
   const [durationRowsByPackageId, setDurationRowsByPackageId] = useState<Record<string, PackageDurationRow[]>>({});
   const [savingDuration, setSavingDuration] = useState(false);
 
+  // Upgrade form: chosen duration per upgrade package card
+  const [selectedUpgradeDurationByPackageId, setSelectedUpgradeDurationByPackageId] = useState<
+    Record<string, number>
+  >({});
+
   useEffect(() => {
     const fetchPackages = async () => {
       if (!user) return;
@@ -207,15 +212,48 @@ export default function MyPackage() {
       const { data: allPkgs } = await supabase.from("packages").select("*").eq("is_active", true);
 
       if (allPkgs) {
-        setAvailablePackages(
-          (allPkgs as any[]).map((pkg) => ({
+        const mappedPkgs = (allPkgs as any[])
+          .map((pkg) => ({
             ...(pkg as any),
             features: Array.isArray((pkg as any).features)
               ? (pkg as any).features
               : JSON.parse(((pkg as any).features as string) || "[]"),
           }))
-            .sort((a, b) => sortByTier(a.type ?? a.name, b.type ?? b.name)) as AvailablePackage[]
-        );
+          .sort((a, b) => sortByTier(a.type ?? a.name, b.type ?? b.name)) as AvailablePackage[];
+
+        setAvailablePackages(mappedPkgs);
+
+        // Load duration rules for ALL available packages (so Upgrade Options matches onboarding too)
+        const pkgIds = mappedPkgs.map((p) => String(p.id)).filter(Boolean);
+        if (pkgIds.length > 0) {
+          const { data: durationRows, error: durationError } = await (supabase as any)
+            .from("package_durations")
+            .select("id,package_id,duration_months,discount_percent,is_active,sort_order")
+            .in("package_id", pkgIds)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+            .order("duration_months", { ascending: true });
+
+          if (durationError) {
+            console.warn("Failed to load package durations:", durationError);
+          }
+
+          const grouped: Record<string, PackageDurationRow[]> = {};
+          ((durationRows as any[]) || []).forEach((r) => {
+            const pid = String(r.package_id);
+            if (!grouped[pid]) grouped[pid] = [];
+            grouped[pid].push({
+              id: String(r.id),
+              package_id: pid,
+              duration_months: Number(r.duration_months ?? 1),
+              discount_percent: Number(r.discount_percent ?? 0),
+              is_active: Boolean(r.is_active ?? true),
+              sort_order: Number(r.sort_order ?? 0),
+            });
+          });
+
+          setDurationRowsByPackageId((prev) => ({ ...prev, ...grouped }));
+        }
       }
 
       setLoading(false);
@@ -258,6 +296,22 @@ export default function MyPackage() {
   const upgradePackages = getUpgradePackages();
   const currentType = activePackage?.packages.type?.toLowerCase() || "";
   const recommendedType = packageUpgradeRecommendations[currentType] || "";
+
+  // Initialize upgrade duration selection per package (default: first non-1-month option)
+  useEffect(() => {
+    if (!upgradePackages.length) return;
+    setSelectedUpgradeDurationByPackageId((prev) => {
+      const next = { ...prev };
+      for (const pkg of upgradePackages) {
+        const pid = String(pkg.id);
+        if (next[pid]) continue;
+
+        const opts = buildDurationOptionsFromDb(durationRowsByPackageId[pid]).filter((d) => d.months !== 1);
+        if (opts.length > 0) next[pid] = opts[0].months;
+      }
+      return next;
+    });
+  }, [durationRowsByPackageId, upgradePackages]);
 
   // Source of truth: profiles.account_status + profiles.payment_active (same mapping as Admin page)
   const statusSource = mapDbAccountStatusToUi(accountStatus, paymentActive);
@@ -311,6 +365,13 @@ export default function MyPackage() {
     return Number.isFinite(m) && m > 0 ? m : 1;
   }, [activePackage?.duration_months]);
 
+  // Do not show "1 Month" in UI at all.
+  const currentDurationSelectValue = useMemo(() => {
+    if (selectedDurationMonths !== 1) return String(selectedDurationMonths);
+    // If DB value is still 1 month, show empty selection so user must pick a real duration.
+    return "";
+  }, [selectedDurationMonths]);
+
   const selectedDurationMeta = useMemo(() => {
     return durationOptions.find((d) => d.months === selectedDurationMonths) ?? {
       months: 1,
@@ -337,8 +398,13 @@ export default function MyPackage() {
       return;
     }
 
+    if (months === 1) {
+      toast.error("Duration 1 Month tidak tersedia");
+      return;
+    }
+
     // Only allow selecting durations that exist in options (keeps it consistent with onboarding rules).
-    const allowed = durationOptions.some((d) => d.months === months);
+    const allowed = visibleDurationOptions.some((d) => d.months === months);
     if (!allowed) {
       toast.error("Duration tidak tersedia untuk package ini");
       return;
@@ -464,7 +530,7 @@ export default function MyPackage() {
                         <span className="text-sm text-muted-foreground">Duration:</span>
                         <div className="min-w-[180px]">
                           <Select
-                            value={String(selectedDurationMonths)}
+                            value={currentDurationSelectValue}
                             onValueChange={handleChangeDuration}
                             disabled={!activePackageId || savingDuration || visibleDurationOptions.length === 0}
                           >
@@ -472,7 +538,7 @@ export default function MyPackage() {
                               <SelectValue placeholder="Pilih duration" />
                             </SelectTrigger>
                             <SelectContent className="bg-popover z-50">
-                              {durationOptions.map((opt) => (
+                              {visibleDurationOptions.map((opt) => (
                                 <SelectItem key={opt.months} value={String(opt.months)}>
                                   {opt.label}
                                   {opt.discountPercent > 0 ? ` — ${opt.discountPercent}% off` : ""}
@@ -549,6 +615,27 @@ export default function MyPackage() {
                 const desktopFeatures = pkg.features.slice(0, 6);
                 const overflowCount = Math.max(0, pkg.features.length - desktopFeatures.length);
 
+                const upgradeDurationOptions = buildDurationOptionsFromDb(
+                  durationRowsByPackageId[String(pkg.id)]
+                ).filter((d) => d.months !== 1);
+
+                const selectedUpgradeMonths =
+                  selectedUpgradeDurationByPackageId[String(pkg.id)] ?? upgradeDurationOptions[0]?.months ?? 0;
+
+                const selectedUpgradeMeta =
+                  upgradeDurationOptions.find((d) => d.months === selectedUpgradeMonths) ?? {
+                    months: 0,
+                    label: "",
+                    discountPercent: 0,
+                    isFromDb: false,
+                  };
+
+                const discountedUpgradeTotal = computeDiscountedTotal({
+                  monthlyPrice: Number(pkg.price || 0),
+                  months: Number(selectedUpgradeMeta.months || 0),
+                  discountPercent: Number(selectedUpgradeMeta.discountPercent || 0),
+                });
+
                 return (
                   <Card
                     key={pkg.id}
@@ -596,6 +683,59 @@ export default function MyPackage() {
                     </CardHeader>
 
                     <CardContent className="space-y-4 min-w-0">
+                      {/* Upgrade Options Duration (same rules as onboarding) */}
+                      <div className="rounded-lg border bg-card/50 p-3 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Duration:</span>
+                            <div className="min-w-[180px]">
+                              <Select
+                                value={selectedUpgradeMonths ? String(selectedUpgradeMonths) : ""}
+                                onValueChange={(v) =>
+                                  setSelectedUpgradeDurationByPackageId((prev) => ({
+                                    ...prev,
+                                    [String(pkg.id)]: Number(v),
+                                  }))
+                                }
+                                disabled={upgradeDurationOptions.length === 0}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Pilih duration" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover z-50">
+                                  {upgradeDurationOptions.map((opt) => (
+                                    <SelectItem key={opt.months} value={String(opt.months)}>
+                                      {opt.label}
+                                      {opt.discountPercent > 0 ? ` — ${opt.discountPercent}% off` : ""}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {selectedUpgradeMeta.discountPercent > 0 && (
+                              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                                {selectedUpgradeMeta.discountPercent}% OFF
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="text-right">
+                            <div className="text-sm text-muted-foreground">
+                              Total ({selectedUpgradeMeta.label || "—"}):{" "}
+                              <span className="font-medium text-foreground">
+                                {selectedUpgradeMeta.months ? `$${discountedUpgradeTotal}` : "—"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {upgradeDurationOptions.length === 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Package ini belum punya opsi duration (selain 1 bulan).
+                          </p>
+                        )}
+                      </div>
+
                       <div className="rounded-lg border bg-card/50 p-3">
                         <p className="text-sm font-medium text-foreground">What you’ll get</p>
                         {/* Mobile: full list */}
