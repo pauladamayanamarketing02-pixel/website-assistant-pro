@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Save, Building2, FileText, User, Users, ArrowLeft, Pencil, X, Plus, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { RichTextEditor } from '@/components/dashboard/RichTextEditor';
 import { SocialMediaInput, SocialMediaLink } from '@/components/dashboard/SocialMediaInput';
 import { findCountryByName, findStateByName, getAllCountries, getCitiesOfState, getStatesOfCountry } from '@/lib/locations';
 import { businessTypeCategories } from '@/data/businessTypes';
+import { useSupabaseRealtimeReload } from '@/hooks/useSupabaseRealtimeReload';
 
 interface BusinessData {
   name: string;
@@ -186,9 +187,8 @@ export default function MyBusiness() {
     }
   }, [kbData, user, originalKbData]);
 
-  useEffect(() => {
-    const fetchBusiness = async () => {
-      if (!user) return;
+  const fetchBusiness = useCallback(async () => {
+    if (!user) return;
 
       // Check for synced data from onboarding
       const syncFirstName = sessionStorage.getItem('sync_firstName');
@@ -364,11 +364,29 @@ export default function MyBusiness() {
         setOriginalKbData(defaultKbData);
       }
       
-      setLoading(false);
-    };
+    setLoading(false);
+  }, [user, formData.businessId]);
 
-    fetchBusiness();
-  }, [user]);
+  useEffect(() => {
+    void fetchBusiness();
+  }, [fetchBusiness]);
+
+  // Keep page in sync with DB changes (realtime). Avoid overwriting user input while editing.
+  useSupabaseRealtimeReload({
+    channelName: user ? `dashboard-user-business:${user.id}` : 'dashboard-user-business:anonymous',
+    targets: user
+      ? [
+          { table: 'businesses', filter: `user_id=eq.${user.id}` },
+          { table: 'profiles', filter: `id=eq.${user.id}` },
+        ]
+      : [],
+    debounceMs: 300,
+    onChange: async () => {
+      if (!user) return;
+      if (isEditing || saving || savingKB || savingMarketingSetup || isEditingMarketingSetup) return;
+      await fetchBusiness();
+    },
+  });
 
   const handleStartEdit = () => {
     if (!user) {
