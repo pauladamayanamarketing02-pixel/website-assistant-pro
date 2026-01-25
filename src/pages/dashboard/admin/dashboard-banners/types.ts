@@ -1,6 +1,17 @@
 export type DashboardBannerAudience = "user" | "assist";
 
-export type DashboardBannerTextEffect = "marquee" | "blink" | "pulse" | "none";
+export type DashboardBannerTextEffect =
+  | "marquee"
+  | "blink"
+  | "pulse"
+  | "glow"
+  | "shake"
+  | "bounce"
+  | "slide"
+  | "fade"
+  | "typewriter"
+  | "flip"
+  | "none";
 
 export type DashboardBanner = {
   id: string;
@@ -36,7 +47,17 @@ export function sanitizeDashboardBannerSettings(value: unknown): DashboardBanner
           title: String(b.title ?? ""),
           subtitle: b.subtitle == null ? null : String(b.subtitle),
           textEffect:
-            b.textEffect === "blink" || b.textEffect === "pulse" || b.textEffect === "none" || b.textEffect === "marquee"
+            b.textEffect === "marquee" ||
+            b.textEffect === "blink" ||
+            b.textEffect === "pulse" ||
+            b.textEffect === "glow" ||
+            b.textEffect === "shake" ||
+            b.textEffect === "bounce" ||
+            b.textEffect === "slide" ||
+            b.textEffect === "fade" ||
+            b.textEffect === "typewriter" ||
+            b.textEffect === "flip" ||
+            b.textEffect === "none"
               ? b.textEffect
               : "marquee",
           ctaLabel: b.ctaLabel == null ? null : String(b.ctaLabel),

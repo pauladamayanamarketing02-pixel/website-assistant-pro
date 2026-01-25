@@ -111,13 +111,22 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
                   `}
                 </style>
               </>
+            ) : textEffect === "none" ? (
+              <div className="text-sm font-semibold text-foreground">{marqueeText}</div>
             ) : (
               <>
                 <div
                   className={cn(
                     "text-sm font-semibold text-foreground",
                     textEffect === "pulse" ? "motion-reduce:animate-none animate-pulse" : null,
-                    textEffect === "blink" ? "dashboard-banner-blink motion-reduce:animate-none" : null
+                    textEffect === "blink" ? "dashboard-banner-blink motion-reduce:animate-none" : null,
+                    textEffect === "glow" ? "dashboard-banner-glow" : null,
+                    textEffect === "shake" ? "dashboard-banner-shake motion-reduce:animate-none" : null,
+                    textEffect === "bounce" ? "dashboard-banner-bounce motion-reduce:animate-none" : null,
+                    textEffect === "slide" ? "dashboard-banner-slide motion-reduce:animate-none" : null,
+                    textEffect === "fade" ? "dashboard-banner-fade motion-reduce:animate-none" : null,
+                    textEffect === "typewriter" ? "dashboard-banner-typewriter motion-reduce:animate-none" : null,
+                    textEffect === "flip" ? "dashboard-banner-flip motion-reduce:animate-none" : null
                   )}
                 >
                   {marqueeText}
@@ -134,8 +143,110 @@ export function DashboardEventBanner({ audience, className }: { audience: Dashbo
                       50%, 100% { opacity: 0.15; }
                     }
 
+                    .dashboard-banner-glow {
+                      text-shadow:
+                        0 0 14px hsl(var(--primary) / 0.35),
+                        0 0 30px hsl(var(--primary) / 0.18);
+                    }
+
+                    .dashboard-banner-shake {
+                      display: inline-block;
+                      will-change: transform;
+                      animation: dashboard-banner-shake 1.2s ease-in-out infinite;
+                    }
+
+                    @keyframes dashboard-banner-shake {
+                      0%, 100% { transform: translateX(0); }
+                      10% { transform: translateX(-1px); }
+                      20% { transform: translateX(2px); }
+                      30% { transform: translateX(-3px); }
+                      40% { transform: translateX(2px); }
+                      50% { transform: translateX(-1px); }
+                      60% { transform: translateX(1px); }
+                      70% { transform: translateX(-2px); }
+                      80% { transform: translateX(2px); }
+                      90% { transform: translateX(-1px); }
+                    }
+
+                    .dashboard-banner-bounce {
+                      display: inline-block;
+                      will-change: transform;
+                      animation: dashboard-banner-bounce 1.1s ease-in-out infinite;
+                    }
+
+                    @keyframes dashboard-banner-bounce {
+                      0%, 100% { transform: translateY(0); }
+                      50% { transform: translateY(-3px); }
+                    }
+
+                    .dashboard-banner-slide {
+                      display: inline-block;
+                      will-change: transform;
+                      animation: dashboard-banner-slide 2.6s ease-in-out infinite;
+                    }
+
+                    @keyframes dashboard-banner-slide {
+                      0%, 100% { transform: translateX(0); }
+                      50% { transform: translateX(-10px); }
+                    }
+
+                    .dashboard-banner-fade {
+                      display: inline-block;
+                      will-change: opacity;
+                      animation: dashboard-banner-fade 1.6s ease-in-out infinite;
+                    }
+
+                    @keyframes dashboard-banner-fade {
+                      0%, 100% { opacity: 1; }
+                      50% { opacity: 0.35; }
+                    }
+
+                    .dashboard-banner-typewriter {
+                      display: inline-block;
+                      overflow: hidden;
+                      white-space: nowrap;
+                      max-width: 100%;
+                      border-right: 2px solid hsl(var(--border));
+                      animation: dashboard-banner-typing 3.2s steps(40, end) infinite,
+                                 dashboard-banner-caret 0.85s step-end infinite;
+                    }
+
+                    @keyframes dashboard-banner-typing {
+                      0% { width: 0; }
+                      45% { width: 100%; }
+                      80% { width: 100%; }
+                      100% { width: 0; }
+                    }
+
+                    @keyframes dashboard-banner-caret {
+                      0%, 49% { border-right-color: transparent; }
+                      50%, 100% { border-right-color: hsl(var(--border)); }
+                    }
+
+                    .dashboard-banner-flip {
+                      display: inline-block;
+                      transform-origin: 50% 55%;
+                      will-change: transform;
+                      animation: dashboard-banner-flip 2.4s ease-in-out infinite;
+                    }
+
+                    @keyframes dashboard-banner-flip {
+                      0%, 100% { transform: perspective(600px) rotateX(0deg); }
+                      50% { transform: perspective(600px) rotateX(18deg); }
+                    }
+
                     @media (prefers-reduced-motion: reduce) {
                       .dashboard-banner-blink { animation: none; }
+                      .dashboard-banner-shake { animation: none; }
+                      .dashboard-banner-bounce { animation: none; }
+                      .dashboard-banner-slide { animation: none; }
+                      .dashboard-banner-fade { animation: none; }
+                      .dashboard-banner-typewriter {
+                        animation: none;
+                        border-right: none;
+                        width: auto;
+                      }
+                      .dashboard-banner-flip { animation: none; }
                     }
                   `}
                 </style>

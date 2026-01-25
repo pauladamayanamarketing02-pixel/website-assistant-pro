@@ -258,9 +258,16 @@ export default function DashboardBanners() {
                         <SelectValue placeholder="Choose effect" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="marquee">Marquee (tulisan berjalan)</SelectItem>
-                        <SelectItem value="blink">Blink (kedip-kedip)</SelectItem>
-                        <SelectItem value="pulse">Pulse (motion halus)</SelectItem>
+                        <SelectItem value="marquee">Marquee</SelectItem>
+                        <SelectItem value="blink">Blink</SelectItem>
+                        <SelectItem value="pulse">Pulse</SelectItem>
+                        <SelectItem value="glow">Glow</SelectItem>
+                        <SelectItem value="shake">Shake</SelectItem>
+                        <SelectItem value="bounce">Bounce</SelectItem>
+                        <SelectItem value="slide">Slide</SelectItem>
+                        <SelectItem value="fade">Fade</SelectItem>
+                        <SelectItem value="typewriter">Typewriter</SelectItem>
+                        <SelectItem value="flip">Flip</SelectItem>
                         <SelectItem value="none">None</SelectItem>
                       </SelectContent>
                     </Select>
