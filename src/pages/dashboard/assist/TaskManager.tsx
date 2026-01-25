@@ -677,7 +677,7 @@ export default function TaskManager() {
   // Task View Mode with Work Log
   if (viewMode === 'view' && selectedTask) {
     const config = statusConfig[selectedTask.status] ?? statusConfig.pending;
-    const isTaskFinalized = selectedTask.status === 'completed' || selectedTask.status === 'cancelled';
+    const isTaskFinalized = selectedTask.status === 'completed' || selectedTask.status === 'cancelled' || selectedTask.status === 'ready_for_review';
 
     return (
       <div className="space-y-6">
