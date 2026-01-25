@@ -25,7 +25,8 @@ import {
 type TaskStatus = "pending" | "assigned" | "in_progress" | "ready_for_review" | "completed" | "cancelled";
 
 type TaskRow = {
-  id: string;
+  uuid: string;
+  taskId: string;
   businessName: string;
   title: string;
   assignee: string;
@@ -108,7 +109,8 @@ export default function AdminTasks() {
         const label = taskNumber ? `T-${String(taskNumber).padStart(4, "0")}` : String(t.id);
 
         return {
-          id: label,
+          uuid: String(t.id),
+          taskId: label,
           businessName: businessByUserId.get(t.user_id) ?? "—",
           title: t.title ?? "—",
           assignee: t.assigned_to ? assigneeById.get(t.assigned_to) ?? "—" : "Unassigned",
@@ -198,8 +200,8 @@ export default function AdminTasks() {
                   </TableRow>
                 ) : (
                   filtered.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="font-medium">{t.id}</TableCell>
+                    <TableRow key={t.uuid}>
+                      <TableCell className="font-medium">{t.taskId}</TableCell>
                       <TableCell>{t.businessName}</TableCell>
                       <TableCell className="text-muted-foreground">{t.title}</TableCell>
                       <TableCell className="text-muted-foreground">{t.assignee}</TableCell>
@@ -211,7 +213,7 @@ export default function AdminTasks() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/dashboard/admin/tasks/${t.id}`)}
+                          onClick={() => navigate(`/dashboard/admin/tasks/${t.taskId}`)}
                         >
                           <Eye className="h-4 w-4" />
                           View Details
