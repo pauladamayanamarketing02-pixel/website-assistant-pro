@@ -56,9 +56,27 @@ Deno.serve(async (req) => {
     const limit = Math.min(1000, Math.max(50, Number(body.limit ?? 300)));
 
     if (action === "list_assists") {
-      const { data, error } = await admin.rpc("get_assist_contacts");
+      // Return ALL assists (all statuses), sorted by full name.
+      const { data, error } = await admin
+        .from("user_roles")
+        .select("user_id, profiles:profiles(id,name,email,avatar_url,account_status)")
+        .eq("role", "assist");
       if (error) throw error;
-      return json({ assists: data ?? [] });
+
+      const assists = (data ?? [])
+        .map((row: any) => {
+          const p = row?.profiles ?? {};
+          return {
+            id: String(p.id ?? row.user_id),
+            name: String(p.name ?? ""),
+            email: String(p.email ?? ""),
+            avatar_url: (p.avatar_url ?? null) as string | null,
+            status: String(p.account_status ?? "").toLowerCase() || "unknown",
+          };
+        })
+        .sort((a: any, b: any) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "en-US"));
+
+      return json({ assists });
     }
 
     if (action === "list_peers") {
