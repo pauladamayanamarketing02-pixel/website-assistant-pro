@@ -109,24 +109,63 @@ export default function AdminBusinessTypes() {
 
   const groupedCount = useMemo(() => new Set(rows.map((r) => r.category)).size, [rows]);
 
+  const isOthers = (value: unknown) => String(value ?? "").trim().toLowerCase() === "others";
+
+  /** Always push label "Others" to the bottom, regardless of asc/desc. */
+  const compareWithOthersLast = (a: unknown, b: unknown, dir: SortDir) => {
+    const ao = isOthers(a);
+    const bo = isOthers(b);
+    if (ao && !bo) return 1;
+    if (!ao && bo) return -1;
+    const dirMult = dir === "asc" ? 1 : -1;
+    return dirMult * String(a ?? "").localeCompare(String(b ?? ""));
+  };
+
   const sortedRows = useMemo(() => {
-    const dirMult = sort.dir === "asc" ? 1 : -1;
     const copy = [...rows];
 
     copy.sort((a, b) => {
+      // Always keep categories grouped, and always keep "Others" category at the bottom.
+      const byCategory = compareWithOthersLast(a.category, b.category, "asc");
+      if (byCategory !== 0) return byCategory;
+
       switch (sort.key) {
-        case "sort_order":
-          return dirMult * ((a.sort_order ?? 0) - (b.sort_order ?? 0));
+        case "category": {
+          // Category is already grouped; sort inside category by order then type.
+          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+          if (byOrder !== 0) return byOrder;
+          return compareWithOthersLast(a.type, b.type, "asc");
+        }
+        case "type": {
+          // Within each category, sort types but always keep "Others" type at the bottom.
+          const byType = compareWithOthersLast(a.type, b.type, sort.dir);
+          if (byType !== 0) return byType;
+          // Then by sort order to keep things predictable.
+          return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+        }
+        case "sort_order": {
+          const dirMult = sort.dir === "asc" ? 1 : -1;
+          const byOrder = dirMult * ((a.sort_order ?? 0) - (b.sort_order ?? 0));
+          if (byOrder !== 0) return byOrder;
+          return compareWithOthersLast(a.type, b.type, "asc");
+        }
         case "is_active": {
+          const dirMult = sort.dir === "asc" ? 1 : -1;
           const av = a.is_active ? 1 : 0;
           const bv = b.is_active ? 1 : 0;
-          return dirMult * (av - bv);
+          const byActive = dirMult * (av - bv);
+          if (byActive !== 0) return byActive;
+          // Keep stable ordering inside category.
+          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+          if (byOrder !== 0) return byOrder;
+          return compareWithOthersLast(a.type, b.type, "asc");
         }
-        case "type":
-          return dirMult * String(a.type ?? "").localeCompare(String(b.type ?? ""));
-        case "category":
-        default:
-          return dirMult * String(a.category ?? "").localeCompare(String(b.category ?? ""));
+        default: {
+          // Fallback: stable ordering inside category.
+          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+          if (byOrder !== 0) return byOrder;
+          return compareWithOthersLast(a.type, b.type, "asc");
+        }
       }
     });
 
