@@ -1,0 +1,47 @@
+export type DashboardBannerAudience = "user" | "assist";
+
+export type DashboardBanner = {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  ctaLabel?: string | null;
+  ctaHref?: string | null;
+  startsAt?: string | null; // ISO
+  endsAt?: string | null; // ISO
+  isPublished?: boolean;
+  showOnUserOverview?: boolean;
+  showOnAssistOverview?: boolean;
+};
+
+export type DashboardBannerSettings = {
+  banners: DashboardBanner[];
+};
+
+export const defaultDashboardBannerSettings: DashboardBannerSettings = {
+  banners: [],
+};
+
+export function sanitizeDashboardBannerSettings(value: unknown): DashboardBannerSettings {
+  if (!value || typeof value !== "object") return defaultDashboardBannerSettings;
+  const v = value as any;
+
+  const banners = Array.isArray(v.banners)
+    ? v.banners
+        .filter(Boolean)
+        .map((b: any): DashboardBanner => ({
+          id: String(b.id ?? crypto.randomUUID()),
+          title: String(b.title ?? ""),
+          subtitle: b.subtitle == null ? null : String(b.subtitle),
+          ctaLabel: b.ctaLabel == null ? null : String(b.ctaLabel),
+          ctaHref: b.ctaHref == null ? null : String(b.ctaHref),
+          startsAt: b.startsAt == null ? null : String(b.startsAt),
+          endsAt: b.endsAt == null ? null : String(b.endsAt),
+          isPublished: b.isPublished === false ? false : true,
+          showOnUserOverview: b.showOnUserOverview === true,
+          showOnAssistOverview: b.showOnAssistOverview === true,
+        }))
+        .filter((b: DashboardBanner) => b.title.trim().length > 0)
+    : [];
+
+  return { banners };
+}

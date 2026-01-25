@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { AssistSidebar, type AssistNavItem } from '@/components/assist/AssistSidebar';
+import { DashboardEventBanner } from '@/components/dashboard/DashboardEventBanner';
 
 import AssistOverview from './assist/overview/AssistOverview';
 
@@ -363,13 +364,16 @@ export default function AssistDashboard() {
               <Route
                 index
                 element={
-                  <AssistOverview
-                    accountStatus={profileStatus}
-                    activeClients={activeClientsCount}
-                    assignedTasks={assignedTasksCount}
-                    unreadMessages={unreadMessagesCount}
-                    taskStats={taskStats}
-                  />
+                  <div className="space-y-4">
+                    <DashboardEventBanner audience="assist" />
+                    <AssistOverview
+                      accountStatus={profileStatus}
+                      activeClients={activeClientsCount}
+                      assignedTasks={assignedTasksCount}
+                      unreadMessages={unreadMessagesCount}
+                      taskStats={taskStats}
+                    />
+                  </div>
                 }
               />
               <Route path="profile" element={<AssistProfile />} />
