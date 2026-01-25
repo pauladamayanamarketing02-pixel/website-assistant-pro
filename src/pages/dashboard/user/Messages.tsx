@@ -542,7 +542,7 @@ export default function Messages() {
         <p className="text-muted-foreground">Chat with your Marketing Assist</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Contacts List */}
         <Card
           className={cn(
@@ -562,7 +562,7 @@ export default function Messages() {
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 min-h-0">
-            <ScrollArea className="h-[60vh] md:h-full">
+            <ScrollArea className="h-[60vh] md:h-[calc(100vh-240px)]">
               {filteredAssists.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <User className="h-8 w-8 mx-auto mb-2" />
@@ -612,7 +612,7 @@ export default function Messages() {
         {/* Chat Area */}
         <Card
           className={cn(
-            'md:col-span-2 flex flex-col min-h-0',
+            'md:col-span-1 lg:col-span-2 flex flex-col min-h-0',
             isMobile && mobileView === 'list' ? 'hidden md:flex' : ''
           )}
         >
@@ -670,7 +670,7 @@ export default function Messages() {
               <CardContent className="flex-1 min-h-0 flex flex-col p-0">
                 <div
                   ref={scrollRef}
-                  className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 max-h-[70vh]"
+                  className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
                 >
                   {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
