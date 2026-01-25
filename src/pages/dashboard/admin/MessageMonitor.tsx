@@ -353,8 +353,8 @@ export default function AdminMessageMonitor() {
               />
             </div>
           </CardHeader>
-          <CardContent className="p-0 flex-1 min-h-0">
-            <ScrollArea className="h-full">
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full w-full">
               {!selectedAssistId ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <p className="text-sm">Select an Assist to load conversations</p>
