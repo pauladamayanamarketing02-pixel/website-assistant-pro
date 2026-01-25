@@ -61,6 +61,21 @@ export default function UserDashboard() {
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [paymentActive, setPaymentActive] = useState<boolean | null>(null);
 
+  // Prevent the document body from becoming the scroll container on mobile.
+  // We keep scrolling inside the dashboard <main> (which already uses `no-scrollbar`).
+  useEffect(() => {
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, []);
+
   const isContentPlannerRoute = useMemo(
     () => location.pathname.includes('/dashboard/user/content-planner'),
     [location.pathname]
