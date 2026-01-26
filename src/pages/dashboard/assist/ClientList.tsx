@@ -132,6 +132,7 @@ interface UserPackage {
   package_id: string;
   status: string;
   started_at: string;
+  activated_at: string | null;
   expires_at: string | null;
   package: {
     name: string;
@@ -573,7 +574,7 @@ export default function ClientList({ initialClientId, backTo, hideClientList, al
       // Fetch packages
       const { data: packagesData } = await (supabase as any)
         .from('user_packages')
-        .select(`id, package_id, status, started_at, expires_at`)
+        .select(`id, package_id, status, started_at, activated_at, expires_at`)
         .eq('user_id', client.id);
 
       if (packagesData) {
@@ -2110,6 +2111,8 @@ export default function ClientList({ initialClientId, backTo, hideClientList, al
                             <TableHead>Package</TableHead>
                             <TableHead>Type</TableHead>
                             <TableHead>Price</TableHead>
+                            <TableHead>Activation Date</TableHead>
+                            <TableHead>Expires Date</TableHead>
                             <TableHead>Status</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -2119,6 +2122,24 @@ export default function ClientList({ initialClientId, backTo, hideClientList, al
                               <TableCell className="font-medium">{up.package?.name || '-'}</TableCell>
                               <TableCell><Badge variant="outline">{up.package?.type || '-'}</Badge></TableCell>
                               <TableCell>${up.package?.price || 0}</TableCell>
+                              <TableCell>
+                                {up.activated_at 
+                                  ? new Date(up.activated_at).toLocaleDateString('id-ID', { 
+                                      year: 'numeric', 
+                                      month: 'short', 
+                                      day: 'numeric' 
+                                    })
+                                  : '-'}
+                              </TableCell>
+                              <TableCell>
+                                {up.expires_at 
+                                  ? new Date(up.expires_at).toLocaleDateString('id-ID', { 
+                                      year: 'numeric', 
+                                      month: 'short', 
+                                      day: 'numeric' 
+                                    })
+                                  : '-'}
+                              </TableCell>
                               <TableCell><Badge>{up.status}</Badge></TableCell>
                             </TableRow>
                           ))}
