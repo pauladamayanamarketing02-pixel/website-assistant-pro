@@ -945,6 +945,41 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_add_on_selections: {
+        Row: {
+          add_on_id: string
+          created_at: string
+          id: string
+          quantity: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          add_on_id: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          add_on_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_add_on_selections_add_on_id_fkey"
+            columns: ["add_on_id"]
+            isOneToOne: false
+            referencedRelation: "package_add_ons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_promos: {
         Row: {
           code: string
@@ -1036,6 +1071,7 @@ export type Database = {
           id: string
           is_active: boolean
           label: string
+          max_quantity: number | null
           package_id: string
           price_per_unit: number
           sort_order: number
@@ -1049,6 +1085,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           label: string
+          max_quantity?: number | null
           package_id: string
           price_per_unit?: number
           sort_order?: number
@@ -1062,6 +1099,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           label?: string
+          max_quantity?: number | null
           package_id?: string
           price_per_unit?: number
           sort_order?: number
