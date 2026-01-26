@@ -114,7 +114,7 @@ export default function SuperAdminPackageEdit() {
         // Load add-ons for this package
         const { data: addOnRows, error: addOnErr } = await (supabase as any)
           .from("package_add_ons")
-          .select("id,add_on_key,label,price_per_unit,unit_step,unit,is_active,sort_order")
+          .select("id,add_on_key,label,price_per_unit,unit_step,unit,is_active,sort_order,max_quantity")
           .eq("package_id", String(data.id))
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true });
@@ -131,6 +131,7 @@ export default function SuperAdminPackageEdit() {
             unit: String(r.unit ?? "unit"),
             is_active: Boolean(r.is_active ?? true),
             sort_order: Number(r.sort_order ?? 0),
+            max_quantity: r.max_quantity === null || r.max_quantity === undefined ? null : Number(r.max_quantity),
           }))
         );
         setRemovedAddOnIds([]);
@@ -191,6 +192,10 @@ export default function SuperAdminPackageEdit() {
               unit: String(a.unit ?? "unit").trim() || "unit",
               is_active: Boolean(a.is_active ?? true),
               sort_order: Number(a.sort_order ?? 0),
+              max_quantity:
+                a.max_quantity === null || a.max_quantity === undefined || Number.isNaN(Number(a.max_quantity))
+                  ? null
+                  : Math.max(0, Number(a.max_quantity)),
             };
 
             return (supabase as any).from("package_add_ons").update(updatePayload).eq("id", a.id);
@@ -211,6 +216,10 @@ export default function SuperAdminPackageEdit() {
           unit: String(a.unit ?? "unit").trim() || "unit",
           is_active: Boolean(a.is_active ?? true),
           sort_order: Number(a.sort_order ?? 0),
+          max_quantity:
+            a.max_quantity === null || a.max_quantity === undefined || Number.isNaN(Number(a.max_quantity))
+              ? null
+              : Math.max(0, Number(a.max_quantity)),
         }));
 
         const { error: upsertErr } = await (supabase as any)
