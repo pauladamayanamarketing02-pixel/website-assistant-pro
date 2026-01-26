@@ -14,6 +14,7 @@ export type PackageAddOnDraft = {
   unit: string;
   is_active: boolean;
   sort_order?: number;
+  max_quantity?: number | null;
 };
 
 export default function PackageAddOnsEditor({
@@ -45,6 +46,7 @@ export default function PackageAddOnsEditor({
           unit: "unit",
           is_active: true,
           sort_order: value.length,
+          max_quantity: null,
         },
       ])
     );
@@ -181,6 +183,27 @@ export default function PackageAddOnsEditor({
                       disabled={disabled}
                     />
                   </div>
+                </div>
+
+                <div className="grid gap-2 sm:max-w-xs">
+                  <Label>Max Quantity (optional)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={row.max_quantity ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") {
+                        update(idx, { max_quantity: null });
+                        return;
+                      }
+                      const n = Number(raw);
+                      update(idx, { max_quantity: Number.isFinite(n) ? Math.max(0, n) : null });
+                    }}
+                    placeholder="Unlimited"
+                    disabled={disabled}
+                  />
+                  <p className="text-xs text-muted-foreground">Null/blank = unlimited clicks on + during onboarding.</p>
                 </div>
               </div>
             ))}

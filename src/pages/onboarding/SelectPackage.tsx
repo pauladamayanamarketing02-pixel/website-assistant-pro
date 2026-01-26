@@ -9,7 +9,15 @@ import PackageCard from '@/components/onboarding/PackageCard';
 import { growingPackages, type GrowingPackage } from '@/data/growingPackages';
 import { buildDurationOptionsFromDb, computeDiscountedTotal, type PackageDurationRow } from '@/lib/packageDurations';
 
-type DbAddOn = { id: string; addOnKey: string; label: string; pricePerUnit: number; unitStep: number; unit: string };
+  type DbAddOn = {
+    id: string; // package_add_ons.id
+    addOnKey: string;
+    label: string;
+    pricePerUnit: number;
+    unitStep: number;
+    unit: string;
+    maxQuantity?: number | null;
+  };
 
 type DbDuration = PackageDurationRow;
 
@@ -79,7 +87,7 @@ export default function SelectPackage() {
            if (pkgIds.length > 0) {
               const { data: addOnRows } = await (supabase as any)
                .from('package_add_ons')
-                .select('package_id,add_on_key,label,price_per_unit,unit_step,unit,sort_order')
+                 .select('id,package_id,add_on_key,label,price_per_unit,unit_step,unit,sort_order,max_quantity')
                .in('package_id', pkgIds)
                 .eq('is_active', true)
                 .order('sort_order', { ascending: true })
@@ -89,13 +97,14 @@ export default function SelectPackage() {
              ((addOnRows as any[]) || []).forEach((r) => {
                const pid = String(r.package_id);
                if (!grouped[pid]) grouped[pid] = [];
-               grouped[pid].push({
-                 id: String(r.add_on_key),
+                grouped[pid].push({
+                  id: String(r.id),
                   addOnKey: String(r.add_on_key),
                  label: String(r.label),
                  pricePerUnit: Number(r.price_per_unit ?? 0),
                  unitStep: Number(r.unit_step ?? 1),
                  unit: String(r.unit ?? 'unit'),
+                  maxQuantity: r.max_quantity === null || r.max_quantity === undefined ? null : Number(r.max_quantity),
                });
              });
              setDbAddOnsByPackageId(grouped);
@@ -161,7 +170,7 @@ export default function SelectPackage() {
            if (pkgIds.length > 0) {
               const { data: addOnRows } = await (supabase as any)
                .from('package_add_ons')
-                .select('package_id,add_on_key,label,price_per_unit,unit_step,unit,sort_order')
+                 .select('id,package_id,add_on_key,label,price_per_unit,unit_step,unit,sort_order,max_quantity')
                .in('package_id', pkgIds)
                 .eq('is_active', true)
                 .order('sort_order', { ascending: true })
@@ -171,13 +180,14 @@ export default function SelectPackage() {
              ((addOnRows as any[]) || []).forEach((r) => {
                const pid = String(r.package_id);
                if (!grouped[pid]) grouped[pid] = [];
-               grouped[pid].push({
-                 id: String(r.add_on_key),
+                grouped[pid].push({
+                  id: String(r.id),
                   addOnKey: String(r.add_on_key),
                  label: String(r.label),
                  pricePerUnit: Number(r.price_per_unit ?? 0),
                  unitStep: Number(r.unit_step ?? 1),
                  unit: String(r.unit ?? 'unit'),
+                  maxQuantity: r.max_quantity === null || r.max_quantity === undefined ? null : Number(r.max_quantity),
                });
              });
              setDbAddOnsByPackageId(grouped);
@@ -268,6 +278,43 @@ export default function SelectPackage() {
 
     setIsSubmitting(true);
     try {
+      // Persist onboarding add-ons selections (per add-on id)
+      const selectedEntries = Object.entries(selectedAddOns || {}).filter(([, qty]) => Number(qty) > 0);
+      const selectedAddOnIds = selectedEntries.map(([addOnId]) => addOnId);
+
+      if (selectedEntries.length > 0) {
+        const { error: selUpsertErr } = await (supabase as any)
+          .from('onboarding_add_on_selections')
+          .upsert(
+            selectedEntries.map(([addOnId, qty]) => ({
+              user_id: user.id,
+              add_on_id: addOnId,
+              quantity: Number(qty) || 0,
+            })),
+            { onConflict: 'user_id,add_on_id' }
+          );
+
+        if (selUpsertErr) throw selUpsertErr;
+      }
+
+      // Remove any previous selections not currently chosen
+      if (selectedAddOnIds.length > 0) {
+        const { error: selDelErr } = await (supabase as any)
+          .from('onboarding_add_on_selections')
+          .delete()
+          .eq('user_id', user.id)
+          // PostgREST expects `in.(a,b,c)` style values; supabase-js wraps it as a string
+          .not('add_on_id', 'in', `(${selectedAddOnIds.join(',')})`);
+
+        if (selDelErr) throw selDelErr;
+      } else {
+        const { error: selClearErr } = await (supabase as any)
+          .from('onboarding_add_on_selections')
+          .delete()
+          .eq('user_id', user.id);
+        if (selClearErr) throw selClearErr;
+      }
+
       if (businessStage === 'new') {
         // Create user package request (awaiting admin approval/payment)
         const { error: packageError } = await (supabase as any).from('user_packages').insert({

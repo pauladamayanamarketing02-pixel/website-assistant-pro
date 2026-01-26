@@ -15,6 +15,7 @@ interface AddOn {
   pricePerUnit: number;
   unitStep: number;
   unit: string;
+  maxQuantity?: number | null;
 }
 
 interface PackageCardProps {
@@ -99,11 +100,15 @@ export default function PackageCard({
     onSelect(totalPrice, selectedAddOns);
   }, [isSelected, onSelect, selectedAddOns, totalPrice]);
 
-  const handleAddOnChange = (addOnId: string, delta: number, unitStep: number) => {
+  const handleAddOnChange = (addOnId: string, delta: number, unitStep: number, maxQuantity?: number | null) => {
     setSelectedAddOns((prev) => {
       const current = prev[addOnId] || 0;
-      const newValue = Math.max(0, current + delta * unitStep);
-      return { ...prev, [addOnId]: newValue };
+      const rawNext = Math.max(0, current + delta * unitStep);
+      const next =
+        maxQuantity === null || maxQuantity === undefined
+          ? rawNext
+          : Math.min(Math.max(0, Number(maxQuantity)), rawNext);
+      return { ...prev, [addOnId]: next };
     });
   };
 
@@ -183,6 +188,7 @@ export default function PackageCard({
           <div className="space-y-3 pt-4 border-t">
             <p className="text-sm font-medium text-muted-foreground">Optional Add-ons</p>
             {addOns.map((addOn) => (
+              // When maxQuantity is set, prevent the user from exceeding it.
               <div
                 key={addOn.id}
                 className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
@@ -200,7 +206,7 @@ export default function PackageCard({
                     variant="outline"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={() => handleAddOnChange(addOn.id, -1, addOn.unitStep)}
+                    onClick={() => handleAddOnChange(addOn.id, -1, addOn.unitStep, addOn.maxQuantity)}
                     disabled={(selectedAddOns[addOn.id] || 0) === 0}
                   >
                     <Minus className="h-3 w-3" />
@@ -212,7 +218,12 @@ export default function PackageCard({
                     variant="outline"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={() => handleAddOnChange(addOn.id, 1, addOn.unitStep)}
+                    onClick={() => handleAddOnChange(addOn.id, 1, addOn.unitStep, addOn.maxQuantity)}
+                    disabled={
+                      addOn.maxQuantity !== null &&
+                      addOn.maxQuantity !== undefined &&
+                      (selectedAddOns[addOn.id] || 0) >= Number(addOn.maxQuantity)
+                    }
                   >
                     <Plus className="h-3 w-3" />
                   </Button>
