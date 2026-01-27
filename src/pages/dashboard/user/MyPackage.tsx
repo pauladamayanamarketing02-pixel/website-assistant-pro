@@ -47,6 +47,18 @@ interface AvailablePackage {
   price: number;
 }
 
+interface PackageAddOnRow {
+  id: string;
+  add_on_key: string;
+  label: string;
+  price_per_unit: number;
+  unit_step: number;
+  unit: string;
+  is_active: boolean;
+  sort_order: number;
+  max_quantity: number | null;
+}
+
 // Package upgrade recommendations based on current package
 const packageUpgradeRecommendations: Record<string, string> = {
   starter: "growth",
@@ -117,6 +129,8 @@ export default function MyPackage() {
   const [paymentActive, setPaymentActive] = useState<boolean>(false);
   const [availablePackages, setAvailablePackages] = useState<AvailablePackage[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [addOnsByPackageId, setAddOnsByPackageId] = useState<Record<string, PackageAddOnRow[]>>({});
 
   const [durationRowsByPackageId, setDurationRowsByPackageId] = useState<Record<string, PackageDurationRow[]>>({});
   const [savingDuration, setSavingDuration] = useState(false);
@@ -254,6 +268,50 @@ export default function MyPackage() {
 
           setDurationRowsByPackageId((prev) => ({ ...prev, ...grouped }));
         }
+      }
+
+      // Fetch add-ons for the current package + upgrade packages (Onboarding add-ons)
+      try {
+        const currentPid = String((userPkg as any)?.package_id ?? "");
+        const upgradePids = (allPkgs as any[] | null)
+          ? (allPkgs as any[]).map((p) => String(p.id)).filter(Boolean)
+          : [];
+
+        const ids = Array.from(new Set([currentPid, ...upgradePids].filter(Boolean)));
+        if (ids.length > 0) {
+          const { data: addOnRows, error: addOnError } = await (supabase as any)
+            .from("package_add_ons")
+            .select("id,package_id,add_on_key,label,price_per_unit,unit_step,unit,is_active,sort_order,max_quantity")
+            .in("package_id", ids)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true });
+
+          if (addOnError) {
+            console.warn("Failed to load package add-ons:", addOnError);
+          } else {
+            const grouped: Record<string, PackageAddOnRow[]> = {};
+            ((addOnRows as any[]) || []).forEach((r) => {
+              const pid = String(r.package_id);
+              if (!grouped[pid]) grouped[pid] = [];
+              grouped[pid].push({
+                id: String(r.id),
+                add_on_key: String(r.add_on_key ?? ""),
+                label: String(r.label ?? ""),
+                price_per_unit: Number(r.price_per_unit ?? 0),
+                unit_step: Number(r.unit_step ?? 1),
+                unit: String(r.unit ?? "unit"),
+                is_active: Boolean(r.is_active ?? true),
+                sort_order: Number(r.sort_order ?? 0),
+                max_quantity: r.max_quantity === null || r.max_quantity === undefined ? null : Number(r.max_quantity),
+              });
+            });
+
+            setAddOnsByPackageId(grouped);
+          }
+        }
+      } catch (e) {
+        console.warn("Add-ons fetch failed:", e);
       }
 
       setLoading(false);
@@ -511,6 +569,29 @@ export default function MyPackage() {
                   </ul>
                 </div>
 
+                <div className="space-y-2">
+                  <p className="font-medium text-foreground">Add-ons (Onboarding):</p>
+
+                  {(addOnsByPackageId[activePackageId] ?? []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No add-ons available for this package.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {(addOnsByPackageId[activePackageId] ?? []).map((addOn) => (
+                        <li key={addOn.id} className="flex items-start justify-between gap-3 min-w-0">
+                          <div className="min-w-0">
+                            <p className="text-sm text-foreground break-words whitespace-normal">{addOn.label}</p>
+                            <p className="text-xs text-muted-foreground break-words whitespace-normal">
+                              {addOn.unit_step} {addOn.unit}
+                              {addOn.max_quantity ? ` • max ${addOn.max_quantity}` : ""}
+                            </p>
+                          </div>
+                          <div className="text-sm font-medium text-foreground shrink-0">${addOn.price_per_unit}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
                 <div className="pt-2">
                   <div className="flex flex-col gap-3">
                     <p className="text-2xl font-bold text-foreground">
@@ -752,6 +833,30 @@ export default function MyPackage() {
                             </li>
                           ))}
                         </ul>
+                      </div>
+
+                      <div className="rounded-lg border bg-card/50 p-3">
+                        <p className="text-sm font-medium text-foreground">Add-ons (Onboarding)</p>
+                        {(addOnsByPackageId[String(pkg.id)] ?? []).length === 0 ? (
+                          <p className="mt-2 text-sm text-muted-foreground">No add-ons available for this package.</p>
+                        ) : (
+                          <ul className="mt-3 space-y-2">
+                            {(addOnsByPackageId[String(pkg.id)] ?? []).map((addOn) => (
+                              <li key={addOn.id} className="flex items-start justify-between gap-3 min-w-0">
+                                <div className="min-w-0">
+                                  <p className="text-sm text-muted-foreground break-words whitespace-normal">
+                                    {addOn.label}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground break-words whitespace-normal">
+                                    {addOn.unit_step} {addOn.unit}
+                                    {addOn.max_quantity ? ` • max ${addOn.max_quantity}` : ""}
+                                  </p>
+                                </div>
+                                <div className="text-sm font-medium text-foreground shrink-0">${addOn.price_per_unit}</div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
 
                       <Button
