@@ -565,14 +565,27 @@ export default function MyPackage() {
     };
   }, [durationOptions, selectedDurationMonths]);
 
+  const currentAddOnsMonthly = useMemo(() => {
+    if (!activePackageId) return 0;
+    return (addOnsByPackageId[activePackageId] ?? []).reduce((sum, addOn) => {
+      const qty = Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0);
+      return sum + qty * Number(addOn.price_per_unit ?? 0);
+    }, 0);
+  }, [activePackageId, addOnsByPackageId, addOnSelectionsByAddOnId]);
+
+  const currentMonthlyWithAddOns = useMemo(() => {
+    const base = Number(activePackage?.packages.price || 0);
+    return base + currentAddOnsMonthly;
+  }, [activePackage?.packages.price, currentAddOnsMonthly]);
+
   const discountedTotalForDuration = useMemo(() => {
     if (!activePackage) return 0;
     return computeDiscountedTotal({
-      monthlyPrice: Number(activePackage.packages.price || 0),
+      monthlyPrice: currentMonthlyWithAddOns,
       months: selectedDurationMeta.months,
       discountPercent: selectedDurationMeta.discountPercent,
     });
-  }, [activePackage, selectedDurationMeta.discountPercent, selectedDurationMeta.months]);
+  }, [activePackage, currentMonthlyWithAddOns, selectedDurationMeta.discountPercent, selectedDurationMeta.months]);
 
   const handleChangeDuration = async (monthsStr: string) => {
     if (!user || !activePackage) return;
@@ -868,8 +881,15 @@ export default function MyPackage() {
                     isFromDb: false,
                   };
 
+                const upgradeAddOnsMonthly = (addOnsByPackageId[String(pkg.id)] ?? []).reduce((sum, addOn) => {
+                  const qty = Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0);
+                  return sum + qty * Number(addOn.price_per_unit ?? 0);
+                }, 0);
+
+                const upgradeMonthlyWithAddOns = Number(pkg.price || 0) + upgradeAddOnsMonthly;
+
                 const discountedUpgradeTotal = computeDiscountedTotal({
-                  monthlyPrice: Number(pkg.price || 0),
+                  monthlyPrice: upgradeMonthlyWithAddOns,
                   months: Number(selectedUpgradeMeta.months || 0),
                   discountPercent: Number(selectedUpgradeMeta.discountPercent || 0),
                 });
