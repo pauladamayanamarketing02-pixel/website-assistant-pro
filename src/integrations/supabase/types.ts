@@ -1703,6 +1703,10 @@ export type Database = {
       }
       website_inquiries: {
         Row: {
+          attachment_mime: string | null
+          attachment_name: string | null
+          attachment_size: number | null
+          attachment_url: string | null
           created_at: string
           email: string
           id: string
@@ -1715,6 +1719,10 @@ export type Database = {
           user_agent: string | null
         }
         Insert: {
+          attachment_mime?: string | null
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_url?: string | null
           created_at?: string
           email: string
           id?: string
@@ -1727,6 +1735,10 @@ export type Database = {
           user_agent?: string | null
         }
         Update: {
+          attachment_mime?: string | null
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_url?: string | null
           created_at?: string
           email?: string
           id?: string
