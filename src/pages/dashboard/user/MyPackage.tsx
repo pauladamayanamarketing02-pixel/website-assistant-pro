@@ -3,6 +3,7 @@ import { Package, Check, ArrowUpRight, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
   type PackageDurationRow,
 } from "@/lib/packageDurations";
 import { toast } from "sonner";
+import { z } from "zod";
 
 interface UserPackage {
   id: string;
@@ -58,6 +60,15 @@ interface PackageAddOnRow {
   sort_order: number;
   max_quantity: number | null;
 }
+
+type AddOnSelectionRow = {
+  id: string;
+  user_id: string;
+  add_on_id: string;
+  quantity: number;
+};
+
+const addOnQuantitySchema = z.number().int().min(0);
 
 // Package upgrade recommendations based on current package
 const packageUpgradeRecommendations: Record<string, string> = {
@@ -131,6 +142,8 @@ export default function MyPackage() {
   const [loading, setLoading] = useState(true);
 
   const [addOnsByPackageId, setAddOnsByPackageId] = useState<Record<string, PackageAddOnRow[]>>({});
+  const [addOnSelectionsByAddOnId, setAddOnSelectionsByAddOnId] = useState<Record<string, number>>({});
+  const [savingAddOnId, setSavingAddOnId] = useState<string | null>(null);
 
   const [durationRowsByPackageId, setDurationRowsByPackageId] = useState<Record<string, PackageDurationRow[]>>({});
   const [savingDuration, setSavingDuration] = useState(false);
@@ -314,11 +327,114 @@ export default function MyPackage() {
         console.warn("Add-ons fetch failed:", e);
       }
 
+      // Fetch user's onboarding add-on selections (so qty & state persists)
+      try {
+        const { data: selections, error: selError } = await (supabase as any)
+          .from("onboarding_add_on_selections")
+          .select("id,user_id,add_on_id,quantity")
+          .eq("user_id", user.id);
+
+        if (selError) {
+          console.warn("Failed to load onboarding add-on selections:", selError);
+        } else {
+          const next: Record<string, number> = {};
+          ((selections as AddOnSelectionRow[]) || []).forEach((s) => {
+            next[String(s.add_on_id)] = Number(s.quantity ?? 0);
+          });
+          setAddOnSelectionsByAddOnId(next);
+        }
+      } catch (e) {
+        console.warn("Selections fetch failed:", e);
+      }
+
       setLoading(false);
     };
 
     fetchPackages();
   }, [user]);
+
+  const getMaxQty = (addOn: PackageAddOnRow) => {
+    const max = addOn.max_quantity;
+    if (max === null || max === undefined) return null;
+    const n = Number(max);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+
+  const clampQty = (qty: number, addOn: PackageAddOnRow) => {
+    const max = getMaxQty(addOn);
+    if (max === null) return Math.max(0, qty);
+    return Math.min(Math.max(0, qty), max);
+  };
+
+  const saveAddOnSelection = async (addOn: PackageAddOnRow, qty: number) => {
+    if (!user) return;
+
+    // Client-side validation
+    const parsed = addOnQuantitySchema.safeParse(qty);
+    if (!parsed.success) {
+      toast.error("Invalid quantity");
+      return;
+    }
+
+    const safeQty = clampQty(parsed.data, addOn);
+    if (safeQty !== qty) {
+      toast.message(`Quantity adjusted to ${safeQty} (max limit).`);
+    }
+
+    setSavingAddOnId(addOn.id);
+    try {
+      // Find existing selection for this add-on
+      const { data: existing, error: existingErr } = await (supabase as any)
+        .from("onboarding_add_on_selections")
+        .select("id,quantity")
+        .eq("user_id", user.id)
+        .eq("add_on_id", addOn.id)
+        .maybeSingle();
+
+      if (existingErr) throw existingErr;
+
+      if (!safeQty) {
+        // qty=0 => delete
+        if (existing?.id) {
+          const { error: delErr } = await (supabase as any)
+            .from("onboarding_add_on_selections")
+            .delete()
+            .eq("id", String(existing.id))
+            .eq("user_id", user.id);
+          if (delErr) throw delErr;
+        }
+        setAddOnSelectionsByAddOnId((prev) => {
+          const next = { ...prev };
+          delete next[String(addOn.id)];
+          return next;
+        });
+        toast.success("Add-on removed");
+        return;
+      }
+
+      if (existing?.id) {
+        const { error: updErr } = await (supabase as any)
+          .from("onboarding_add_on_selections")
+          .update({ quantity: safeQty })
+          .eq("id", String(existing.id))
+          .eq("user_id", user.id);
+        if (updErr) throw updErr;
+      } else {
+        const { error: insErr } = await (supabase as any)
+          .from("onboarding_add_on_selections")
+          .insert({ user_id: user.id, add_on_id: addOn.id, quantity: safeQty });
+        if (insErr) throw insErr;
+      }
+
+      setAddOnSelectionsByAddOnId((prev) => ({ ...prev, [String(addOn.id)]: safeQty }));
+      toast.success("Add-on saved");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Failed to save add-on");
+    } finally {
+      setSavingAddOnId(null);
+    }
+  };
 
   // Filter packages to only show those with higher price than active package
   const getUpgradePackages = () => {
@@ -585,7 +701,33 @@ export default function MyPackage() {
                               {addOn.max_quantity ? ` • max ${addOn.max_quantity}` : ""}
                             </p>
                           </div>
-                          <div className="text-sm font-medium text-foreground shrink-0">${addOn.price_per_unit}</div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="text-sm font-medium text-foreground">${addOn.price_per_unit}</div>
+                            <Input
+                              className="h-9 w-20"
+                              type="number"
+                              min={0}
+                              step={addOn.unit_step || 1}
+                              value={String(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0)}
+                              onChange={(e) => {
+                                const next = Number(e.target.value);
+                                setAddOnSelectionsByAddOnId((prev) => ({
+                                  ...prev,
+                                  [String(addOn.id)]: Number.isFinite(next) ? next : 0,
+                                }));
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={savingAddOnId === addOn.id}
+                              onClick={() =>
+                                void saveAddOnSelection(addOn, Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0))
+                              }
+                            >
+                              {savingAddOnId === addOn.id ? "Saving..." : "Add"}
+                            </Button>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -852,7 +994,36 @@ export default function MyPackage() {
                                     {addOn.max_quantity ? ` • max ${addOn.max_quantity}` : ""}
                                   </p>
                                 </div>
-                                <div className="text-sm font-medium text-foreground shrink-0">${addOn.price_per_unit}</div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <div className="text-sm font-medium text-foreground">${addOn.price_per_unit}</div>
+                                  <Input
+                                    className="h-9 w-20"
+                                    type="number"
+                                    min={0}
+                                    step={addOn.unit_step || 1}
+                                    value={String(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0)}
+                                    onChange={(e) => {
+                                      const next = Number(e.target.value);
+                                      setAddOnSelectionsByAddOnId((prev) => ({
+                                        ...prev,
+                                        [String(addOn.id)]: Number.isFinite(next) ? next : 0,
+                                      }));
+                                    }}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={savingAddOnId === addOn.id}
+                                    onClick={() =>
+                                      void saveAddOnSelection(
+                                        addOn,
+                                        Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0)
+                                      )
+                                    }
+                                  >
+                                    {savingAddOnId === addOn.id ? "Saving..." : "Add"}
+                                  </Button>
+                                </div>
                               </li>
                             ))}
                           </ul>
