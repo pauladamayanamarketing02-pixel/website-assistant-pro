@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Package, Check, ArrowUpRight, Star } from "lucide-react";
+import { Package, Check, ArrowUpRight, Star, Minus, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -366,6 +365,17 @@ export default function MyPackage() {
     return Math.min(Math.max(0, qty), max);
   };
 
+  const changeAddOnQty = (addOn: PackageAddOnRow, delta: number) => {
+    const curr = Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0);
+    const step = Number(addOn.unit_step ?? 1);
+    const next = clampQty(curr + delta * step, addOn);
+    setAddOnSelectionsByAddOnId((prev) => ({
+      ...prev,
+      [String(addOn.id)]: next,
+    }));
+    void saveAddOnSelection(addOn, next);
+  };
+
   const saveAddOnSelection = async (addOn: PackageAddOnRow, qty: number) => {
     if (!user) return;
 
@@ -685,48 +695,62 @@ export default function MyPackage() {
                   </ul>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="font-medium text-foreground">Add-ons (Onboarding):</p>
+                <div className="space-y-3">
+                  <p className="font-medium text-foreground">Add-ons</p>
 
                   {(addOnsByPackageId[activePackageId] ?? []).length === 0 ? (
                     <p className="text-sm text-muted-foreground">No add-ons available for this package.</p>
                   ) : (
                     <ul className="space-y-2">
                       {(addOnsByPackageId[activePackageId] ?? []).map((addOn) => (
-                        <li key={addOn.id} className="flex items-start justify-between gap-3 min-w-0">
+                        <li
+                          key={addOn.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border bg-card/50 p-3"
+                        >
                           <div className="min-w-0">
-                            <p className="text-sm text-foreground break-words whitespace-normal">{addOn.label}</p>
+                            <p className="text-sm font-medium text-foreground break-words whitespace-normal">
+                              {addOn.label}
+                            </p>
                             <p className="text-xs text-muted-foreground break-words whitespace-normal">
-                              {addOn.unit_step} {addOn.unit}
+                              {addOn.unit_step} {addOn.unit} / month
+                            </p>
+                            <p className="text-xs text-muted-foreground break-words whitespace-normal">
+                              +${addOn.price_per_unit} for {addOn.unit_step} {addOn.unit}
                               {addOn.max_quantity ? ` • max ${addOn.max_quantity}` : ""}
                             </p>
                           </div>
+
                           <div className="flex items-center gap-2 shrink-0">
-                            <div className="text-sm font-medium text-foreground">${addOn.price_per_unit}</div>
-                            <Input
-                              className="h-9 w-20"
-                              type="number"
-                              min={0}
-                              step={addOn.unit_step || 1}
-                              value={String(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0)}
-                              onChange={(e) => {
-                                const next = Number(e.target.value);
-                                setAddOnSelectionsByAddOnId((prev) => ({
-                                  ...prev,
-                                  [String(addOn.id)]: Number.isFinite(next) ? next : 0,
-                                }));
-                              }}
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={savingAddOnId === addOn.id}
-                              onClick={() =>
-                                void saveAddOnSelection(addOn, Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0))
-                              }
-                            >
-                              {savingAddOnId === addOn.id ? "Saving..." : "Add"}
-                            </Button>
+                            <div className="inline-flex items-center gap-1 rounded-lg border bg-background p-1">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                disabled={
+                                  savingAddOnId === addOn.id ||
+                                  Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0) <= 0
+                                }
+                                onClick={() => changeAddOnQty(addOn, -1)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center text-sm font-medium text-foreground">
+                                {Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0)}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                disabled={
+                                  savingAddOnId === addOn.id ||
+                                  (getMaxQty(addOn) !== null &&
+                                    Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0) >= getMaxQty(addOn)!)
+                                }
+                                onClick={() => changeAddOnQty(addOn, 1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </li>
                       ))}
@@ -978,51 +1002,61 @@ export default function MyPackage() {
                       </div>
 
                       <div className="rounded-lg border bg-card/50 p-3">
-                        <p className="text-sm font-medium text-foreground">Add-ons (Onboarding)</p>
+                        <p className="text-sm font-medium text-foreground">Add-ons</p>
                         {(addOnsByPackageId[String(pkg.id)] ?? []).length === 0 ? (
                           <p className="mt-2 text-sm text-muted-foreground">No add-ons available for this package.</p>
                         ) : (
                           <ul className="mt-3 space-y-2">
                             {(addOnsByPackageId[String(pkg.id)] ?? []).map((addOn) => (
-                              <li key={addOn.id} className="flex items-start justify-between gap-3 min-w-0">
+                              <li
+                                key={addOn.id}
+                                className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3"
+                              >
                                 <div className="min-w-0">
-                                  <p className="text-sm text-muted-foreground break-words whitespace-normal">
+                                  <p className="text-sm font-medium text-foreground break-words whitespace-normal">
                                     {addOn.label}
                                   </p>
                                   <p className="text-xs text-muted-foreground break-words whitespace-normal">
-                                    {addOn.unit_step} {addOn.unit}
+                                    {addOn.unit_step} {addOn.unit} / month
+                                  </p>
+                                  <p className="text-xs text-muted-foreground break-words whitespace-normal">
+                                    +${addOn.price_per_unit} for {addOn.unit_step} {addOn.unit}
                                     {addOn.max_quantity ? ` • max ${addOn.max_quantity}` : ""}
                                   </p>
                                 </div>
+
                                 <div className="flex items-center gap-2 shrink-0">
-                                  <div className="text-sm font-medium text-foreground">${addOn.price_per_unit}</div>
-                                  <Input
-                                    className="h-9 w-20"
-                                    type="number"
-                                    min={0}
-                                    step={addOn.unit_step || 1}
-                                    value={String(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0)}
-                                    onChange={(e) => {
-                                      const next = Number(e.target.value);
-                                      setAddOnSelectionsByAddOnId((prev) => ({
-                                        ...prev,
-                                        [String(addOn.id)]: Number.isFinite(next) ? next : 0,
-                                      }));
-                                    }}
-                                  />
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={savingAddOnId === addOn.id}
-                                    onClick={() =>
-                                      void saveAddOnSelection(
-                                        addOn,
-                                        Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0)
-                                      )
-                                    }
-                                  >
-                                    {savingAddOnId === addOn.id ? "Saving..." : "Add"}
-                                  </Button>
+                                  <div className="inline-flex items-center gap-1 rounded-lg border bg-background p-1">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      disabled={
+                                        savingAddOnId === addOn.id ||
+                                        Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0) <= 0
+                                      }
+                                      onClick={() => changeAddOnQty(addOn, -1)}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-8 text-center text-sm font-medium text-foreground">
+                                      {Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0)}
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      disabled={
+                                        savingAddOnId === addOn.id ||
+                                        (getMaxQty(addOn) !== null &&
+                                          Number(addOnSelectionsByAddOnId[String(addOn.id)] ?? 0) >=
+                                            getMaxQty(addOn)!)
+                                      }
+                                      onClick={() => changeAddOnQty(addOn, 1)}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </div>
                               </li>
                             ))}
