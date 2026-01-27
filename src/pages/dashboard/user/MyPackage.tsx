@@ -943,7 +943,6 @@ export default function MyPackage() {
                     <CardContent className="space-y-4 min-w-0">
                       {/* Upgrade Options Duration (same rules as onboarding) */}
                       <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
                           <div className="flex flex-wrap items-center gap-2 min-w-0">
                             <span className="text-sm text-muted-foreground">Duration:</span>
                             <div className="w-full sm:w-[220px]">
@@ -977,15 +976,12 @@ export default function MyPackage() {
                             )}
                           </div>
 
-                          <div className="text-right">
-                            <div className="text-sm text-muted-foreground">
-                              Total ({selectedUpgradeMeta.label || "—"}):{" "}
-                              <span className="font-medium text-foreground">
-                                {selectedUpgradeMeta.months ? `$${discountedUpgradeTotal}` : "—"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                          <p className="text-sm text-muted-foreground">
+                            Total ({selectedUpgradeMeta.label || "—"}):{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedUpgradeMeta.months ? `$${discountedUpgradeTotal}` : "—"}
+                            </span>
+                          </p>
 
                         {upgradeDurationOptions.length === 0 && (
                           <p className="text-xs text-muted-foreground">
