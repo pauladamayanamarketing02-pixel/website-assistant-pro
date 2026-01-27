@@ -941,55 +941,6 @@ export default function MyPackage() {
                     </CardHeader>
 
                     <CardContent className="space-y-4 min-w-0">
-                      {/* Upgrade Options Duration (same rules as onboarding) */}
-                      <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                          <div className="flex flex-wrap items-center gap-2 min-w-0">
-                            <span className="text-sm text-muted-foreground">Duration:</span>
-                            <div className="w-full sm:w-[220px]">
-                              <Select
-                                value={selectedUpgradeMonths ? String(selectedUpgradeMonths) : ""}
-                                onValueChange={(v) =>
-                                  setSelectedUpgradeDurationByPackageId((prev) => ({
-                                    ...prev,
-                                    [String(pkg.id)]: Number(v),
-                                  }))
-                                }
-                                disabled={upgradeDurationOptions.length === 0}
-                              >
-                                <SelectTrigger className="h-9">
-                                  <SelectValue placeholder="Select a duration" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-popover z-50">
-                                  {upgradeDurationOptions.map((opt) => (
-                                    <SelectItem key={opt.months} value={String(opt.months)}>
-                                      {opt.label}
-                                      {opt.discountPercent > 0 ? ` — ${opt.discountPercent}% off` : ""}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            {selectedUpgradeMeta.discountPercent > 0 && (
-                              <Badge variant="secondary" className="bg-primary/10 text-primary">
-                                {selectedUpgradeMeta.discountPercent}% OFF
-                              </Badge>
-                            )}
-                          </div>
-
-                          <p className="text-sm text-muted-foreground">
-                            Total ({selectedUpgradeMeta.label || "—"}):{" "}
-                            <span className="font-medium text-foreground">
-                              {selectedUpgradeMeta.months ? `$${discountedUpgradeTotal}` : "—"}
-                            </span>
-                          </p>
-
-                        {upgradeDurationOptions.length === 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            This package does not have any duration options (other than 1 month).
-                          </p>
-                        )}
-                      </div>
-
                       <div className="rounded-lg border bg-card/50 p-3">
                         <p className="text-sm font-medium text-foreground">What you’ll get</p>
                         {/* Mobile: full list */}
@@ -1077,6 +1028,55 @@ export default function MyPackage() {
                               </li>
                             ))}
                           </ul>
+                        )}
+                      </div>
+
+                      {/* Duration (after Add-ons) */}
+                      <div className="rounded-lg border bg-card/50 p-3 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <span className="text-sm text-muted-foreground">Duration:</span>
+                          <div className="w-full sm:w-[220px]">
+                            <Select
+                              value={selectedUpgradeMonths ? String(selectedUpgradeMonths) : ""}
+                              onValueChange={(v) =>
+                                setSelectedUpgradeDurationByPackageId((prev) => ({
+                                  ...prev,
+                                  [String(pkg.id)]: Number(v),
+                                }))
+                              }
+                              disabled={upgradeDurationOptions.length === 0}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select a duration" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover z-50">
+                                {upgradeDurationOptions.map((opt) => (
+                                  <SelectItem key={opt.months} value={String(opt.months)}>
+                                    {opt.label}
+                                    {opt.discountPercent > 0 ? ` — ${opt.discountPercent}% off` : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {selectedUpgradeMeta.discountPercent > 0 && (
+                            <Badge variant="secondary" className="bg-primary/10 text-primary">
+                              {selectedUpgradeMeta.discountPercent}% OFF
+                            </Badge>
+                          )}
+                        </div>
+
+                        <p className="text-sm text-muted-foreground">
+                          Total ({selectedUpgradeMeta.label || "—"}):{" "}
+                          <span className="font-medium text-foreground">
+                            {selectedUpgradeMeta.months ? `$${discountedUpgradeTotal}` : "—"}
+                          </span>
+                        </p>
+
+                        {upgradeDurationOptions.length === 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            This package does not have any duration options (other than 1 month).
+                          </p>
                         )}
                       </div>
 
