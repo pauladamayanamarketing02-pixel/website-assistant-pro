@@ -441,11 +441,6 @@ export default function MyPackage() {
     );
   }
 
-  const currentFeaturesDesktop = activePackage ? activePackage.packages.features.slice(0, 6) : [];
-  const currentFeaturesOverflow = activePackage
-    ? Math.max(0, activePackage.packages.features.length - currentFeaturesDesktop.length)
-    : 0;
-
   return (
     <div className="space-y-6">
       <div className="shrink-0">
@@ -503,9 +498,9 @@ export default function MyPackage() {
                     ))}
                   </ul>
 
-                  {/* Desktop: limit list so the page fits 1 screen */}
+                  {/* Desktop: show full list (no "+xx more…") */}
                   <ul className="hidden lg:block space-y-2">
-                    {currentFeaturesDesktop.map((feature, index) => (
+                    {activePackage.packages.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-2 min-w-0">
                         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                           <Check className="h-3 w-3 text-primary" />
@@ -513,9 +508,6 @@ export default function MyPackage() {
                         <span className="text-sm text-foreground break-words whitespace-normal">{feature}</span>
                       </li>
                     ))}
-                    {currentFeaturesOverflow > 0 && (
-                      <li className="text-xs text-muted-foreground pl-7">+{currentFeaturesOverflow} more…</li>
-                    )}
                   </ul>
                 </div>
 
@@ -613,8 +605,6 @@ export default function MyPackage() {
             <div className="grid gap-4">
               {upgradePackages.map((pkg) => {
                 const isRecommended = normalizeTier(pkg.type) === normalizeTier(recommendedType);
-                const desktopFeatures = pkg.features.slice(0, 6);
-                const overflowCount = Math.max(0, pkg.features.length - desktopFeatures.length);
 
                 const upgradeDurationOptions = buildDurationOptionsFromDb(
                   durationRowsByPackageId[String(pkg.id)]
@@ -751,9 +741,9 @@ export default function MyPackage() {
                           ))}
                         </ul>
 
-                        {/* Desktop: limited list */}
+                        {/* Desktop: full list (no "+xx more…") */}
                         <ul className="hidden lg:block mt-3 space-y-2">
-                          {desktopFeatures.map((feature, index) => (
+                          {pkg.features.map((feature, index) => (
                             <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground min-w-0">
                               <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                                 <Check className="h-3 w-3 text-primary" />
@@ -761,9 +751,6 @@ export default function MyPackage() {
                               <span className="break-words whitespace-normal">{feature}</span>
                             </li>
                           ))}
-                          {overflowCount > 0 && (
-                            <li className="text-xs text-muted-foreground pl-7">+{overflowCount} more…</li>
-                          )}
                         </ul>
                       </div>
 
