@@ -88,8 +88,11 @@ export default function SuperAdminUsersAssists() {
 
   const getAccountStatus = (row: Pick<AccountRow, "role" | "paymentActive" | "accountStatus">) => {
     const role = normalizeRole(row.role);
-    // payment_active=true always means Active access.
-    if (row.paymentActive) return "active";
+    // NOTE:
+    // - For assistants, status should strictly follow profiles.account_status
+    //   so the admin "set nonactive" action works reliably.
+    // - For users, payment_active=true still implies Active access.
+    if (role !== "assistant" && row.paymentActive) return "active";
 
     const s = normalizeAccountStatus(row.accountStatus);
 
