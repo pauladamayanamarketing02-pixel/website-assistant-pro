@@ -255,13 +255,13 @@ export default function AssistDashboard() {
         try {
           const { data, error } = await (supabase as any)
             .from('profiles')
-            .select('status, name, email')
+            .select('account_status, name, email')
             .eq('id', user.id)
             .maybeSingle();
 
           if (error) throw error;
 
-          setProfileStatus(String((data as any)?.status ?? 'active'));
+          setProfileStatus(String((data as any)?.account_status ?? 'active'));
           setProfileName(String((data as any)?.name ?? ''));
           setProfileEmail(String((data as any)?.email ?? user.email ?? ''));
         } catch (err) {

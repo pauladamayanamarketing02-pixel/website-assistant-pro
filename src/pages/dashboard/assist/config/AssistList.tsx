@@ -41,12 +41,17 @@ export default function AssistList() {
       // Fetch profiles for assist users
       const { data: profiles, error: profilesError } = await (supabase as any)
         .from('profiles')
-        .select('id, name, email, status')
+        .select('id, name, email, account_status')
         .in('id', assistIds);
 
       if (profilesError) throw profilesError;
 
-      setAssists((profiles as any) || []);
+      setAssists((((profiles as any[]) || []) as any[]).map((p) => ({
+        id: String(p.id),
+        name: String(p.name ?? ""),
+        email: String(p.email ?? ""),
+        status: (p as any).account_status ?? null,
+      })) as any);
     } catch (error) {
       console.error('Error fetching assists:', error);
     } finally {

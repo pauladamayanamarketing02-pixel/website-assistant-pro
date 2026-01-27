@@ -61,7 +61,7 @@ export default function AdminAssistants() {
 
       const { data: profiles, error: profilesError } = await (supabase as any)
         .from("profiles")
-        .select("id, name, email, phone, country, status")
+        .select("id, name, email, phone, country, account_status")
         .in("id", assistIds)
         .order("created_at", { ascending: false });
 
@@ -69,6 +69,7 @@ export default function AdminAssistants() {
 
       const nextRows: AssistantRow[] = ((profiles as any[]) ?? []).map((p) => ({
         ...p,
+        status: (p as any).account_status ?? null,
         assistId: formatAssistId(p.id),
       }));
 

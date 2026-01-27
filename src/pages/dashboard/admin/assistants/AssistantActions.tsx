@@ -37,7 +37,7 @@ type Props = {
 export function AssistantActions({ userId, email, status, onView, onDeleted, onUpdated }: Props) {
   const { toast } = useToast();
   const [sendingReset, setSendingReset] = useState(false);
-  const [settingStatus, setSettingStatus] = useState<"active" | "inactive" | null>(null);
+  const [settingStatus, setSettingStatus] = useState<"active" | "nonactive" | null>(null);
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -55,7 +55,7 @@ export function AssistantActions({ userId, email, status, onView, onDeleted, onU
   const normalizedStatus = useMemo(() => String(status ?? "active").toLowerCase(), [status]);
   const isActive = normalizedStatus === "active";
 
-  const setProfileStatus = async (next: "active" | "inactive") => {
+  const setProfileStatus = async (next: "active" | "nonactive") => {
     if (!userId) return;
     setSettingStatus(next);
     try {
@@ -206,7 +206,7 @@ export function AssistantActions({ userId, email, status, onView, onDeleted, onU
           size="icon"
           className="h-8 w-8"
           title="Set Nonactive"
-          onClick={() => void setProfileStatus("inactive")}
+          onClick={() => void setProfileStatus("nonactive")}
           disabled={!userId || !isActive || sendingReset || sendingEmailChange || deleting || settingStatus !== null}
         >
           <CircleX className="h-4 w-4 text-destructive" />
