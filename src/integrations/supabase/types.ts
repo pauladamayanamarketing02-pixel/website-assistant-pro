@@ -1295,7 +1295,6 @@ export type Database = {
           portfolio_url: string | null
           skills: string[] | null
           social_links: Json | null
-          status: string | null
           twitter_url: string | null
           updated_at: string | null
         }
@@ -1322,7 +1321,6 @@ export type Database = {
           portfolio_url?: string | null
           skills?: string[] | null
           social_links?: Json | null
-          status?: string | null
           twitter_url?: string | null
           updated_at?: string | null
         }
@@ -1349,7 +1347,6 @@ export type Database = {
           portfolio_url?: string | null
           skills?: string[] | null
           social_links?: Json | null
-          status?: string | null
           twitter_url?: string | null
           updated_at?: string | null
         }
