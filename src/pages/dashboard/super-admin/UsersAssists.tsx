@@ -86,10 +86,21 @@ export default function SuperAdminUsersAssists() {
     return s;
   };
 
-  // IMPORTANT: show the raw status coming from `profiles.account_status`
-  // (normalized for back-compat). No extra inference from `payment_active`.
-  const getProfileAccountStatus = (row: Pick<AccountRow, "accountStatus">) => {
-    return normalizeAccountStatus(row.accountStatus);
+  const getAccountStatus = (row: Pick<AccountRow, "role" | "paymentActive" | "accountStatus">) => {
+    const role = normalizeRole(row.role);
+    // payment_active=true always means Active access.
+    if (row.paymentActive) return "active";
+
+    const s = normalizeAccountStatus(row.accountStatus);
+
+    // For assistants we only care about active/nonactive/pending.
+    if (role === "assistant") {
+      if (s === "active" || s === "pending" || s === "nonactive") return s;
+      // Treat suspended/blacklisted/expired/etc as nonactive for assistant UI.
+      return "nonactive";
+    }
+
+    return s;
   };
 
   const renderStatusBadge = (status: string, role: string) => {
@@ -156,7 +167,7 @@ export default function SuperAdminUsersAssists() {
     return rows.filter((r) => {
       if (roleFilter !== "all" && normalizeRole(r.role) !== roleFilter) return false;
       if (statusFilter !== "all") {
-        const s = String(getProfileAccountStatus(r) ?? "").toLowerCase().trim();
+        const s = String(getAccountStatus(r) ?? "").toLowerCase().trim();
         if (s !== String(statusFilter).toLowerCase().trim()) return false;
       }
       return true;
@@ -169,7 +180,7 @@ export default function SuperAdminUsersAssists() {
     const map = new Map<string, string>();
 
     base.forEach((r) => {
-      const raw = String(getProfileAccountStatus(r) ?? "").toLowerCase().trim();
+      const raw = String(getAccountStatus(r) ?? "").toLowerCase().trim();
       if (!raw) return;
       const label =
         normalizeRole(r.role) === "assistant" ? formatAssistStatusLabel(raw) : formatStatusLabel(raw);
@@ -195,7 +206,7 @@ export default function SuperAdminUsersAssists() {
     return [...filtered].sort((a, b) => {
       const getSortValue = (row: AccountRow) => {
           if (sortKey === "account_status") {
-            const status = getProfileAccountStatus(row);
+            const status = getAccountStatus(row);
             const label =
               normalizeRole(row.role) === "assistant" ? formatAssistStatusLabel(status) : formatStatusLabel(status);
             return label.toLowerCase();
@@ -347,7 +358,7 @@ export default function SuperAdminUsersAssists() {
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>{r.email}</TableCell>
                       <TableCell className="capitalize">{r.role.replace("_", " ")}</TableCell>
-                      <TableCell>{renderStatusBadge(getProfileAccountStatus(r), r.role)}</TableCell>
+                      <TableCell>{renderStatusBadge(getAccountStatus(r), r.role)}</TableCell>
                       <TableCell className="text-right">
                         {canLoginAs(r.role) ? (
                           <Button size="sm" variant="outline" onClick={() => openLoginAs(r.id)}>
