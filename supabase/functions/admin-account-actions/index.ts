@@ -102,15 +102,15 @@ Deno.serve(async (req) => {
     const { data: requester, error: requesterErr } = await admin.auth.getUser(token);
     if (requesterErr || !requester?.user) return json(401, { error: "Unauthorized" });
 
-    // Authorize requester: admin only
+    // Authorize requester: admin or super_admin
     const { data: roleRows, error: roleErr } = await admin
       .from("user_roles")
       .select("role")
       .eq("user_id", requester.user.id);
 
     if (roleErr) throw roleErr;
-    const isAdmin = (roleRows ?? []).some((r) => r.role === "admin");
-    if (!isAdmin) return json(403, { error: "Forbidden" });
+    const isAdminOrSuperAdmin = (roleRows ?? []).some((r) => r.role === "admin" || r.role === "super_admin");
+    if (!isAdminOrSuperAdmin) return json(403, { error: "Forbidden" });
 
     const body = (await req.json()) as Payload;
 
