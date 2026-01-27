@@ -44,6 +44,10 @@ type InquiryRow = {
   message: string;
   status: string;
   source: string;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_mime?: string | null;
+  attachment_size?: number | null;
 };
 
 function formatDateTime(input: string) {
@@ -127,6 +131,35 @@ function InquiryTable({ rows, emptyLabel, onOpen, selected, onMarkResolved }: In
                         </div>
                       </div>
 
+                      {r.attachment_url ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm font-medium text-foreground">Attachment</div>
+
+                          {String(r.attachment_mime ?? "").startsWith("image/") ? (
+                            <img
+                              src={r.attachment_url}
+                              alt={r.attachment_name || "Support attachment"}
+                              className="max-h-80 w-full rounded-md border border-border object-contain bg-muted/20"
+                              loading="lazy"
+                            />
+                          ) : null}
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <a
+                              href={r.attachment_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sm text-primary underline underline-offset-4"
+                            >
+                              {r.attachment_name || "Download attachment"}
+                            </a>
+                            {r.attachment_size ? (
+                              <span className="text-xs text-muted-foreground">{(r.attachment_size / 1024 / 1024).toFixed(2)} MB</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-medium text-foreground">Status:</div>
                         <Badge variant={statusBadgeVariant(selected?.status ?? r.status)}>
@@ -172,7 +205,9 @@ export default function AdminSupport() {
 
       const { data, error } = await (supabase as any)
         .from("website_inquiries")
-        .select("id, created_at, name, email, subject, message, status, source")
+        .select(
+          "id, created_at, name, email, subject, message, status, source, attachment_url, attachment_name, attachment_mime, attachment_size"
+        )
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -186,6 +221,11 @@ export default function AdminSupport() {
         message: String(x.message ?? ""),
         status: String(x.status ?? "new"),
         source: String(x.source ?? "contact"),
+        attachment_url: x.attachment_url ? String(x.attachment_url) : null,
+        attachment_name: x.attachment_name ? String(x.attachment_name) : null,
+        attachment_mime: x.attachment_mime ? String(x.attachment_mime) : null,
+        attachment_size:
+          typeof x.attachment_size === "number" ? x.attachment_size : x.attachment_size ? Number(x.attachment_size) : null,
       })) as InquiryRow[];
 
       setRows(list);
