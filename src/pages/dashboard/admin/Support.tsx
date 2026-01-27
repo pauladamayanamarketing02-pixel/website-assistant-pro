@@ -144,6 +144,16 @@ function InquiryTable({ rows, emptyLabel, onOpen, selected, onMarkResolved }: In
                             />
                           ) : null}
 
+                          {String(r.attachment_mime ?? "") === "application/pdf" ? (
+                            <div className="overflow-hidden rounded-md border border-border bg-muted/20">
+                              <iframe
+                                title={r.attachment_name || "PDF attachment"}
+                                src={r.attachment_url}
+                                className="h-80 w-full"
+                              />
+                            </div>
+                          ) : null}
+
                           <div className="flex flex-wrap items-center gap-2">
                             <a
                               href={r.attachment_url}
