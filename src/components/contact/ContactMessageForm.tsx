@@ -194,7 +194,16 @@ export function ContactMessageForm({
               type="file"
               accept={acceptedFileTypes}
               onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
-              className={errors.attachment ? "border-destructive" : ""}
+                className={
+                  [
+                    "h-9 text-xs",
+                    "file:mr-3 file:rounded-md file:border-0",
+                    "file:bg-muted file:px-3 file:py-1",
+                    "file:text-xs file:font-medium file:text-foreground",
+                    "hover:file:bg-muted/80",
+                    errors.attachment ? "border-destructive" : "",
+                  ].join(" ")
+                }
             />
             {attachment ? (
               <Button type="button" variant="outline" size="icon" onClick={() => setAttachment(null)}>
