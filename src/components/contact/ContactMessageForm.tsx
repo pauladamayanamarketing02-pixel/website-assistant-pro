@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
-import { Send } from "lucide-react";
+import { Send, Paperclip, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,8 @@ export type ContactMessageFormProps = {
   onSubmitted?: () => void;
   wrapper?: "card" | "none";
   disableNameEmail?: boolean;
+  subjectPlaceholder?: string;
+  allowAttachment?: boolean;
 };
 
 export function ContactMessageForm({
@@ -32,6 +34,8 @@ export function ContactMessageForm({
   onSubmitted,
   wrapper = "card",
   disableNameEmail = false,
+  subjectPlaceholder,
+  allowAttachment = false,
 }: ContactMessageFormProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -42,10 +46,55 @@ export function ContactMessageForm({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+
+  const acceptedFileTypes = useMemo(() => {
+    // images + pdf (as requested)
+    return ["image/*", "application/pdf"].join(",");
+  }, []);
+
+  const validateAttachment = (file: File) => {
+    const maxBytes = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxBytes) return "File terlalu besar (maks 10MB).";
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    if (!isPdf && !isImage) return "File harus berupa gambar atau PDF.";
+    return null;
+  };
+
+  const uploadAttachment = async (file: File) => {
+    const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+    const safeExt = ext ? `.${ext}` : "";
+    const fileName = `${Date.now()}-${Math.random().toString(16).slice(2)}${safeExt}`;
+    const path = `support-attachments/${fileName}`;
+
+    const { error } = await supabase.storage.from("user-files").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || undefined,
+    });
+    if (error) throw error;
+
+    const { data } = supabase.storage.from("user-files").getPublicUrl(path);
+    return {
+      url: data.publicUrl,
+      name: file.name,
+      mime: file.type || null,
+      size: file.size,
+    };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+
+    if (allowAttachment && attachment) {
+      const fileErr = validateAttachment(attachment);
+      if (fileErr) {
+        setErrors((prev) => ({ ...prev, attachment: fileErr }));
+        return;
+      }
+    }
 
     const result = contactSchema.safeParse(formData);
     if (!result.success) {
@@ -60,6 +109,8 @@ export function ContactMessageForm({
     setIsSubmitting(true);
 
     try {
+      const uploaded = allowAttachment && attachment ? await uploadAttachment(attachment) : null;
+
       const payload = {
         name: result.data.name,
         email: result.data.email,
@@ -68,6 +119,10 @@ export function ContactMessageForm({
         source,
         status: "new",
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        attachment_url: uploaded?.url ?? null,
+        attachment_name: uploaded?.name ?? null,
+        attachment_mime: uploaded?.mime ?? null,
+        attachment_size: uploaded?.size ?? null,
       };
 
       const { error } = await (supabase as any).from("website_inquiries").insert(payload);
@@ -75,6 +130,7 @@ export function ContactMessageForm({
 
       toast({ title: "Message sent!", description: "We'll get back to you as soon as possible." });
       setFormData({ name: "", email: "", subject: "", message: "" });
+      setAttachment(null);
       onSubmitted?.();
     } catch (err) {
       console.error("Contact submit error:", err);
@@ -121,13 +177,43 @@ export function ContactMessageForm({
         <Label htmlFor="subject">Subject</Label>
         <Input
           id="subject"
-          placeholder="What's this about?"
+          placeholder={subjectPlaceholder ?? "What's this about?"}
           value={formData.subject}
           onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
           className={errors.subject ? "border-destructive" : ""}
         />
         {errors.subject && <p className="text-sm text-destructive">{errors.subject}</p>}
       </div>
+
+      {allowAttachment ? (
+        <div className="space-y-2">
+          <Label htmlFor="attachment">Attachment (PDF / Image)</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="attachment"
+              type="file"
+              accept={acceptedFileTypes}
+              onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
+              className={errors.attachment ? "border-destructive" : ""}
+            />
+            {attachment ? (
+              <Button type="button" variant="outline" size="icon" onClick={() => setAttachment(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" size="icon" disabled>
+                <Paperclip className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          {attachment ? (
+            <p className="text-xs text-muted-foreground break-words">
+              {attachment.name} • {(attachment.size / 1024 / 1024).toFixed(2)} MB
+            </p>
+          ) : null}
+          {errors.attachment && <p className="text-sm text-destructive">{errors.attachment}</p>}
+        </div>
+      ) : null}
       <div className="space-y-2">
         <Label htmlFor="message">Message</Label>
         <Textarea
