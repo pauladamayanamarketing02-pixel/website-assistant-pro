@@ -125,10 +125,10 @@ export default function ConfigPage() {
 
     const { data: profiles } = await (supabase as any)
       .from('profiles')
-      .select('id, name, email, phone, status')
+      .select('id, name, email, phone, account_status')
       .in('id', assistIds);
 
-    setAssistUsers(((profiles as any[]) || []).map((p) => ({ ...p, status: (p as any).status || 'active' })));
+    setAssistUsers(((profiles as any[]) || []).map((p) => ({ ...p, status: (p as any).account_status || 'active' })));
     setLoadingAssist(false);
   };
 
@@ -161,11 +161,11 @@ export default function ConfigPage() {
   };
 
   const handleToggleAssistStatus = async (assist: AssistUser) => {
-    const newStatus = assist.status === 'active' ? 'inactive' : 'active';
+    const newStatus = assist.status === 'active' ? 'nonactive' : 'active';
     
     const { error } = await (supabase as any)
       .from('profiles')
-      .update({ status: newStatus } as any)
+      .update({ account_status: newStatus } as any)
       .eq('id', assist.id);
 
     if (error) {
@@ -228,7 +228,7 @@ export default function ConfigPage() {
           id: authData.user.id,
           email: newAssistData.email,
           name: newAssistData.name,
-          status: 'active',
+          account_status: 'active',
         });
 
         // Create role

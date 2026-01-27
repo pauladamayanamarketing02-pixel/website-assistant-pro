@@ -127,7 +127,7 @@ export default function AdminMessageMonitor() {
 
         const { data: profiles, error: profilesError } = await (supabase as any)
           .from("profiles")
-          .select("id,name,email,avatar_url,status")
+          .select("id,name,email,avatar_url,account_status")
           .in("id", assistIds);
 
         if (profilesError) throw profilesError;
@@ -138,7 +138,7 @@ export default function AdminMessageMonitor() {
             name: String(p.name ?? ""),
             email: String(p.email ?? ""),
             avatar_url: (p.avatar_url ?? null) as string | null,
-            status: p.status != null ? String(p.status) : undefined,
+            status: p.account_status != null ? String(p.account_status) : undefined,
           }))
           .sort((a: AssistRow, b: AssistRow) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "en-US"))) as AssistRow[];
 

@@ -19,7 +19,6 @@ type ProfileRow = {
   id: string;
   name: string;
   email: string;
-  status?: string | null;
   payment_active?: boolean | null;
   account_status?: string | null;
 };
@@ -29,7 +28,6 @@ type AccountRow = {
   name: string;
   email: string;
   role: string;
-  status: string;
   paymentActive: boolean;
   accountStatus: string;
 };
@@ -82,22 +80,27 @@ export default function SuperAdminUsersAssists() {
 
   const normalizeAccountStatus = (status: string) => {
     const s = String(status ?? "").toLowerCase().trim();
-    // Back-compat with previous enum values
-    if (s === "nonactive" || s === "inactive" || s === "blacklisted") return "suspended";
+    // Back-compat with previous values
+    if (s === "inactive") return "nonactive";
     if (s === "") return "pending";
     return s;
   };
 
-  const getAccountStatus = (row: Pick<AccountRow, "role" | "paymentActive" | "status">) => {
-    // For role=user, show richer onboarding states from account_status.
+  const getAccountStatus = (row: Pick<AccountRow, "role" | "paymentActive" | "accountStatus">) => {
+    const role = normalizeRole(row.role);
     // payment_active=true always means Active access.
-    if (normalizeRole(row.role) === "user") {
-      const r = row as any as AccountRow;
-      if (r.paymentActive) return "active";
-      return normalizeAccountStatus(r.accountStatus);
+    if (row.paymentActive) return "active";
+
+    const s = normalizeAccountStatus(row.accountStatus);
+
+    // For assistants we only care about active/nonactive/pending.
+    if (role === "assistant") {
+      if (s === "active" || s === "pending" || s === "nonactive") return s;
+      // Treat suspended/blacklisted/expired/etc as nonactive for assistant UI.
+      return "nonactive";
     }
-    // For assistants/admins keep existing profiles.status behavior.
-    return String((row as any).status ?? "pending");
+
+    return s;
   };
 
   const renderStatusBadge = (status: string, role: string) => {
@@ -123,7 +126,7 @@ export default function SuperAdminUsersAssists() {
       const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id,name,email,status,payment_active,account_status")
+          .select("id,name,email,payment_active,account_status")
           .order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id,role"),
       ]);
@@ -141,7 +144,6 @@ export default function SuperAdminUsersAssists() {
           name: String(p.name ?? ""),
           email: String(p.email ?? ""),
           role,
-          status: String((p as any).status ?? "pending"),
           accountStatus: String((p as any).account_status ?? "pending"),
           // IMPORTANT: default must be false so new users don't appear Active.
           paymentActive: Boolean((p as any).payment_active ?? false),

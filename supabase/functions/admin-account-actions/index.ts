@@ -144,15 +144,15 @@ Deno.serve(async (req) => {
       if (!userId) return json(400, { error: "user_id is required" });
       if (!status) return json(400, { error: "status is required" });
 
-      // DB constraint allows: active | inactive | pending
-      // UI uses label "Nonactive" but we store it as "inactive".
-      if (status === "nonactive") status = "inactive";
+      // We standardize on profiles.account_status.
+      // Back-compat: old UI/clients may still send "inactive".
+      if (status === "inactive") status = "nonactive";
 
-      if (status !== "active" && status !== "inactive") {
-        return json(400, { error: "status must be 'active' or 'inactive'" });
+      if (status !== "active" && status !== "nonactive") {
+        return json(400, { error: "status must be 'active' or 'nonactive'" });
       }
 
-      const { error } = await admin.from("profiles").update({ status }).eq("id", userId);
+      const { error } = await admin.from("profiles").update({ account_status: status }).eq("id", userId);
       if (error) throw error;
 
       return json(200, { ok: true, user_id: userId, status });
