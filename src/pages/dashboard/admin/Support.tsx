@@ -260,8 +260,20 @@ export default function AdminSupport() {
       )
       .subscribe();
 
+    // Fallback: if Realtime isn't enabled for this table in Supabase, still refresh periodically
+    // so admins see new tickets without manually refreshing.
+    const interval = window.setInterval(() => {
+      void fetchInquiries();
+    }, 15000);
+
+    // Also refetch when the user returns to the tab/window
+    const onFocus = () => void fetchInquiries();
+    window.addEventListener("focus", onFocus);
+
     return () => {
       supabase.removeChannel(channel);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
