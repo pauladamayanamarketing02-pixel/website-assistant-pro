@@ -10,8 +10,8 @@ type Props = {
 
 export default function AssistSupportLocked({ name, email, onLogout }: Props) {
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto w-full max-w-xl space-y-4 pb-10">
+    <div className="min-h-[100dvh] bg-background overflow-y-auto p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-xl space-y-4 pb-24">
         <header className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Support</h1>
           <p className="text-sm text-muted-foreground">
