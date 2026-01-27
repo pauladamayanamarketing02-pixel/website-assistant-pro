@@ -60,6 +60,7 @@ export default function UserDashboard() {
   const location = useLocation();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [paymentActive, setPaymentActive] = useState<boolean | null>(null);
+  const [accountStatus, setAccountStatus] = useState<string | null>(null);
 
   // Prevent the document body from becoming the scroll container on mobile.
   // We keep scrolling inside the dashboard <main> (which already uses `no-scrollbar`).
@@ -166,7 +167,7 @@ export default function UserDashboard() {
     const fetchPayment = async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("payment_active")
+        .select("payment_active, account_status")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -174,9 +175,11 @@ export default function UserDashboard() {
       // default true (matches DB default) if anything goes wrong
       if (error) {
         setPaymentActive(true);
+        setAccountStatus(null);
         return;
       }
       setPaymentActive(Boolean((data as any)?.payment_active ?? true));
+      setAccountStatus(String((data as any)?.account_status ?? ""));
     };
 
     fetchPayment();
@@ -215,6 +218,10 @@ export default function UserDashboard() {
   }, [loadingMenuRules, paymentActive, visibleMenuItems]);
 
   const userIsNonActive = paymentActive === false;
+  const needsSupportLanding = useMemo(() => {
+    const s = String(accountStatus ?? "").toLowerCase();
+    return s === "pending" || s === "expired" || s === "approved";
+  }, [accountStatus]);
 
   if (loading || checkingOnboarding || paymentActive === null) {
     return (
@@ -249,7 +256,15 @@ export default function UserDashboard() {
             <Routes>
               <Route
                 index
-                element={userIsNonActive ? <Navigate to="/dashboard/user/package" replace /> : <DashboardOverview />}
+                element={
+                  needsSupportLanding ? (
+                    <Navigate to="/dashboard/user/support" replace />
+                  ) : userIsNonActive ? (
+                    <Navigate to="/dashboard/user/package" replace />
+                  ) : (
+                    <DashboardOverview />
+                  )
+                }
               />
               <Route
                 path="overview"
